@@ -97,7 +97,7 @@ curl --request GET \
 
 Parameters
 
-- `tokenName`: The name of the fungible token (e.g. FLOW)
+- `tokenName`: The name of the fungible token (e.g. "flow")
 
 Example
 
@@ -122,7 +122,7 @@ curl --request GET \
 
 Parameters
 
-- `tokenName`: The name of the fungible token (e.g. FLOW)
+- `tokenName`: The name of the fungible token (e.g. "flow")
 
 ---
 
@@ -134,7 +134,7 @@ Parameters
 
 Parameters
 
-- `tokenName`: The name of the fungible token (e.g. FLOW)
+- `tokenName`: The name of the fungible token (e.g. "flow")
 - `transactionId`: The Flow transaction ID for the withdrawal
 
 ---
@@ -145,7 +145,7 @@ Parameters
 
 Parameters
 
-- `tokenName`: The name of the fungible token (e.g. FLOW)
+- `tokenName`: The name of the fungible token (e.g. "flow")
 
 Body (JSON)
 
@@ -175,3 +175,70 @@ curl --request GET \
 ### Non-Fungible Tokens
 
 :warning: _Not yet implemented_
+
+#### List all tokens
+
+:warning: _Not yet implemented_
+
+`GET /v1/non-fungible-tokens`
+
+Example
+
+```sh
+curl --request GET \
+  --url http://localhost:3000/v1/non-fungible-tokens
+```
+
+---
+
+#### Get details of a token
+
+:warning: _Not yet implemented_
+
+`GET /v1/non-fungible-tokens/{tokenName}`
+
+Parameters
+
+- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
+
+---
+
+#### List all withdrawals of a token type
+
+:warning: _Not yet implemented_
+
+`GET /v1/non-fungible-tokens/{tokenName}/withdrawals`
+
+Parameters
+
+- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
+
+---
+
+#### Get details of a token withdrawal
+
+:warning: _Not yet implemented_
+
+`GET /v1/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}`
+
+Parameters
+
+- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
+- `transactionId`: The Flow transaction ID for the withdrawal
+
+---
+
+#### Create a token withdrawal
+
+:warning: _Not yet implemented_
+
+`POST /v1/non-fungible-tokens/{tokenName}/withdrawals`
+
+Parameters
+
+- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
+
+Body (JSON)
+
+- `recipient`: The Flow address of the recipient (e.g. "0xf8d6e0586b0a20c7")
+
