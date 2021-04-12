@@ -44,7 +44,7 @@ docker-compose up -d
 flow project deploy --network=emulator
 ```
 
-### Setup the database
+### Set up the database
 
 ```sh
 npm run db-migrate-dev
