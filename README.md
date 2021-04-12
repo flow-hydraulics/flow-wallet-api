@@ -28,7 +28,7 @@ Supported tokens:
 
 `GET /v1/fungible-tokens`
 
-**Example**
+Example
 
 ```sh
 curl --request GET \
@@ -41,11 +41,11 @@ curl --request GET \
 
 `GET /v1/fungible-tokens/{tokenName}`
 
-**Parameters**
+Parameters
 
 - `tokenName`: The name of the fungible token (e.g. FLOW)
 
-**Example**
+Example
 
 ```sh
 curl --request GET \
@@ -60,7 +60,7 @@ curl --request GET \
 
 `GET /v1/fungible-tokens/{tokenName}/withdrawals`
 
-**Parameters**
+Parameters
 
 - `tokenName`: The name of the fungible token (e.g. FLOW)
 
@@ -72,7 +72,7 @@ curl --request GET \
 
 `GET /v1/fungible-tokens/{tokenName}/withdrawals/{transactionId}`
 
-**Parameters**
+Parameters
 
 - `tokenName`: The name of the fungible token (e.g. FLOW)
 - `transactionId`: The Flow transaction ID for the withdrawal
@@ -83,17 +83,17 @@ curl --request GET \
 
 `POST /v1/fungible-tokens/{tokenName}/withdrawals`
 
-**Parameters**
+Parameters
 
 - `tokenName`: The name of the fungible token (e.g. FLOW)
 
-**Body (JSON)**
+Body (JSON)
 
 - `amount`: The number of tokens to transfer (e.g. "123.456")
   - Must be a fixed-point number with a maximum of 8 decimal places
 - `recipient`: The Flow address of the recipient (e.g. "0xf8d6e0586b0a20c7")
 
-**Example**
+Example
 
 ```sh
 curl --request GET \
@@ -106,4 +106,4 @@ curl --request GET \
 
 ### Non-Fungible Tokens
 
-TODO
+:warning: _Not yet implemented_
