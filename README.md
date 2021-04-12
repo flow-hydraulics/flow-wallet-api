@@ -16,6 +16,49 @@ implements a simple custodial wallet for the Flow blockchain.
 - [ ] Send non-fungible token withdrawals from a user account
 - [ ] Detect non-fungible token deposits to aa user account
 
+## Getting Started
+
+### Install the Flow CLI
+
+First, install the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
+
+### Install dependencies and configure environment
+
+```sh
+npm install
+
+cp env.example .env
+```
+
+### Start the database and emulator
+
+Use Docker Compose to launch Postgres and the [Flow Emulator](https://docs.onflow.org/emulator):
+
+```sh
+docker-compose up -d
+```
+
+### Deploy token contracts to the emulator
+
+```sh
+flow project deploy --network=emulator
+```
+
+### Setup the database
+
+```sh
+npm run db-migrate-dev
+
+# sync the account keys table
+npm run db-sync-account-keys
+```
+
+### Start the server!
+
+```sh
+npm run start
+```
+
 ## API Routes
 
 ### Fungible Tokens
