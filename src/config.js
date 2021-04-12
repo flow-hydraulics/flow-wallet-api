@@ -1,0 +1,38 @@
+const chainEmulator = "emulator"
+const chainTestnet = "testnet"
+
+const contractsEmulator = {
+  FlowToken: "0x0ae53cb6e3f42a79",
+  FungibleToken: "0xee82856bf20e2aa6",
+  FUSD: "0xf8d6e0586b0a20c7",
+}
+
+const contractsTestnet = {
+  FlowToken: "0x7e60df042a9c0868",
+  FungibleToken: "0x9a0766d93b6608b7",
+  FUSD: "0xe223d8a629e49c68",
+}
+
+function getContracts(chain) {
+  chain = chain || chainEmulator
+
+  switch (chain) {
+    case chainEmulator:
+      return contractsEmulator
+    case chainTestnet:
+      return contractsTestnet
+  }
+
+  throw `Invalid chain: ${chain}`
+}
+
+module.exports = {
+  env:              process.env.NODE_ENV,
+  port:             process.env.PORT               || 3000,
+  accessApiHost:    process.env.ACCESS_API_HOST    || "http://localhost:8080",
+  signerAddress:    process.env.SIGNER_ADDRESS     || "0xf8d6e0586b0a20c7",
+  signerPrivateKey: process.env.SIGNER_PRIVATE_KEY,
+  signerSigAlgo:    process.env.SIGNER_SIG_ALGO    || "ECDSA_P256",
+  signerHashAlgo:   process.env.SIGNER_HASH_ALGO   || "SHA3_256",
+  contracts:        getContracts(process.env.CHAIN),
+}

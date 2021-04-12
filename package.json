@@ -1,0 +1,33 @@
+{
+  "name": "flow-wallet-nodejs-demo",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./src/index.js",
+    "db-migrate-dev": "prisma migrate dev --preview-feature",
+    "db-migrate-deploy": "prisma migrate deploy --preview-feature",
+    "db-sync-account-keys": "node ./src/database/syncAccountKeys.js"
+  },
+  "prisma": {
+    "schema": "src/database/schema.prisma"
+  },
+  "dependencies": {
+    "@onflow/fcl": "0.0.67",
+    "@onflow/types": "0.0.4",
+    "@prisma/client": "^2.20.1",
+    "debug": "~2.6.9",
+    "dedent-js": "^1.0.1",
+    "dotenv": "^8.2.0",
+    "elliptic": "^6.5.4",
+    "express": "~4.16.1",
+    "http-errors": "~1.6.3",
+    "http-status": "^1.5.0",
+    "http-status-codes": "^2.1.4",
+    "morgan": "~1.9.1",
+    "sha3": "^2.1.4",
+    "winston": "^3.3.3"
+  },
+  "devDependencies": {
+    "prisma": "^2.20.1"
+  }
+}

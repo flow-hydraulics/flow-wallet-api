@@ -1,0 +1,19 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=wallet
+      - POSTGRES_USER=wallet
+      - POSTGRES_PASSWORD=wallet
+  emulator:
+    image: gcr.io/flow-container-registry/emulator:v0.16.1
+    ports:
+      - "8080:8080"
+      - "3569:3569"
+    environment:
+      - FLOW_SERVICEPRIVATEKEY=${SIGNER_PRIVATE_KEY}
+      - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
+      - FLOW_SERVICEKEYHASHALGO=SHA3_256
