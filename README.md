@@ -6,14 +6,15 @@ implements a simple custodial wallet for the Flow blockchain.
 ## Functionality
 
 - [x] Single admin account (hot wallet)
-- [x] Fungible token withdrawals from admin account (FLOW, FUSD)
-- [ ] Fungible token deposits from admin account (FLOW, FUSD)
-- [ ] Fungible token withdrawals from user account (FLOW, FUSD)
-- [ ] Fungible token deposits from user account (FLOW, FUSD)
-- [ ] Non-fungible token withdrawals from admin account
-- [ ] Non-fungible token deposits from admin account
-- [ ] Non-fungible token withdrawals from user account
-- [ ] Non-fungible token deposits from user account
+- [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
+- [ ] Detect fungible token deposits to admin account (FLOW, FUSD)
+- [ ] Create user accounts from admin account
+- [ ] Send fungible token withdrawals from a user account (FLOW, FUSD)
+- [ ] Detect fungible token deposits to a user account (FLOW, FUSD)
+- [ ] Send non-fungible token withdrawals from admin account
+- [ ] Detect non-fungible token deposits to admin account
+- [ ] Send non-fungible token withdrawals from a user account
+- [ ] Detect non-fungible token deposits to aa user account
 
 ## API Routes
 
@@ -34,6 +35,8 @@ curl --request GET \
   --url http://localhost:3000/v1/fungible-tokens
 ```
 
+---
+
 #### Get details of a token
 
 `GET /v1/fungible-tokens/{tokenName}`
@@ -49,7 +52,11 @@ curl --request GET \
   --url http://localhost:3000/v1/fungible-tokens/flow
 ```
 
+---
+
 #### List all withdrawals of a token type
+
+:warning: _Not yet implemented_
 
 `GET /v1/fungible-tokens/{tokenName}/withdrawals`
 
@@ -57,9 +64,11 @@ curl --request GET \
 
 - `tokenName`: The name of the fungible token (e.g. FLOW)
 
-:warning: Not implemented
+---
 
 #### Get details of a token withdrawal
+
+:warning: _Not yet implemented_
 
 `GET /v1/fungible-tokens/{tokenName}/withdrawals/{transactionId}`
 
@@ -68,7 +77,7 @@ curl --request GET \
 - `tokenName`: The name of the fungible token (e.g. FLOW)
 - `transactionId`: The Flow transaction ID for the withdrawal
 
-:warning: Not implemented
+---
 
 #### Create a token withdrawal
 
@@ -92,6 +101,8 @@ curl --request GET \
   --header 'Content-Type: application/json' \
   --data '{ "recipient": "0xf8d6e0586b0a20c7", "amount": "123.456" }'
 ```
+
+---
 
 ### Non-Fungible Tokens
 
