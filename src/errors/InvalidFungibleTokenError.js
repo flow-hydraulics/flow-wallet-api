@@ -1,9 +1,9 @@
-const { StatusCodes } = require('http-status-codes');
+const httpStatus = require('http-status');
 const ApiError = require("./ApiError");
 
 class InvalidFungibleTokenError extends ApiError {
   constructor(token) {
-    const statusCode = StatusCodes.BAD_REQUEST;
+    const statusCode = httpStatus.BAD_REQUEST;
     const message = `${token} is not valid fungible token`;
 
     super(statusCode, message);

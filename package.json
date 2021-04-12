@@ -7,7 +7,9 @@
     "deploy-contracts": "flow project deploy --network=emulator --update",
     "db-migrate-dev": "prisma migrate dev --preview-feature",
     "db-migrate-deploy": "prisma migrate deploy --preview-feature",
-    "db-sync-account-keys": "node ./src/database/syncAccountKeys.js"
+    "db-sync-account-keys": "node ./src/database/syncAccountKeys.js",
+    "lint": "eslint .",
+    "lint-fix": "eslint . --fix"
   },
   "prisma": {
     "schema": "src/database/schema.prisma"
@@ -16,19 +18,22 @@
     "@onflow/fcl": "0.0.67",
     "@onflow/types": "0.0.4",
     "@prisma/client": "^2.20.1",
-    "debug": "~2.6.9",
     "dedent-js": "^1.0.1",
     "dotenv": "^8.2.0",
     "elliptic": "^6.5.4",
     "express": "~4.16.1",
-    "http-errors": "~1.6.3",
     "http-status": "^1.5.0",
-    "http-status-codes": "^2.1.4",
     "morgan": "~1.9.1",
     "sha3": "^2.1.4",
     "winston": "^3.3.3"
   },
   "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.21.0",
+    "eslint-config-prettier": "^8.1.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "eslint-plugin-react": "^7.22.0",
+    "prettier": "^2.2.1",
     "prisma": "^2.20.1"
   }
 }

@@ -1,9 +1,9 @@
-const { StatusCodes } = require('http-status-codes');
+const httpStatus = require('http-status');
 const ApiError = require("./ApiError");
 
 class NotFoundError extends ApiError {
   constructor() {
-    const statusCode = StatusCodes.NOT_FOUND;
+    const statusCode = httpStatus.NOT_FOUND;
     const message = "not found";
 
     super(statusCode, message);
