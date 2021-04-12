@@ -1,4 +1,4 @@
-const fcl = require("@onflow/fcl");
+const fcl = require("@onflow/fcl")
 
 async function sendTransaction({
   transaction,
@@ -16,11 +16,11 @@ async function sendTransaction({
     fcl.limit(1000),
   ])
 
-  const { transactionId } = response;
+  const {transactionId} = response
 
   await fcl.tx(response).onceSealed()
 
   return transactionId
 }
 
-module.exports = sendTransaction;
+module.exports = sendTransaction

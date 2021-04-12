@@ -1,15 +1,13 @@
-const express = require('express');
-const fungibleTokensController = require('../../../controllers/fungibleTokens');
+const express = require("express")
+const fungibleTokensController = require("../../../controllers/fungibleTokens")
 
-const router = express.Router({mergeParams: true});
+const router = express.Router({mergeParams: true})
 
 router
-  .route('/')
+  .route("/")
   .get(fungibleTokensController.getWithdrawals)
-  .post(fungibleTokensController.createWithdrawal);
+  .post(fungibleTokensController.createWithdrawal)
 
-router
-  .route('/:transactionId')
-  .get(fungibleTokensController.getWithdrawal)
+router.route("/:transactionId").get(fungibleTokensController.getWithdrawal)
 
-module.exports = router;
+module.exports = router

@@ -1,4 +1,4 @@
-const dedent = require('dedent-js');
+const dedent = require("dedent-js")
 
 function template(contracts) {
   return dedent`
@@ -26,6 +26,5 @@ function template(contracts) {
   }
   `
 }
-  
-module.exports = template;
-  
+
+module.exports = template

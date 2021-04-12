@@ -1,12 +1,9 @@
-const { transferFLOW, transferFUSD } = require('./transfer');
+const {transferFLOW, transferFUSD} = require("./transfer")
 
 const tokenFLOW = "flow"
 const tokenFUSD = "fusd"
 
-const tokens = [
-  tokenFLOW,
-  tokenFUSD,
-];
+const tokens = [tokenFLOW, tokenFUSD]
 
 const transferFuncs = {
   [tokenFLOW]: transferFLOW,
@@ -14,15 +11,15 @@ const transferFuncs = {
 }
 
 function isValidToken(token) {
-  return token in transferFuncs;
+  return token in transferFuncs
 }
 
 function getTokenTransferFunc(token) {
-  return transferFuncs[token];
+  return transferFuncs[token]
 }
 
 module.exports = {
   tokens,
   isValidToken,
-  getTokenTransferFunc
-};
+  getTokenTransferFunc,
+}

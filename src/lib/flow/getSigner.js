@@ -1,13 +1,13 @@
-const fcl = require("@onflow/fcl");
+const fcl = require("@onflow/fcl")
 
-const {signWithPrivateKey} = require("./crypto");
+const {signWithPrivateKey} = require("./crypto")
 
 function getSigner(
   signerAddress,
   signerPrivateKey,
   signerSigAlgo,
   signerHashAlgo,
-  signerKeyIndex,
+  signerKeyIndex
 ) {
   return async (account = {}) => {
     return {
@@ -29,4 +29,4 @@ function getSigner(
   }
 }
 
-module.exports = getSigner;
+module.exports = getSigner

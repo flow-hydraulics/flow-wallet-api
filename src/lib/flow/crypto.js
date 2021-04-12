@@ -1,6 +1,6 @@
-const {createHash} = require("crypto");
-const {SHA3} = require("sha3");
-const {ec: EC} = require("elliptic");
+const {createHash} = require("crypto")
+const {SHA3} = require("sha3")
+const {ec: EC} = require("elliptic")
 
 const sigAlgos = {
   ECDSA_P256: "ECDSA_P256",
@@ -61,4 +61,4 @@ module.exports = {
   sigAlgos,
   hashAlgos,
   signWithPrivateKey,
-};
+}

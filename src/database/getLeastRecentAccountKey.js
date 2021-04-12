@@ -1,4 +1,4 @@
-const {PrismaClient} = require("@prisma/client");
+const {PrismaClient} = require("@prisma/client")
 
 const prisma = new PrismaClient()
 
@@ -19,4 +19,4 @@ const getLeastRecentAccountKey = async () => {
   return results[0].index
 }
 
-module.exports = getLeastRecentAccountKey;
+module.exports = getLeastRecentAccountKey

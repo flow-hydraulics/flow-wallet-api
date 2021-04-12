@@ -27,12 +27,12 @@ function getContracts(chain) {
 }
 
 module.exports = {
-  env:             process.env.NODE_ENV,
-  port:            process.env.PORT                || 3000,
-  accessApiHost:   process.env.ACCESS_API_HOST     || "http://localhost:8080",
-  adminAddress:    process.env.ADMIN_ADDRESS       || "0xf8d6e0586b0a20c7",
+  env: process.env.NODE_ENV,
+  port: process.env.PORT || 3000,
+  accessApiHost: process.env.ACCESS_API_HOST || "http://localhost:8080",
+  adminAddress: process.env.ADMIN_ADDRESS || "0xf8d6e0586b0a20c7",
   adminPrivateKey: process.env.ADMIN_PRIVATE_KEY,
-  adminSigAlgo:    process.env.ADMIN_SIG_ALGO      || "ECDSA_P256",
-  adminHashAlgo:   process.env.ADMIN_HASH_ALGO     || "SHA3_256",
-  contracts:       getContracts(process.env.CHAIN),
+  adminSigAlgo: process.env.ADMIN_SIG_ALGO || "ECDSA_P256",
+  adminHashAlgo: process.env.ADMIN_HASH_ALGO || "SHA3_256",
+  contracts: getContracts(process.env.CHAIN),
 }
