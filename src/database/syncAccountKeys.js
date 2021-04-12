@@ -7,7 +7,7 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient()
 
-const signerAddress = process.env.SIGNER_ADDRESS
+const adminAddress = process.env.ADMIN_ADDRESS
 const accessAPIHost = process.env.ACCESS_API_HOST
 
 fcl.config().put("accessNode.api", accessAPIHost)
@@ -18,9 +18,9 @@ async function getAccount(address) {
 }
 
 async function main() {
-  const account = await getAccount(signerAddress)
+  const account = await getAccount(adminAddress)
 
-  console.log(`Fetched account information for ${signerAddress} from ${accessAPIHost}\n`)
+  console.log(`Fetched account information for ${adminAddress} from ${accessAPIHost}\n`)
 
   // truncate existing keys
   const { count } = await prisma.accountKey.deleteMany({where: {}})

@@ -38,14 +38,14 @@ const createWithdrawal = catchAsync(async (req, res) => {
   // TODO: validate recipient and amount
   const { recipient, amount } = req.body;
 
-  const signerKeyIndex = await getLeastRecentAccountKey();
+  const adminKeyIndex = await getLeastRecentAccountKey();
 
   const signer = getSigner(
-    config.signerAddress,
-    config.signerPrivateKey,
-    config.signerSigAlgo,
-    config.signerHashAlgo,
-    signerKeyIndex,
+    config.adminAddress,
+    config.adminPrivateKey,
+    config.adminSigAlgo,
+    config.adminHashAlgo,
+    adminKeyIndex,
   )
 
   const transfer = getTokenTransferFunc(tokenName)
