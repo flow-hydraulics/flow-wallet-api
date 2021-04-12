@@ -48,9 +48,6 @@ flow project deploy --network=emulator
 
 ```sh
 npm run db-migrate-dev
-
-# sync the account keys table
-npm run db-sync-account-keys
 ```
 
 ### Start the server!
