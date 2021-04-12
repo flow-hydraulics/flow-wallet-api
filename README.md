@@ -35,6 +35,17 @@ curl --request GET \
   --url http://localhost:3000/v1/fungible-tokens
 ```
 
+```json
+[
+  {
+    "name": "flow"
+  },
+  {
+    "name": "fusd"
+  }
+]
+```
+
 ---
 
 #### Get details of a token
@@ -50,6 +61,12 @@ Example
 ```sh
 curl --request GET \
   --url http://localhost:3000/v1/fungible-tokens/flow
+```
+
+```json
+{
+  "name": "flow"
+}
 ```
 
 ---
@@ -100,6 +117,14 @@ curl --request GET \
   --url http://localhost:3000/v1/fungible-tokens \
   --header 'Content-Type: application/json' \
   --data '{ "recipient": "0xf8d6e0586b0a20c7", "amount": "123.456" }'
+```
+
+```json
+{
+  "transactionId": "18647b584a03345f3b2d2c4d9ab2c4179ae1b124a7f62ef9f33910e5ca8b353c",
+  "recipient": "0xf8d6e0586b0a20c7",
+  "amount": "123.456"
+}
 ```
 
 ---
