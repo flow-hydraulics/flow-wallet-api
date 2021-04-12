@@ -38,12 +38,6 @@ Use Docker Compose to launch Postgres and the [Flow Emulator](https://docs.onflo
 docker-compose up -d
 ```
 
-### Deploy token contracts to the emulator
-
-```sh
-flow project deploy --network=emulator
-```
-
 ### Migrate the database
 
 ```sh
