@@ -5,12 +5,20 @@ implements a simple custodial wallet service for the Flow blockchain.
 
 ## Functionality
 
+### Admin
+
 - [x] Single admin account (hot wallet)
+- [ ] Create user accounts from admin account
+
+### Fungible Tokens
+
 - [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
 - [ ] Detect fungible token deposits to admin account (FLOW, FUSD)
-- [ ] Create user accounts from admin account
 - [ ] Send fungible token withdrawals from a user account (FLOW, FUSD)
 - [ ] Detect fungible token deposits to a user account (FLOW, FUSD)
+
+## Non-Fungible Tokens
+
 - [ ] Send non-fungible token withdrawals from admin account
 - [ ] Detect non-fungible token deposits to admin account
 - [ ] Send non-fungible token withdrawals from a user account
