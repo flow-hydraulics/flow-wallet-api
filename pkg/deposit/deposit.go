@@ -9,6 +9,7 @@ import "github.com/onflow/flow-go-sdk"
 type NFTDeposition struct {
 	chainId            flow.ChainID
 	nftContractAddress flow.Address
+	nftContractName    string
 	nftId              uint64
 	extUserId          string
 }
