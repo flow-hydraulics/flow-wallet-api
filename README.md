@@ -8,14 +8,14 @@ implements a simple custodial wallet service for the Flow blockchain.
 ### Admin
 
 - [x] Single admin account (hot wallet)
-- [ ] Create user accounts from admin account
+- [ ] [Create user accounts from admin account](https://github.com/onflow/flow-wallet-api-node-demo/issues/1)
 
 ### Fungible Tokens
 
 - [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
-- [ ] Detect fungible token deposits to admin account (FLOW, FUSD)
-- [ ] Send fungible token withdrawals from a user account (FLOW, FUSD)
-- [ ] Detect fungible token deposits to a user account (FLOW, FUSD)
+- [ ] [Detect fungible token deposits to admin account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/2)
+- [ ] [Send fungible token withdrawals from a user account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/3)
+- [ ] [Detect fungible token deposits to a user account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/4)
 
 ## Non-Fungible Tokens
 
