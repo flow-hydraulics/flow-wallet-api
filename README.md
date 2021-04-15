@@ -46,12 +46,6 @@ Use Docker Compose to launch Postgres and the [Flow Emulator](https://docs.onflo
 docker-compose up -d
 ```
 
-### Migrate the database
-
-```sh
-npm run db-migrate-dev
-```
-
 ### Start the server
 
 ```sh
@@ -240,4 +234,3 @@ Parameters
 Body (JSON)
 
 - `recipient`: The Flow address of the recipient (e.g. "0xf8d6e0586b0a20c7")
-

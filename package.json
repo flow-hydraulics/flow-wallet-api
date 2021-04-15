@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "npm run deploy-contracts && npm run db-sync-account-keys && npm run start-api",
-    "start-api": "NODE_ENV=development node ./src/index.js",
+    "start": "npm run deploy-contracts && npm run db-migrate-dev && npm run db-sync-account-keys && npm run start-api",
+    "start-api": "NODE_ENV=development nodemon ./src/index.js",
     "deploy-contracts": "flow project deploy --network=emulator --update",
     "db-migrate-dev": "prisma migrate dev --preview-feature",
     "db-migrate-deploy": "prisma migrate deploy --preview-feature",
@@ -33,6 +33,7 @@
     "eslint": "^7.21.0",
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-prettier": "^3.3.1",
+    "nodemon": "^2.0.7",
     "prettier": "^2.2.1",
     "prisma": "^2.20.1"
   }
