@@ -3,7 +3,7 @@ import * as fcl from "@onflow/fcl"
 import {Account, AccountAuthorization} from "./index"
 import {SignatureAlgorithm, HashAlgorithm, signWithPrivateKey} from "./crypto"
 
-export default function getSigner(
+export default function getAccountAuthorization(
   signerAddress: string,
   signerPrivateKey: string,
   signerSigAlgo: SignatureAlgorithm,

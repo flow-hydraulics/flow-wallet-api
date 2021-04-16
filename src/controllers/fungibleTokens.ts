@@ -1,7 +1,7 @@
 import * as httpStatus from "http-status"
 import config from "../config"
 import {tokens, isValidToken, getTokenTransferFunc} from "../lib/fungibleTokens"
-import {getSigner} from "../lib/flow"
+import {getAccountAuthorization} from "../lib/flow"
 import getLeastRecentAccountKey from "../database/getLeastRecentAccountKey"
 import catchAsync from "../errors/catchAsync"
 import ApiError from "../errors/ApiError"
@@ -46,7 +46,7 @@ export const createWithdrawal = catchAsync(async (req, res) => {
 
   const adminKeyIndex = await getLeastRecentAccountKey()
 
-  const signer = getSigner(
+  const authorization = getAccountAuthorization(
     config.adminAddress,
     config.adminPrivateKey,
     config.adminSigAlgo,
@@ -60,7 +60,7 @@ export const createWithdrawal = catchAsync(async (req, res) => {
     const transactionId = await transfer(
       recipient,
       amount,
-      signer,
+      authorization,
       config.contracts
     )
 

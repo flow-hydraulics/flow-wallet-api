@@ -1,4 +1,4 @@
-import getSigner from "./getSigner"
+import getAccountAuthorization from "./getAccountAuthorization"
 
 export interface Account {
   addr?: string
@@ -17,4 +17,4 @@ export interface AccountAuthorization {
   signingFunction: (data: {message: string}) => AccountSignature
 }
 
-export {getSigner}
+export {getAccountAuthorization}
