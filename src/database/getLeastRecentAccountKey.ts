@@ -1,4 +1,4 @@
-const {PrismaClient} = require("@prisma/client")
+import {PrismaClient} from "@prisma/client"
 
 const prisma = new PrismaClient()
 
@@ -14,9 +14,7 @@ WHERE index = (
 RETURNING index
 `
 
-const getLeastRecentAccountKey = async () => {
+export default async function getLeastRecentAccountKey(): Promise<number> {
   const results = await prisma.$queryRaw(getLeastRecentAccountKeySql)
   return results[0].index
 }
-
-module.exports = getLeastRecentAccountKey

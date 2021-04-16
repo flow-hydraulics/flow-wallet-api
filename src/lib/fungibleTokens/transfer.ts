@@ -1,10 +1,10 @@
-const fcl = require("@onflow/fcl")
-const t = require("@onflow/types")
+import * as fcl from "@onflow/fcl"
+import * as t from "@onflow/types"
 
-const sendTransaction = require("../flow/sendTransaction")
+import sendTransaction from "../flow/sendTransaction"
 
-const transferFLOWTemplate = require("./templates/transferFLOW")
-const transferFUSDTemplate = require("./templates/transferFUSD")
+import transferFLOWTemplate from "./templates/transferFLOW"
+import transferFUSDTemplate from "./templates/transferFUSD"
 
 async function transfer(template, recipient, amount, authorization, contracts) {
   return await sendTransaction({
@@ -19,7 +19,12 @@ async function transfer(template, recipient, amount, authorization, contracts) {
   })
 }
 
-async function transferFLOW(recipient, amount, authorization, contracts) {
+export async function transferFLOW(
+  recipient,
+  amount,
+  authorization,
+  contracts
+) {
   return transfer(
     transferFLOWTemplate,
     recipient,
@@ -29,7 +34,12 @@ async function transferFLOW(recipient, amount, authorization, contracts) {
   )
 }
 
-async function transferFUSD(recipient, amount, authorization, contracts) {
+export async function transferFUSD(
+  recipient,
+  amount,
+  authorization,
+  contracts
+) {
   return transfer(
     transferFUSDTemplate,
     recipient,
@@ -37,9 +47,4 @@ async function transferFUSD(recipient, amount, authorization, contracts) {
     authorization,
     contracts
   )
-}
-
-module.exports = {
-  transferFLOW,
-  transferFUSD,
 }

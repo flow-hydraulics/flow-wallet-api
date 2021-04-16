@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "outDir": "./built",
+    "target": "es2020",
+    "moduleResolution": "node",
+  },
+  "include": ["./src/**/*"]
+}

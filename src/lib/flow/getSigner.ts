@@ -1,14 +1,15 @@
-const fcl = require("@onflow/fcl")
+import * as fcl from "@onflow/fcl"
 
-const {signWithPrivateKey} = require("./crypto")
+import {Account, AccountAuthorization} from "./index"
+import {SignatureAlgorithm, HashAlgorithm, signWithPrivateKey} from "./crypto"
 
-function getSigner(
-  signerAddress,
-  signerPrivateKey,
-  signerSigAlgo,
-  signerHashAlgo,
-  signerKeyIndex
-) {
+export default function getSigner(
+  signerAddress: string,
+  signerPrivateKey: string,
+  signerSigAlgo: SignatureAlgorithm,
+  signerHashAlgo: HashAlgorithm,
+  signerKeyIndex: number
+): (account?: Account) => Promise<AccountAuthorization> {
   return async (account = {}) => {
     return {
       ...account,
@@ -28,5 +29,3 @@ function getSigner(
     }
   }
 }
-
-module.exports = getSigner

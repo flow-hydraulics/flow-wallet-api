@@ -1,7 +1,7 @@
-const httpStatus = require("http-status")
-const config = require("../config")
-const logger = require("../logger")
-const ApiError = require("../errors/ApiError")
+import * as httpStatus from "http-status"
+import config from "../config"
+import logger from "../logger"
+import ApiError from "../errors/ApiError"
 
 const errorsMiddleware = (err, req, res, next) => {
   let {statusCode, message} = err
@@ -29,4 +29,4 @@ const errorsMiddleware = (err, req, res, next) => {
   res.status(statusCode).send(response)
 }
 
-module.exports = errorsMiddleware
+export default errorsMiddleware
