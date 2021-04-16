@@ -1,5 +1,5 @@
-const express = require("express")
-const fungibleTokensController = require("../../../controllers/fungibleTokens")
+import * as express from "express"
+import * as fungibleTokensController from "../../../controllers/fungibleTokens"
 
 const router = express.Router({mergeParams: true})
 
@@ -10,4 +10,4 @@ router
 
 router.route("/:transactionId").get(fungibleTokensController.getWithdrawal)
 
-module.exports = router
+export default router

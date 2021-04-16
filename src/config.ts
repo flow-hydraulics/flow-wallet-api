@@ -26,7 +26,7 @@ function getContracts(chain) {
   throw `Invalid chain: ${chain}`
 }
 
-module.exports = {
+export default {
   env: process.env.NODE_ENV,
   port: process.env.PORT || 3000,
   accessApiHost: process.env.ACCESS_API_HOST || "http://localhost:8080",

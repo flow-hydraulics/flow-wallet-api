@@ -1,13 +1,13 @@
-const {createHash} = require("crypto")
-const {SHA3} = require("sha3")
-const {ec: EC} = require("elliptic")
+import {createHash} from "crypto"
+import {SHA3} from "sha3"
+import {ec as EC} from "elliptic"
 
-const sigAlgos = {
+export const sigAlgos = {
   ECDSA_P256: "ECDSA_P256",
   ECDSA_secp256k1: "ECDSA_secp256k1",
 }
 
-const hashAlgos = {
+export const hashAlgos = {
   SHA2_256: "SHA2_256",
   SHA3_256: "SHA3_256",
 }
@@ -45,7 +45,7 @@ function encodeSignature(sig) {
   return Buffer.concat([r, s]).toString("hex")
 }
 
-function signWithPrivateKey(privateKey, sigAlgo, hashAlgo, msg) {
+export function signWithPrivateKey(privateKey, sigAlgo, hashAlgo, msg) {
   const signer = getSigner(sigAlgo)
   const hasher = getHasher(hashAlgo)
 
@@ -57,8 +57,3 @@ function signWithPrivateKey(privateKey, sigAlgo, hashAlgo, msg) {
   return encodeSignature(sig)
 }
 
-module.exports = {
-  sigAlgos,
-  hashAlgos,
-  signWithPrivateKey,
-}

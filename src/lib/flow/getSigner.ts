@@ -1,8 +1,8 @@
-const fcl = require("@onflow/fcl")
+import * as fcl from "@onflow/fcl"
 
-const {signWithPrivateKey} = require("./crypto")
+import {signWithPrivateKey} from "./crypto"
 
-function getSigner(
+export default function getSigner(
   signerAddress,
   signerPrivateKey,
   signerSigAlgo,
@@ -28,5 +28,3 @@ function getSigner(
     }
   }
 }
-
-module.exports = getSigner

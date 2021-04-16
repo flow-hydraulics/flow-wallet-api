@@ -1,22 +1,22 @@
-const httpStatus = require("http-status")
-const config = require("../config")
-const {
+import * as httpStatus from "http-status"
+import config from "../config"
+import {
   tokens,
   isValidToken,
   getTokenTransferFunc,
-} = require("../lib/fungibleTokens")
-const getSigner = require("../lib/flow/getSigner")
-const getLeastRecentAccountKey = require("../database/getLeastRecentAccountKey")
-const catchAsync = require("../errors/catchAsync")
-const ApiError = require("../errors/ApiError")
-const InvalidFungibleTokenError = require("../errors/InvalidFungibleTokenError")
+} from "../lib/fungibleTokens"
+import getSigner from "../lib/flow/getSigner"
+import getLeastRecentAccountKey from "../database/getLeastRecentAccountKey"
+import catchAsync from "../errors/catchAsync"
+import ApiError from "../errors/ApiError"
+import InvalidFungibleTokenError from "../errors/InvalidFungibleTokenError"
 
 const makeToken = tokenName => ({name: tokenName})
 const allTokens = tokens.map(tokenName => makeToken(tokenName))
 
-const getTokens = catchAsync(async (req, res) => res.json(allTokens))
+export const getTokens = catchAsync(async (req, res) => res.json(allTokens))
 
-const getToken = catchAsync(async (req, res) => {
+export const getToken = catchAsync(async (req, res) => {
   const tokenName = req.params.tokenName
 
   if (!isValidToken(tokenName)) {
@@ -29,14 +29,16 @@ const getToken = catchAsync(async (req, res) => {
 })
 
 // TODO: implement withdrawal getters
-const getWithdrawals = catchAsync(async (req, res) => {
-  res.send("TODO: implement me")
-})
-const getWithdrawal = catchAsync(async (req, res) => {
+export const getWithdrawals = catchAsync(async (req, res) => {
   res.send("TODO: implement me")
 })
 
-const createWithdrawal = catchAsync(async (req, res) => {
+// TODO: implement withdrawal getters
+export const getWithdrawal = catchAsync(async (req, res) => {
+  res.send("TODO: implement me")
+})
+
+export const createWithdrawal = catchAsync(async (req, res) => {
   const tokenName = req.params.tokenName
 
   if (!isValidToken(tokenName)) {
@@ -80,11 +82,3 @@ const createWithdrawal = catchAsync(async (req, res) => {
     )
   }
 })
-
-module.exports = {
-  getTokens,
-  getToken,
-  getWithdrawals,
-  getWithdrawal,
-  createWithdrawal,
-}

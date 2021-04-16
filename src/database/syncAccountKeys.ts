@@ -1,9 +1,9 @@
-const fcl = require("@onflow/fcl")
-const dotenv = require("dotenv")
+import * as fcl from "@onflow/fcl"
+import * as dotenv from "dotenv"
 
 dotenv.config()
 
-const {PrismaClient} = require("@prisma/client")
+import {PrismaClient} from "@prisma/client"
 
 const prisma = new PrismaClient()
 

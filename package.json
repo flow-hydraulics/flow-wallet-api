@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "start": "npm run deploy-contracts && npm run db-migrate-dev && npm run db-sync-account-keys && npm run start-api",
-    "start-api": "NODE_ENV=development nodemon ./src/index.js",
+    "start-api": "NODE_ENV=development ts-node-dev --respawn ./src/index.ts",
     "deploy-contracts": "flow project deploy --network=emulator --update",
     "db-migrate-dev": "prisma migrate dev --preview-feature",
     "db-migrate-deploy": "prisma migrate deploy --preview-feature",
-    "db-sync-account-keys": "node ./src/database/syncAccountKeys.js",
+    "db-sync-account-keys": "ts-node ./src/database/syncAccountKeys.ts",
     "lint": "eslint .",
     "lint-fix": "eslint . --fix"
   },
@@ -29,12 +29,17 @@
     "winston": "^3.3.3"
   },
   "devDependencies": {
+    "@types/express": "^4.17.11",
+    "@types/node": "^14.14.39",
     "babel-eslint": "^10.1.0",
     "eslint": "^7.21.0",
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-prettier": "^3.3.1",
     "nodemon": "^2.0.7",
     "prettier": "^2.2.1",
-    "prisma": "^2.20.1"
+    "prisma": "^2.20.1",
+    "ts-node": "^9.1.1",
+    "ts-node-dev": "^1.1.6",
+    "typescript": "^4.2.4"
   }
 }

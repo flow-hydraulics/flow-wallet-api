@@ -1,5 +1,5 @@
-const morgan = require("morgan")
-const logger = require("../logger")
+import * as morgan from "morgan"
+import logger from "../logger"
 
 const stream = {
   write: message => logger.info(message),
@@ -15,4 +15,4 @@ const morganMiddleware = morgan(
   {stream, skip}
 )
 
-module.exports = morganMiddleware
+export default morganMiddleware

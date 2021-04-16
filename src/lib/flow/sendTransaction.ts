@@ -1,6 +1,6 @@
-const fcl = require("@onflow/fcl")
+import * as fcl from "@onflow/fcl"
 
-async function sendTransaction({
+export default async function sendTransaction({
   transaction,
   args,
   proposer,
@@ -22,5 +22,3 @@ async function sendTransaction({
 
   return transactionId
 }
-
-module.exports = sendTransaction
