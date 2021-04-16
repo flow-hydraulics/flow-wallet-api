@@ -1,4 +1,5 @@
-require("dotenv").config()
+import * as dotenv from "dotenv"
+dotenv.config()
 
 import * as express from "express"
 import morganMiddleware from "./middleware/morgan"

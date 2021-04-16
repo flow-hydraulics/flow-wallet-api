@@ -19,7 +19,12 @@ async function transfer(template, recipient, amount, authorization, contracts) {
   })
 }
 
-export async function transferFLOW(recipient, amount, authorization, contracts) {
+export async function transferFLOW(
+  recipient,
+  amount,
+  authorization,
+  contracts
+) {
   return transfer(
     transferFLOWTemplate,
     recipient,
@@ -29,7 +34,12 @@ export async function transferFLOW(recipient, amount, authorization, contracts) 
   )
 }
 
-export async function transferFUSD(recipient, amount, authorization, contracts) {
+export async function transferFUSD(
+  recipient,
+  amount,
+  authorization,
+  contracts
+) {
   return transfer(
     transferFUSDTemplate,
     recipient,

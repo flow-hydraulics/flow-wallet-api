@@ -1,14 +1,15 @@
 import * as fcl from "@onflow/fcl"
 
-import {signWithPrivateKey} from "./crypto"
+import {Account, AccountAuthorization} from "./index"
+import {SignatureAlgorithm, HashAlgorithm, signWithPrivateKey} from "./crypto"
 
 export default function getSigner(
-  signerAddress,
-  signerPrivateKey,
-  signerSigAlgo,
-  signerHashAlgo,
-  signerKeyIndex
-) {
+  signerAddress: string,
+  signerPrivateKey: string,
+  signerSigAlgo: SignatureAlgorithm,
+  signerHashAlgo: HashAlgorithm,
+  signerKeyIndex: number
+): (account?: Account) => Promise<AccountAuthorization> {
   return async (account = {}) => {
     return {
       ...account,

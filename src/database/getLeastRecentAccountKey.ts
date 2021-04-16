@@ -14,7 +14,7 @@ WHERE index = (
 RETURNING index
 `
 
-export default async function getLeastRecentAccountKey() {
+export default async function getLeastRecentAccountKey(): Promise<number> {
   const results = await prisma.$queryRaw(getLeastRecentAccountKeySql)
   return results[0].index
 }

@@ -1,11 +1,7 @@
 import * as httpStatus from "http-status"
 import config from "../config"
-import {
-  tokens,
-  isValidToken,
-  getTokenTransferFunc,
-} from "../lib/fungibleTokens"
-import getSigner from "../lib/flow/getSigner"
+import {tokens, isValidToken, getTokenTransferFunc} from "../lib/fungibleTokens"
+import {getSigner} from "../lib/flow"
 import getLeastRecentAccountKey from "../database/getLeastRecentAccountKey"
 import catchAsync from "../errors/catchAsync"
 import ApiError from "../errors/ApiError"
