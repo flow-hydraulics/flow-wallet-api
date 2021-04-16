@@ -8,7 +8,7 @@ implements a simple custodial wallet service for the Flow blockchain.
 ### 1. Admin
 
 - [x] Single admin account (hot wallet)
-- [ ] [Create user accounts from admin account](https://github.com/onflow/flow-wallet-api-node-demo/issues/1)
+- [ ] [Create user accounts (using admin account)](https://github.com/onflow/flow-wallet-api-node-demo/issues/1)
 
 ### 2. Fungible Tokens
 
