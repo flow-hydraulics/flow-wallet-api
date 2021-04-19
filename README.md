@@ -19,10 +19,12 @@ implements a simple custodial wallet service for the Flow blockchain.
 
 ### 3. Non-Fungible Tokens
 
+- [ ] Set up admin account with non-fungible token collections (`NFT.Collection`)
 - [ ] Send non-fungible token withdrawals from admin account
 - [ ] Detect non-fungible token deposits to admin account
+- [ ] Set up a user account with non-fungible token collections (`NFT.Collection`)
 - [ ] Send non-fungible token withdrawals from a user account
-- [ ] Detect non-fungible token deposits to aa user account
+- [ ] Detect non-fungible token deposits to a user account
 
 ## Getting Started
 
