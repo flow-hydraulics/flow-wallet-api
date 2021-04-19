@@ -3,69 +3,95 @@ package account
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"time"
 
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/config"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
-func Handle(err error) {
+type NFT struct {
+	BaseAddress string
+	Address     string
+	Name        string
+}
+
+type FlowJsonConfig struct {
+	Accounts map[string]FlowJsonConfigAccount `json:"accounts"`
+}
+
+type FlowJsonConfigAccount struct {
+	Address string `json:"address"`
+	Keys    string `json:"keys"`
+}
+
+func handle(err error) {
 	if err != nil {
 		fmt.Println("err:", err.Error())
 		panic(err)
 	}
 }
 
-func ServiceAccount(flowClient *client.Client, confAcc config.FlowConfigAccount) (flow.Address, *flow.AccountKey, crypto.Signer) {
-	sigAlgo := crypto.StringToSignatureAlgorithm(confAcc.SigAlgo)
-	privateKey, err := crypto.DecodePrivateKeyHex(sigAlgo, confAcc.Keys)
-	Handle(err)
+func authorize(ctx context.Context, c *client.Client, authAcct Account) (flow.Address, *flow.AccountKey, crypto.Signer) {
+	privateKey, err := crypto.DecodePrivateKeyHex(crypto.ECDSA_P256, authAcct.PrivateKey)
+	handle(err)
 
-	addr := flow.HexToAddress(confAcc.Address)
-	acc, err := flowClient.GetAccount(context.Background(), addr)
-	Handle(err)
+	addr := flow.HexToAddress(authAcct.Address)
+	acc, err := c.GetAccount(ctx, addr)
+	handle(err)
 
 	accountKey := acc.Keys[0]
 	signer := crypto.NewInMemorySigner(privateKey, accountKey.HashAlgo)
+
 	return addr, accountKey, signer
 }
 
-func RandomPrivateKey() crypto.PrivateKey {
+func randomPrivateKey() crypto.PrivateKey {
 	seed := make([]byte, crypto.MinSeedLength)
 	_, err := rand.Read(seed)
-	Handle(err)
+	handle(err)
 
 	privateKey, err := crypto.GeneratePrivateKey(crypto.ECDSA_P256, seed)
-	Handle(err)
+	handle(err)
 
 	return privateKey
 }
 
-func GetReferenceBlockId(flowClient *client.Client) flow.Identifier {
-	block, err := flowClient.GetLatestBlock(context.Background(), true)
-	Handle(err)
+func getReferenceBlockId(ctx context.Context, c *client.Client) flow.Identifier {
+	block, err := c.GetLatestBlock(ctx, true)
+	handle(err)
 
 	return block.ID
 }
 
-func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) *flow.TransactionResult {
+func waitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) *flow.TransactionResult {
 	result, err := c.GetTransactionResult(ctx, id)
-	Handle(err)
-
-	fmt.Printf("Waiting for transaction %s to be sealed...\n", id)
+	handle(err)
 
 	for result.Status != flow.TransactionStatusSealed {
 		time.Sleep(time.Second)
-		fmt.Print(".")
 		result, err = c.GetTransactionResult(ctx, id)
-		Handle(err)
+		handle(err)
 	}
 
-	fmt.Println()
-	fmt.Printf("Transaction %s sealed\n", id)
-
 	return result
+}
+
+func ReadFromFlowFile(configPath string, acctName string) Account {
+	jsonFile, err := ioutil.ReadFile(configPath)
+	handle(err)
+
+	var conf FlowJsonConfig
+	err = json.Unmarshal(jsonFile, &conf)
+	handle(err)
+
+	acct := conf.Accounts[acctName]
+
+	return Account{
+		Address:    acct.Address,
+		PrivateKey: acct.Keys,
+	}
 }

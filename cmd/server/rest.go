@@ -5,15 +5,15 @@ import (
 	"log"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	conf := config.ReadFile(".flow/flow.json")
-	serviceAcc := conf.Accounts["emulator-account"]
+	ctx := context.Background()
+
+	serviceAcct := account.ReadFromFlowFile("../../flow.json", "emulator-account")
 
 	flowClient, err := client.New("localhost:3569", grpc.WithInsecure())
 	if err != nil {
@@ -27,17 +27,19 @@ func main() {
 
 	// Just to test
 	app.Get("/latestblock", func(c *fiber.Ctx) error {
-		latestBlock, err := flowClient.GetLatestBlock(context.Background(), true)
+		latestBlock, err := flowClient.GetLatestBlock(ctx, true)
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		return c.SendString(latestBlock.ID.String())
 	})
 
 	// Just to test
 	app.Get("/generate", func(c *fiber.Ctx) error {
-		_, _, myAddress := account.CreateRandom(flowClient, serviceAcc)
-		return c.SendString(myAddress.Hex())
+		newAcct := account.CreateRandom(ctx, flowClient, serviceAcct)
+
+		return c.SendString(newAcct.Address)
 	})
 
 	log.Fatal(app.Listen(":3000"))
