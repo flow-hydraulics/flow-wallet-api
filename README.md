@@ -1,5 +1,8 @@
 # Flow Wallet API Demo (Node.js + express)
 
+> :warning: This demo is a work in progress.
+
+
 This is a demonstration of a RESTful API that
 implements a simple custodial wallet service for the Flow blockchain.
 
