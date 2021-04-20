@@ -114,7 +114,7 @@ curl --request GET \
 
 #### List all withdrawals of a token type
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 `GET /v1/fungible-tokens/{tokenName}/withdrawals`
 
@@ -126,7 +126,7 @@ Parameters
 
 #### Get details of a token withdrawal
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 `GET /v1/fungible-tokens/{tokenName}/withdrawals/{transactionId}`
 
@@ -172,11 +172,11 @@ curl --request GET \
 
 ### Non-Fungible Tokens
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 #### List all tokens
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 `GET /v1/non-fungible-tokens`
 
@@ -191,7 +191,7 @@ curl --request GET \
 
 #### Get details of a token
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 `GET /v1/non-fungible-tokens/{tokenName}`
 
@@ -203,7 +203,7 @@ Parameters
 
 #### List all withdrawals of a token type
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 `GET /v1/non-fungible-tokens/{tokenName}/withdrawals`
 
@@ -215,7 +215,7 @@ Parameters
 
 #### Get details of a token withdrawal
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 `GET /v1/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}`
 
@@ -228,7 +228,7 @@ Parameters
 
 #### Create a token withdrawal
 
-:warning: _Not yet implemented_
+> :warning: Not yet implemented
 
 `POST /v1/non-fungible-tokens/{tokenName}/withdrawals`
 
