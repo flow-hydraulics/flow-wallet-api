@@ -19,6 +19,8 @@ implements a simple custodial wallet service for the Flow blockchain.
 - [ ] [Detect fungible token deposits to admin account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/2)
 - [ ] [Send fungible token withdrawals from a user account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/3)
 - [ ] [Detect fungible token deposits to a user account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/4)
+- [ ] View the fungible token balance of the admin account
+- [ ] View the fungible token balance of a user account
 
 ### 3. Non-Fungible Tokens
 
@@ -28,6 +30,8 @@ implements a simple custodial wallet service for the Flow blockchain.
 - [ ] Set up a user account with non-fungible token collections (`NFT.Collection`)
 - [ ] Send non-fungible token withdrawals from a user account
 - [ ] Detect non-fungible token deposits to a user account
+- [ ] View the non-fungible tokens owned by the admin account
+- [ ] View the non-fungible tokens owned by a user account
 
 ## Getting Started
 
