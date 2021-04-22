@@ -10,9 +10,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model AccountKey {
-  @@map(name: "account_keys")
+model AdminSignerKey {
+  @@map(name: "admin_signer_keys")
 
-  index        Int      @id
-  last_used_at DateTime @updatedAt
+  index      Int      @id
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }

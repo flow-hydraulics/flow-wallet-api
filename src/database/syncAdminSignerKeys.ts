@@ -21,25 +21,25 @@ async function main() {
   const account = await getAccount(adminAddress)
 
   console.log(
-    `Fetched account information for ${adminAddress} from ${accessAPIHost}\n`
+    `Fetched admin account information for ${adminAddress} from ${accessAPIHost}\n`
   )
 
   // truncate existing keys
-  const {count} = await prisma.accountKey.deleteMany({where: {}})
+  const {count} = await prisma.adminSignerKey.deleteMany({where: {}})
 
-  console.log(`Removed ${count} existing key(s) from DB\n`)
+  console.log(`Removed ${count} existing admin key(s) from DB\n`)
 
   await Promise.all(
     account.keys.map(async key => {
       console.log(`- Inserting key ${key.index}`)
 
-      await prisma.accountKey.create({
+      await prisma.adminSignerKey.create({
         data: {index: key.index},
       })
     })
   )
 
-  console.log(`\nInserted ${account.keys.length} key(s) into DB`)
+  console.log(`\nInserted ${account.keys.length} admin key(s) into DB`)
 }
 
 main()

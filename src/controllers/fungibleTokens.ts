@@ -1,8 +1,7 @@
 import * as httpStatus from "http-status"
 import config from "../config"
 import {tokens, isValidToken, getTokenTransferFunc} from "../lib/fungibleTokens"
-import {getAccountAuthorization} from "../lib/flow"
-import getLeastRecentAccountKey from "../database/getLeastRecentAccountKey"
+import {getAccountAuthorization} from "../services/accounts"
 import catchAsync from "../errors/catchAsync"
 import ApiError from "../errors/ApiError"
 import InvalidFungibleTokenError from "../errors/InvalidFungibleTokenError"
@@ -35,6 +34,7 @@ export const getWithdrawal = catchAsync(async (req, res) => {
 })
 
 export const createWithdrawal = catchAsync(async (req, res) => {
+  const address = req.params.address
   const tokenName = req.params.tokenName
 
   if (!isValidToken(tokenName)) {
@@ -44,15 +44,7 @@ export const createWithdrawal = catchAsync(async (req, res) => {
   // TODO: validate recipient and amount
   const {recipient, amount} = req.body
 
-  const adminKeyIndex = await getLeastRecentAccountKey()
-
-  const authorization = getAccountAuthorization(
-    config.adminAddress,
-    config.adminPrivateKey,
-    config.adminSigAlgo,
-    config.adminHashAlgo,
-    adminKeyIndex
-  )
+  const authorization = await getAccountAuthorization(address)
 
   const transfer = getTokenTransferFunc(tokenName)
 
@@ -72,6 +64,7 @@ export const createWithdrawal = catchAsync(async (req, res) => {
 
     res.json(response)
   } catch (e) {
+    console.log(e)
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       "failed to complete withdrawal"

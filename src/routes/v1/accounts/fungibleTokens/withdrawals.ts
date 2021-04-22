@@ -1,5 +1,5 @@
 import * as express from "express"
-import * as fungibleTokensController from "../../../controllers/fungibleTokens"
+import * as fungibleTokensController from "../../../../controllers/fungibleTokens"
 
 const router = express.Router({mergeParams: true})
 

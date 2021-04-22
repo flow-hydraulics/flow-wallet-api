@@ -63,6 +63,80 @@ npm run start
 
 ## API Routes
 
+### Accounts
+
+#### List all accounts
+
+> :warning: Not yet implemented
+
+`GET /v1/accounts`
+
+Example
+
+```sh
+curl --request GET \
+  --url http://localhost:3000/v1/accounts
+```
+
+```json
+[
+  {
+    "address": "0xf8d6e0586b0a20c7"
+  },
+  {
+    "address": "0xe467b9dd11fa00df"
+  }
+]
+```
+
+---
+
+### Get an account
+
+> :warning: Not yet implemented
+
+`GET /v1/accounts/{address}`
+
+Parameters
+
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
+
+Example
+
+```sh
+curl --request GET \
+  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7
+```
+
+```json
+{
+  "address": "0xf8d6e0586b0a20c7"
+}
+```
+
+---
+
+### Create an account
+
+> :warning: Not yet implemented
+
+`POST /v1/accounts`
+
+Example
+
+```sh
+curl --request POST \
+  --url http://localhost:3000/v1/accounts
+```
+
+```json
+{
+  "address": "0xe467b9dd11fa00df"
+}
+```
+
+---
+
 ### Fungible Tokens
 
 Supported tokens:
@@ -71,13 +145,17 @@ Supported tokens:
 
 #### List all tokens
 
-`GET /v1/fungible-tokens`
+`GET /v1/accounts/{address}/fungible-tokens`
+
+Parameters
+
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 
 Example
 
 ```sh
 curl --request GET \
-  --url http://localhost:3000/v1/fungible-tokens
+  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/fungible-tokens
 ```
 
 ```json
@@ -93,24 +171,26 @@ curl --request GET \
 
 ---
 
-#### Get details of a token
+#### Get details of a token type
 
-`GET /v1/fungible-tokens/{tokenName}`
+`GET /v1/accounts/{address}/fungible-tokens/{tokenName}`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the fungible token (e.g. "flow")
 
 Example
 
 ```sh
 curl --request GET \
-  --url http://localhost:3000/v1/fungible-tokens/flow
+  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/fungible-tokens/flow
 ```
 
 ```json
 {
-  "name": "flow"
+  "name": "flow", 
+  "balance": "42.0"
 }
 ```
 
@@ -120,10 +200,11 @@ curl --request GET \
 
 > :warning: Not yet implemented
 
-`GET /v1/fungible-tokens/{tokenName}/withdrawals`
+`GET /v1/accounts/{v1/accounts/{address}/fungible-tokens}/fungible-tokens/{tokenName}/withdrawals`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the fungible token (e.g. "flow")
 
 ---
@@ -132,10 +213,11 @@ Parameters
 
 > :warning: Not yet implemented
 
-`GET /v1/fungible-tokens/{tokenName}/withdrawals/{transactionId}`
+`GET /v1/accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the fungible token (e.g. "flow")
 - `transactionId`: The Flow transaction ID for the withdrawal
 
@@ -143,10 +225,11 @@ Parameters
 
 #### Create a token withdrawal
 
-`POST /v1/fungible-tokens/{tokenName}/withdrawals`
+`POST /v1/accounts/{address}/fungible-tokens/{tokenName}/withdrawals`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the fungible token (e.g. "flow")
 
 Body (JSON)
@@ -158,16 +241,16 @@ Body (JSON)
 Example
 
 ```sh
-curl --request GET \
-  --url http://localhost:3000/v1/fungible-tokens \
+curl --request POST \
+  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/fungible-tokens/fusd/withdrawls \
   --header 'Content-Type: application/json' \
-  --data '{ "recipient": "0xf8d6e0586b0a20c7", "amount": "123.456" }'
+  --data '{ "recipient": "0xe467b9dd11fa00df", "amount": "123.456" }'
 ```
 
 ```json
 {
   "transactionId": "18647b584a03345f3b2d2c4d9ab2c4179ae1b124a7f62ef9f33910e5ca8b353c",
-  "recipient": "0xf8d6e0586b0a20c7",
+  "recipient": "0xe467b9dd11fa00df",
   "amount": "123.456"
 }
 ```
@@ -182,13 +265,17 @@ curl --request GET \
 
 > :warning: Not yet implemented
 
-`GET /v1/non-fungible-tokens`
+`GET /v1/accounts/{address}/non-fungible-tokens`
+
+Parameters
+
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 
 Example
 
 ```sh
 curl --request GET \
-  --url http://localhost:3000/v1/non-fungible-tokens
+  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/non-fungible-tokens
 ```
 
 ---
@@ -197,10 +284,11 @@ curl --request GET \
 
 > :warning: Not yet implemented
 
-`GET /v1/non-fungible-tokens/{tokenName}`
+`GET /v1/accounts/{address}/non-fungible-tokens/{tokenName}`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
 
 ---
@@ -209,10 +297,11 @@ Parameters
 
 > :warning: Not yet implemented
 
-`GET /v1/non-fungible-tokens/{tokenName}/withdrawals`
+`GET /v1/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
 
 ---
@@ -221,10 +310,11 @@ Parameters
 
 > :warning: Not yet implemented
 
-`GET /v1/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}`
+`GET /v1/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
 - `transactionId`: The Flow transaction ID for the withdrawal
 
@@ -234,10 +324,11 @@ Parameters
 
 > :warning: Not yet implemented
 
-`POST /v1/non-fungible-tokens/{tokenName}/withdrawals`
+`POST /v1/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals`
 
 Parameters
 
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
 - `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
 
 Body (JSON)

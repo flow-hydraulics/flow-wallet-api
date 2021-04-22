@@ -1,8 +1,8 @@
 import * as express from "express"
-import fungibleTokensRoute from "./fungibleTokens"
+import accounts from "./accounts"
 
 const router = express.Router()
 
-router.use("/fungible-tokens", fungibleTokensRoute)
+router.use("/accounts", accounts)
 
 export default router

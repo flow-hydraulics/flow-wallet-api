@@ -1,8 +1,8 @@
 import * as express from "express"
-import * as fungibleTokensController from "../../../controllers/fungibleTokens"
+import * as fungibleTokensController from "../../../../controllers/fungibleTokens"
 import withdrawals from "./withdrawals"
 
-const router = express.Router()
+const router = express.Router({mergeParams: true})
 
 router.route("/").get(fungibleTokensController.getTokens)
 
