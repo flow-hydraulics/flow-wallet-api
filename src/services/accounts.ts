@@ -51,17 +51,11 @@ export const getAccountAuthorization = async (address: string): Promise<AccountA
 
   const keyIndex = await getLeastRecentAdminSignerKey()
 
-  console.log("Foo")
-
-  const auth = getAuthorization(
+  return getAuthorization(
     account.address,
     privateKey,
     account.sigAlgo,
     account.hashAlgo,
     keyIndex,
   )
-
-  console.log("Foo 1")
-
-  return auth
 }
