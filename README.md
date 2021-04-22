@@ -13,7 +13,12 @@ implements a simple custodial wallet service for the Flow blockchain.
 - [x] Single admin account (hot wallet)
 - [ ] [Create user accounts (using admin account)](https://github.com/onflow/flow-wallet-api-node-demo/issues/1)
 
-### 2. Fungible Tokens
+### 2. Transaction Execution
+
+- [ ] Send an arbitrary transaction from the admin account
+- [ ] Send an arbitrary transaction from a user account
+
+### 3. Fungible Tokens
 
 - [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
 - [ ] [Detect fungible token deposits to admin account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/2)
@@ -22,7 +27,7 @@ implements a simple custodial wallet service for the Flow blockchain.
 - [ ] View the fungible token balance of the admin account
 - [ ] View the fungible token balance of a user account
 
-### 3. Non-Fungible Tokens
+### 4. Non-Fungible Tokens
 
 - [ ] Set up admin account with non-fungible token collections (`NFT.Collection`)
 - [ ] Send non-fungible token withdrawals from admin account
@@ -132,6 +137,37 @@ curl --request POST \
 ```json
 {
   "address": "0xe467b9dd11fa00df"
+}
+```
+
+---
+
+### Transaction Execution
+
+`POST /v1/accounts/{address}/transactions`
+
+Parameters
+
+- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
+
+Body (JSON)
+
+- `code`: The Cadence code to execute in the transaction
+  - The code must always specify exactly one authorizer (i.e. `prepare(auth: AuthAccount)`)
+
+Example
+
+```sh
+curl --request POST \
+  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/transactions \
+  --header 'Content-Type: application/json' \
+  --data '{ "code": "transaction { prepare(auth: AuthAccount) { log(\"Hello, World!\") } }" }'
+```
+
+```json
+{
+  "transactionId": "18647b584a03345f3b2d2c4d9ab2c4179ae1b124a7f62ef9f33910e5ca8b353c",
+  "error": null,
 }
 ```
 
