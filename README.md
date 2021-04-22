@@ -96,7 +96,7 @@ curl --request GET \
 
 ---
 
-### Get an account
+#### Get an account
 
 > :warning: Not yet implemented
 
@@ -121,7 +121,7 @@ curl --request GET \
 
 ---
 
-### Create an account
+#### Create an account
 
 > :warning: Not yet implemented
 
@@ -143,6 +143,10 @@ curl --request POST \
 ---
 
 ### Transaction Execution
+
+#### Execute a transaction
+
+> :warning: Not yet implemented
 
 `POST /v1/accounts/{address}/transactions`
 
