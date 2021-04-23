@@ -1,4 +1,4 @@
-package postgres
+package memory
 
 import (
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
@@ -9,7 +9,9 @@ type DataStore struct {
 	store.AccountStore
 }
 
-type AccountStore struct{}
+type AccountStore struct {
+	StoredAccounts map[uuid.UUID]store.Account
+}
 
 func NewDataStore() (*DataStore, error) {
 	return &DataStore{
@@ -18,11 +20,11 @@ func NewDataStore() (*DataStore, error) {
 }
 
 func NewAccountStore() *AccountStore {
-	return &AccountStore{}
+	return &AccountStore{StoredAccounts: make(map[uuid.UUID]store.Account)}
 }
 
 func (s *AccountStore) Account(id uuid.UUID) (store.Account, error) {
-	panic("not implemented") // TODO: Implement
+	return s.StoredAccounts[id], nil
 }
 
 func (s *AccountStore) Accounts() ([]store.Account, error) {

@@ -3,8 +3,12 @@ package store
 import "github.com/google/uuid"
 
 type DataStore interface {
+	AccountStore
+}
+
+type AccountStore interface {
 	Account(id uuid.UUID) (Account, error)
 	Accounts() ([]Account, error)
-	Transaction(id uuid.UUID) (Transaction, error)
-	Transactions() ([]Transaction, error)
+	CreateAccount(a *Account) error
+	DeleteAccount(id uuid.UUID) error
 }
