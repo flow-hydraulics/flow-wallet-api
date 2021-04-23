@@ -11,7 +11,7 @@ import (
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
 	kms "github.com/eqlabs/flow-nft-wallet-service/pkg/store/google_kms"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/postgres"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/memory"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err := postgres.NewDataStore()
+	db, err := memory.NewDataStore()
 	if err != nil {
 		log.Fatal(err)
 	}
