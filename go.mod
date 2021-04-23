@@ -3,7 +3,7 @@ module github.com/eqlabs/flow-nft-wallet-service
 go 1.16
 
 require (
-	github.com/google/uuid v1.2.0 // indirect
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/onflow/flow-go-sdk v0.17.0
 	github.com/sirupsen/logrus v1.8.1 // indirect
