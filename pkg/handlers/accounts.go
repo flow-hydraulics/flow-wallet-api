@@ -13,8 +13,8 @@ type Accounts Server
 func NewAccounts(
 	l *log.Logger,
 	c *client.Client,
-	db *store.DataStore,
-	ks *store.KeyStore) *Accounts {
+	db store.DataStore,
+	ks store.KeyStore) *Accounts {
 	return &Accounts{l, c, db, ks}
 }
 

@@ -13,8 +13,8 @@ type Transactions Server
 func NewTransactions(
 	l *log.Logger,
 	c *client.Client,
-	db *store.DataStore,
-	ks *store.KeyStore) *Transactions {
+	db store.DataStore,
+	ks store.KeyStore) *Transactions {
 	return &Transactions{l, c, db, ks}
 }
 

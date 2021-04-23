@@ -13,8 +13,8 @@ type FungibleTokens Server
 func NewFungibleTokens(
 	l *log.Logger,
 	c *client.Client,
-	db *store.DataStore,
-	ks *store.KeyStore) *FungibleTokens {
+	db store.DataStore,
+	ks store.KeyStore) *FungibleTokens {
 	return &FungibleTokens{l, c, db, ks}
 }
 

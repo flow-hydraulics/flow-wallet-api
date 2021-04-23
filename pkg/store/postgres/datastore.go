@@ -5,7 +5,9 @@ import (
 	"github.com/google/uuid"
 )
 
-type DataStore struct{}
+type DataStore struct {
+	store.DataStore
+}
 
 func NewDataStore() (*DataStore, error) {
 	return &DataStore{}, nil
