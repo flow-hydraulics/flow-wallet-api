@@ -46,25 +46,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Account'
-    put:
-      description: Edit account public keys.
-      requestBody:
-        description: "NOTE: Will overwrite old keys. Send new public keys for the account."
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                newPubKeys:
-                  $ref: '#/components/schemas/Account/properties/pubKeys'
-      responses:
-        200:
-          description: Account updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Account'
     delete:
       description: Delete an account
       responses:
@@ -225,10 +206,6 @@ components:
         address:
           type: string
           example: '0x1'
-        pubKeys:
-          type: array
-          items:
-            type: string
         fungibleTokens:
           type: array
           items:
