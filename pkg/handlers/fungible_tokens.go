@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
+	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
@@ -20,6 +21,8 @@ func NewFungibleTokens(
 
 func (s *FungibleTokens) Details(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Fungible token details")
+	vars := mux.Vars(r)
+	s.l.Println(vars)
 }
 
 func (s *FungibleTokens) Init(rw http.ResponseWriter, r *http.Request) {

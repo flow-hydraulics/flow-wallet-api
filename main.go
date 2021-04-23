@@ -49,13 +49,15 @@ func main() {
 
 	r := mux.NewRouter()
 
-	ra := r.PathPrefix("/accounts").Subrouter()
+	rv := r.PathPrefix("/{apiVersion}").Subrouter()
+
+	ra := rv.PathPrefix("/accounts").Subrouter()
 	ra.HandleFunc("", accounts.List)
 	ra.HandleFunc("", accounts.Create).Methods("POST")
 
 	raa := ra.PathPrefix("/{address}").Subrouter()
 	raa.HandleFunc("", accounts.Details).Methods("GET")
-	raa.HandleFunc("", accounts.Update).Methods("PATCH")
+	raa.HandleFunc("", accounts.Update).Methods("PUT")
 	raa.HandleFunc("", accounts.Delete).Methods("DELETE")
 	raa.HandleFunc("/transactions", transactions.SendTransaction).Methods("POST")
 
