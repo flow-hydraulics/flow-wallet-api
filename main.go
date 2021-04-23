@@ -49,18 +49,22 @@ func main() {
 
 	r := mux.NewRouter()
 
+	// Catch the api version
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
+	// Handle "/accounts"
 	ra := rv.PathPrefix("/accounts").Subrouter()
 	ra.HandleFunc("", accounts.List)
 	ra.HandleFunc("", accounts.Create).Methods("POST")
 
+	// Handle "/accounts/{address}"
 	raa := ra.PathPrefix("/{address}").Subrouter()
 	raa.HandleFunc("", accounts.Details).Methods("GET")
 	raa.HandleFunc("", accounts.Update).Methods("PUT")
 	raa.HandleFunc("", accounts.Delete).Methods("DELETE")
 	raa.HandleFunc("/transactions", transactions.SendTransaction).Methods("POST")
 
+	// Handle "/accounts/{address}/fungible-tokens/{tokenName}"
 	rft := raa.PathPrefix("/fungible-tokens/{tokenName}").Subrouter()
 	rft.HandleFunc("", fungibleTokens.Details).Methods("GET")
 	rft.HandleFunc("", fungibleTokens.Init).Methods("POST")
