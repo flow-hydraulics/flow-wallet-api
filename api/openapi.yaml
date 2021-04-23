@@ -1,0 +1,279 @@
+openapi: 3.0.1
+
+info:
+  title: Flow Custodial Wallet API
+  description: ""
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/v1
+
+paths:
+  '/accounts':
+    get:
+      description: List accounts.
+      parameters:
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+    post:
+      description: Create a new account.
+      responses:
+        201:
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+  '/accounts/{address}':
+    parameters:
+      - $ref: '#/components/parameters/address'
+    get:
+      description: Get details about an account.
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+    patch:
+      description: Edit account public keys.
+      requestBody:
+        description: "NOTE: Will overwrite old keys. Send new public keys for the account."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newPubKeys:
+                  $ref: '#/components/schemas/Account/properties/pubKeys'
+      responses:
+        200:
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+    delete:
+      description: Delete an account
+      responses:
+        200:
+          description: Account deleted
+
+  '/accounts/{address}/transactions':
+    parameters:
+      - $ref: '#/components/parameters/address'
+    post:
+      description: Execute a transaction on behalf of the account.
+      responses:
+        200:
+          description: Transaction executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    $ref: '#/components/schemas/FungibleTokenWithdrawal/properties/transactionId'
+
+  '/accounts/{address}/fungible-tokens/{tokenName}':
+    parameters:
+      - $ref: '#/components/parameters/address'
+      - $ref: '#/components/parameters/tokenName'
+    get:
+      description: Get details regarding the token for this account.
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FungibleTokenAccountDetails'
+    post:
+      description: Initiate the account to be able to receive a token type.
+      requestBody:
+        description: ""
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tokenAddress:
+                  $ref: '#/components/schemas/FungibleToken/properties/address'
+      responses:
+        200:
+          description: Account initiated for token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+  '/accounts/{address}/fungible-tokens/{tokenName}/withdrawals':
+    parameters:
+      - $ref: '#/components/parameters/address'
+      - $ref: '#/components/parameters/tokenName'
+      - $ref: '#/components/parameters/skip'
+      - $ref: '#/components/parameters/limit'
+    get:
+      description: List all withdrawals of a token type for an account.
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FungibleTokenWithdrawal'
+    post:
+      description: Create a token withdrawal
+      requestBody:
+        description: ""
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  $ref: '#/components/schemas/FungibleTokenWithdrawal/properties/amount'
+                recipient:
+                  $ref: '#/components/schemas/FungibleTokenWithdrawal/properties/recipient'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FungibleTokenWithdrawal'
+
+  '/accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}':
+    parameters:
+      - $ref: '#/components/parameters/address'
+      - $ref: '#/components/parameters/tokenName'
+      - in: path
+        name: transactionId
+        required: true
+        schema:
+          $ref: '#/components/schemas/Transaction/properties/id'
+    get:
+      description: Get details of a token withdrawal for an account.
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FungibleTokenWithdrawal'
+
+components:
+  parameters:
+    skip:
+      name: skip
+      in: query
+      description: number of items to skip
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 0
+    limit:
+      name: limit
+      in: query
+      description: max records to return
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 1000
+    address:
+      name: address
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Account/properties/address'
+    tokenName:
+      in: path
+      name: tokenName
+      required: true
+      schema:
+         $ref: '#/components/schemas/FungibleToken/properties/name'
+  schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "18647b584a03345f3b2d2c4d9ab2c4179ae1b124a7f62ef9f33910e5ca8b353c"
+    Account:
+      type: object
+      properties:
+        address:
+          type: string
+          example: '0x1'
+        pubKeys:
+          type: array
+          items:
+            type: string
+        fungibleTokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/FungibleToken'
+        nonFungibleTokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/NonFungibleToken'
+    FungibleToken:
+      type: object
+      properties:
+        address:
+          type: string
+          example: '0x1654653399040a61'
+        name:
+          type: string
+          example: FlowToken
+    FungibleTokenAccountDetails:
+      type: object
+      properties:
+        balance:
+          type: number
+          format: float
+          example: 1.34
+    FungibleTokenWithdrawal:
+      type: object
+      properties:
+        transactionId:
+           $ref: '#/components/schemas/Transaction/properties/id'
+        timestamp:
+          type: string
+          format: date-time
+        recipient:
+          type: string
+          example: "0x2"
+        amount:
+          type: number
+          format: float
+          example: 0.01
+    NonFungibleToken:
+      type: object
+      properties:
+        address:
+          type: string
+          example: '0x0b2a3299cc857e29'
+        name:
+          type: string
+          example: TopShot

@@ -80,18 +80,22 @@ func waitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) *flo
 	return result
 }
 
-func ReadFromFlowFile(configPath string, acctName string) Account {
+func NewFromFlowFile(configPath string, acctName string) (*Account, error) {
 	jsonFile, err := ioutil.ReadFile(configPath)
-	handle(err)
+	if err != nil {
+		return nil, err
+	}
 
 	var conf FlowJsonConfig
 	err = json.Unmarshal(jsonFile, &conf)
-	handle(err)
+	if err != nil {
+		return nil, err
+	}
 
 	acct := conf.Accounts[acctName]
 
-	return Account{
+	return &Account{
 		Address:    acct.Address,
 		PrivateKey: acct.Keys,
-	}
+	}, nil
 }
