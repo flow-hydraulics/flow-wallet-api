@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
+	kms "github.com/eqlabs/flow-nft-wallet-service/pkg/store/google_kms"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/postgres"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk/client"
@@ -23,12 +24,17 @@ func main() {
 
 	l := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
+	fc, err := client.New("localhost:3569", grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	db, err := postgres.NewDataStore()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ks, err := postgres.NewKeyStore()
+	ks, err := kms.NewKeyStore(fc)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,11 +43,6 @@ func main() {
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
-
-	fc, err := client.New("localhost:3569", grpc.WithInsecure())
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	accounts := handlers.NewAccounts(l, fc, db, ks)
 	transactions := handlers.NewTransactions(l, fc, db, ks)
