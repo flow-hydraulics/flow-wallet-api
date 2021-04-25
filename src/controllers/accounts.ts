@@ -1,7 +1,6 @@
-import config from "../config"
 import catchAsync from "../errors/catchAsync"
 import NotFoundError from "../errors/NotFoundError"
-import { getAccountByAddress, queryAccounts } from "../services/accounts"
+import {getAccountByAddress, queryAccounts} from "../services/accounts"
 
 export const getAccounts = catchAsync(async (req, res) => {
   const accounts = await queryAccounts()
@@ -20,6 +19,3 @@ export const getAccount = catchAsync(async (req, res) => {
 
   res.json(account)
 })
-
-// TODO: implement create account function
-export const createAccount = catchAsync(async (req, res) => {})

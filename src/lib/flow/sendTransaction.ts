@@ -4,14 +4,14 @@ import {AccountAuthorization} from "./index"
 
 interface Argument {
   value: string
-  xform: any
+  xform: any // eslint-disable-line
 }
 
 interface Transaction {
-  transaction: string,
-  args: Argument[],
-  proposer: string,
-  authorizations: AccountAuthorization[],
+  transaction: string
+  args: Argument[]
+  proposer: string
+  authorizations: AccountAuthorization[]
   payer: string
 }
 

@@ -1,30 +1,25 @@
 import * as fcl from "@onflow/fcl"
 
 import {AccountAuthorizer} from "./index"
-import {SignatureAlgorithm, HashAlgorithm, signWithPrivateKey} from "./crypto"
+import {Signer} from "./crypto"
+
+const fromHex = (hex: string) => Buffer.from(hex, "hex")
 
 export default function getAuthorization(
-  signerAddress: string,
-  signerPrivateKey: string,
-  signerSigAlgo: SignatureAlgorithm,
-  signerHashAlgo: HashAlgorithm,
-  signerKeyIndex: number
+  address: string,
+  keyIndex: number,
+  signer: Signer
 ): AccountAuthorizer {
   return async (account = {}) => {
     return {
       ...account,
       tempId: "SIGNER",
-      addr: fcl.sansPrefix(signerAddress),
-      keyId: signerKeyIndex,
+      addr: fcl.sansPrefix(address),
+      keyId: keyIndex,
       signingFunction: data => ({
-        addr: fcl.withPrefix(signerAddress),
-        keyId: signerKeyIndex,
-        signature: signWithPrivateKey(
-          signerPrivateKey,
-          signerSigAlgo,
-          signerHashAlgo,
-          data.message
-        ),
+        addr: fcl.withPrefix(address),
+        keyId: keyIndex,
+        signature: signer.sign(fromHex(data.message)).toHex(),
       }),
     }
   }

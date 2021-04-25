@@ -17,6 +17,8 @@ export interface AccountAuthorization {
   signingFunction: (data: {message: string}) => AccountSignature
 }
 
-export type AccountAuthorizer = (account?: Account) => Promise<AccountAuthorization> 
+export type AccountAuthorizer = (
+  account?: Account
+) => Promise<AccountAuthorization>
 
 export {getAuthorization}

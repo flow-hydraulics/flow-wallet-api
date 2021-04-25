@@ -10,7 +10,7 @@ const transferFuncs = {
   [tokenFUSD]: transferFUSD,
 }
 
-export function isValidToken(token) {
+export function isValidToken(token: string): boolean {
   return token in transferFuncs
 }
 
