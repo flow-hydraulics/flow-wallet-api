@@ -1,4 +1,4 @@
-import {HashAlgorithm, SignatureAlgorithm} from "./lib/flow/crypto"
+import {HashAlgorithm, SignatureAlgorithm} from "./lib/crypto"
 
 const chainEmulator = "emulator"
 const chainTestnet = "testnet"
@@ -35,7 +35,7 @@ const config = {
   adminAddress: process.env.ADMIN_ADDRESS || "0xf8d6e0586b0a20c7",
   adminPrivateKey: process.env.ADMIN_PRIVATE_KEY,
   adminSigAlgo: SignatureAlgorithm[process.env.ADMIN_SIG_ALGO || "ECDSA_P256"],
-  adminHashAlgo: (process.env.ADMIN_HASH_ALGO || "SHA3_256") as HashAlgorithm,
+  adminHashAlgo: HashAlgorithm[process.env.ADMIN_HASH_ALGO || "SHA3_256"],
   contracts: getContracts(process.env.CHAIN),
 }
 

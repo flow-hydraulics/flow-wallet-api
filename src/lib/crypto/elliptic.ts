@@ -75,18 +75,32 @@ export class InMemoryPrivateKey {
   private ecKeyPair: elliptic.ec.KeyPair
   private sigAlgo: SignatureAlgorithm
 
-  constructor(privateKey: Buffer, sigAlgo: SignatureAlgorithm) {
-    const ec = getEC(sigAlgo)
-    this.ecKeyPair = ec.keyFromPrivate(privateKey)
+  constructor(ecKeyPair: elliptic.ec.KeyPair, sigAlgo: SignatureAlgorithm) {
+    this.ecKeyPair = ecKeyPair
     this.sigAlgo = sigAlgo
+  }
+
+  public static generate(sigAlgo: SignatureAlgorithm): InMemoryPrivateKey {
+    const ec = getEC(sigAlgo)
+    const ecKeyPair = ec.genKeyPair()
+    return new InMemoryPrivateKey(ecKeyPair, sigAlgo)
+  }
+
+  public static fromBuffer(
+    buffer: Buffer,
+    sigAlgo: SignatureAlgorithm
+  ): InMemoryPrivateKey {
+    const ec = getEC(sigAlgo)
+    const ecKeyPair = ec.keyFromPrivate(buffer)
+    return new InMemoryPrivateKey(ecKeyPair, sigAlgo)
   }
 
   public static fromHex(
     hex: string,
-    sigalgo: SignatureAlgorithm
+    sigAlgo: SignatureAlgorithm
   ): InMemoryPrivateKey {
     const buffer = Buffer.from(hex, "hex")
-    return new InMemoryPrivateKey(buffer, sigalgo)
+    return InMemoryPrivateKey.fromBuffer(buffer, sigAlgo)
   }
 
   sign(digest: Buffer): Signature {
@@ -103,8 +117,12 @@ export class InMemoryPrivateKey {
     return this.sigAlgo
   }
 
+  toBuffer(): Buffer {
+    return this.ecKeyPair.getPrivate().toArrayLike(Buffer, bufferEndianness)
+  }
+
   toHex(): string {
-    return this.ecKeyPair.getPrivate().toArrayLike(Buffer, "be").toString("hex")
+    return this.toBuffer().toString("hex")
   }
 }
 

@@ -1,9 +1,8 @@
 import config from "../config"
-import * as fcl from "@onflow/fcl"
 
 import getLeastRecentAdminSignerKey from "../database/getLeastRecentAdminSignerKey"
 import {AccountAuthorizer, getAuthorization} from "../lib/flow"
-import * as Crypto from "../lib/flow/crypto"
+import * as Crypto from "../lib/crypto"
 
 interface Account {
   address: string
