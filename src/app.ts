@@ -12,6 +12,9 @@ import AccountsService from "./services/accounts"
 import {PrismaClient} from ".prisma/client"
 import FungibleTokensService from "./services/fungibleTokens"
 import FungibleTokensController from "./controllers/fungibleTokens"
+import InMemoryKeyManager from "./lib/keys/inMemory"
+import config from "./config"
+import {getAdminKey} from "./admin"
 
 const app = express()
 
@@ -21,7 +24,15 @@ app.use(express.urlencoded({extended: false}))
 
 const prisma = new PrismaClient()
 
-const accountsService = new AccountsService(prisma)
+const userKeyManager = new InMemoryKeyManager(
+  config.userSigAlgo,
+  config.userHashAlgo,
+  config.userEncryptionKey,
+)
+
+const adminKey = getAdminKey()
+
+const accountsService = new AccountsService(prisma, adminKey, userKeyManager)
 const accountsController = new AccountsController(accountsService)
 
 const fungiblTokensService = new FungibleTokensService(prisma, accountsService)

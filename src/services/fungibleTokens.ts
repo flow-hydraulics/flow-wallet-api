@@ -33,17 +33,17 @@ export default class FungibleTokensService extends Service {
     tokenName: string,
     amount: string
   ): Promise<string> {
-    const authorization = await this.accounts.getAuthorization(sender)
+    const userAuthorization = await this.accounts.getAuthorization(sender)
 
     const transfer = getTokenTransferFunc(tokenName)
 
-    const transactionId = await transfer(
+    const { id } = await transfer(
       recipient,
       amount,
-      authorization,
+      userAuthorization,
       config.contracts
     )
 
-    return transactionId
+    return id
   }
 }

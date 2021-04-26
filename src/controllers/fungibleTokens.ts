@@ -66,7 +66,6 @@ export default class FungibleTokensController {
 
       res.json(response)
     } catch (e) {
-      console.log(e)
       throw new ApiError(
         httpStatus.INTERNAL_SERVER_ERROR,
         "failed to complete withdrawal"

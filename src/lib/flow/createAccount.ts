@@ -1,6 +1,6 @@
 import * as fcl from "@onflow/fcl"
 import * as t from "@onflow/types"
-import * as Crypto from "../crypto"
+import * as dedent from "dedent-js"
 
 import {
   ECDSA_P256,
@@ -10,6 +10,7 @@ import {
   encodeKey,
 } from "@onflow/util-encode-key"
 
+import * as Crypto from "../crypto"
 import sendTransaction from "./sendTransaction"
 import {AccountAuthorizer} from "./index"
 
@@ -25,21 +26,45 @@ const hashAlgos = {
 
 const accountKeyWeight = 1000
 
-const txCreateAccount = `
-transaction(publicKey: String) {
+function txCreateAccount(contracts) {
+  return dedent`
+  import FungibleToken from ${contracts.FungibleToken}
+  import FUSD from ${contracts.FUSD}
 
-  prepare(signer: AuthAccount) {
-    let account = AuthAccount(payer: signer)
-    account.addPublicKey(publicKey.decodeHex())
+  transaction(publicKey: String) {
+
+    let account: AuthAccount
+
+    prepare(signer: AuthAccount) {
+      self.account = AuthAccount(payer: signer)
+    }
+
+    execute {
+      self.account.addPublicKey(publicKey.decodeHex())
+
+      // Add FUSD vault
+      self.account.save(<-FUSD.createEmptyVault(), to: /storage/fusdVault)
+
+      self.account.link<&FUSD.Vault{FungibleToken.Receiver}>(
+          /public/fusdReceiver,
+          target: /storage/fusdVault
+      )
+
+      self.account.link<&FUSD.Vault{FungibleToken.Balance}>(
+          /public/fusdBalance,
+          target: /storage/fusdVault
+      )
+    }
   }
+  `
 }
-`
 
 export async function createAccount(
   publicKey: Crypto.PublicKey,
   sigAlgo: Crypto.SignatureAlgorithm,
   hashAlgo: Crypto.HashAlgorithm,
-  authorization: AccountAuthorizer
+  authorization: AccountAuthorizer,
+  contracts,
 ): Promise<string> {
   const encodedPublicKey = encodeKey(
     publicKey.toHex(),
@@ -49,7 +74,7 @@ export async function createAccount(
   )
 
   const result = await sendTransaction({
-    transaction: txCreateAccount,
+    transaction: txCreateAccount(contracts),
     args: [fcl.arg(encodedPublicKey, t.String)],
     authorizations: [authorization],
     payer: authorization,
