@@ -1,47 +1,47 @@
-import * as Crypto from "../crypto"
+import * as crypto from "../crypto"
 
 import {decrypt, encrypt} from "./encryption"
 
 import {Key, KeyManager, KeyType} from "./index"
 
 class InMemoryKey implements Key {
-  privateKey: Crypto.InMemoryPrivateKey
-  hashAlgo: Crypto.HashAlgorithm
+  privateKey: crypto.InMemoryPrivateKey
+  hashAlgo: crypto.HashAlgorithm
 
   constructor(
-    privateKey: Crypto.InMemoryPrivateKey,
-    hashAlgo: Crypto.HashAlgorithm
+    privateKey: crypto.InMemoryPrivateKey,
+    hashAlgo: crypto.HashAlgorithm
   ) {
     this.privateKey = privateKey
     this.hashAlgo = hashAlgo
   }
 
-  getPublicKey(): Crypto.PublicKey {
+  getPublicKey(): crypto.PublicKey {
     return this.privateKey.getPublicKey()
   }
 
-  getSignatureAlgorithm(): Crypto.SignatureAlgorithm {
+  getSignatureAlgorithm(): crypto.SignatureAlgorithm {
     return this.privateKey.getSignatureAlgorithm()
   }
 
-  getHashAlgorithm(): Crypto.HashAlgorithm {
+  getHashAlgorithm(): crypto.HashAlgorithm {
     return this.hashAlgo
   }
 
-  getSigner(): Crypto.Signer {
-    return new Crypto.InMemorySigner(this.privateKey, this.hashAlgo)
+  getSigner(): crypto.Signer {
+    return new crypto.InMemorySigner(this.privateKey, this.hashAlgo)
   }
 }
 
 export default class InMemoryKeyManager implements KeyManager<InMemoryKey> {
   keyType = KeyType.InMemory
-  sigAlgo: Crypto.SignatureAlgorithm
-  hashAlgo: Crypto.HashAlgorithm
+  sigAlgo: crypto.SignatureAlgorithm
+  hashAlgo: crypto.HashAlgorithm
   encryptionKey: Buffer
 
   constructor(
-    sigAlgo: Crypto.SignatureAlgorithm,
-    hashAlgo: Crypto.HashAlgorithm,
+    sigAlgo: crypto.SignatureAlgorithm,
+    hashAlgo: crypto.HashAlgorithm,
     encryptionKey?: Buffer
   ) {
     this.sigAlgo = sigAlgo
@@ -50,7 +50,7 @@ export default class InMemoryKeyManager implements KeyManager<InMemoryKey> {
   }
 
   generate(): InMemoryKey {
-    const privateKey = Crypto.InMemoryPrivateKey.generate(this.sigAlgo)
+    const privateKey = crypto.InMemoryPrivateKey.generate(this.sigAlgo)
     return new InMemoryKey(privateKey, this.hashAlgo)
   }
 
@@ -71,7 +71,7 @@ export default class InMemoryKeyManager implements KeyManager<InMemoryKey> {
       hex = decrypt(this.encryptionKey, hex)
     }
 
-    const privateKey = Crypto.InMemoryPrivateKey.fromHex(hex, this.sigAlgo)
+    const privateKey = crypto.InMemoryPrivateKey.fromHex(hex, this.sigAlgo)
     return new InMemoryKey(privateKey, this.hashAlgo)
   }
 }

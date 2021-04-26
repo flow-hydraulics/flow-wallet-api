@@ -9,20 +9,20 @@ import {
   encodeKey,
 } from "@onflow/util-encode-key"
 
-import * as Crypto from "../crypto"
+import * as crypto from "../crypto"
 
 import sendTransaction from "./sendTransaction"
 
 import {AccountAuthorizer} from "./index"
 
 const sigAlgos = {
-  [Crypto.SignatureAlgorithm.ECDSA_P256]: ECDSA_P256,
-  [Crypto.SignatureAlgorithm.ECDSA_secp256k1]: ECDSA_secp256k1,
+  [crypto.SignatureAlgorithm.ECDSA_P256]: ECDSA_P256,
+  [crypto.SignatureAlgorithm.ECDSA_secp256k1]: ECDSA_secp256k1,
 }
 
 const hashAlgos = {
-  [Crypto.HashAlgorithm.SHA2_256]: SHA2_256,
-  [Crypto.HashAlgorithm.SHA3_256]: SHA3_256,
+  [crypto.HashAlgorithm.SHA2_256]: SHA2_256,
+  [crypto.HashAlgorithm.SHA3_256]: SHA3_256,
 }
 
 const accountKeyWeight = 1000
@@ -61,9 +61,9 @@ function txCreateAccount(contracts) {
 }
 
 export async function createAccount(
-  publicKey: Crypto.PublicKey,
-  sigAlgo: Crypto.SignatureAlgorithm,
-  hashAlgo: Crypto.HashAlgorithm,
+  publicKey: crypto.PublicKey,
+  sigAlgo: crypto.SignatureAlgorithm,
+  hashAlgo: crypto.HashAlgorithm,
   authorization: AccountAuthorizer,
   contracts: {[key: string]: string}
 ): Promise<string> {

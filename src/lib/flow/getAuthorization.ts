@@ -1,6 +1,6 @@
 import * as fcl from "@onflow/fcl"
 
-import * as Crypto from "../crypto"
+import * as crypto from "../crypto"
 
 import {AccountAuthorizer} from "./index"
 
@@ -9,7 +9,7 @@ const fromHex = (hex: string) => Buffer.from(hex, "hex")
 export default function getAuthorization(
   address: string,
   keyIndex: number,
-  signer: Crypto.Signer
+  signer: crypto.Signer
 ): AccountAuthorizer {
   return async (account = {}) => {
     return {

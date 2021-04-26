@@ -1,4 +1,4 @@
-import * as Crypto from "../crypto"
+import * as crypto from "../crypto"
 
 export enum KeyType {
   InMemory = "in-memory",
@@ -6,10 +6,10 @@ export enum KeyType {
 }
 
 export interface Key {
-  getPublicKey(): Crypto.PublicKey
-  getSignatureAlgorithm(): Crypto.SignatureAlgorithm
-  getHashAlgorithm(): Crypto.HashAlgorithm
-  getSigner(): Crypto.Signer
+  getPublicKey(): crypto.PublicKey
+  getSignatureAlgorithm(): crypto.SignatureAlgorithm
+  getHashAlgorithm(): crypto.HashAlgorithm
+  getSigner(): crypto.Signer
 }
 
 export interface KeyManager<T extends Key> {
