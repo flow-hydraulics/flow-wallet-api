@@ -72,8 +72,6 @@ npm run start
 
 #### List all accounts
 
-> :warning: Not yet implemented
-
 `GET /v1/accounts`
 
 Example
@@ -98,8 +96,6 @@ curl --request GET \
 
 #### Get an account
 
-> :warning: Not yet implemented
-
 `GET /v1/accounts/{address}`
 
 Parameters
@@ -122,8 +118,6 @@ curl --request GET \
 ---
 
 #### Create an account
-
-> :warning: Not yet implemented
 
 `POST /v1/accounts`
 
