@@ -1,6 +1,8 @@
 import * as express from "express"
-import FungibleTokensController from "../../../../controllers/fungibleTokens"
-import catchAsync from "../../../../errors/catchAsync"
+
+import FungibleTokensController from "src/controllers/fungibleTokens"
+import catchAsync from "src/errors/catchAsync"
+
 import createWithdrawalsRouter from "./withdrawals"
 
 function createRouter(

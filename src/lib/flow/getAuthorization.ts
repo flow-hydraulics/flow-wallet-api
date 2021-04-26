@@ -1,7 +1,8 @@
 import * as fcl from "@onflow/fcl"
 
-import {AccountAuthorizer} from "./index"
 import * as Crypto from "../crypto"
+
+import {AccountAuthorizer} from "./index"
 
 const fromHex = (hex: string) => Buffer.from(hex, "hex")
 

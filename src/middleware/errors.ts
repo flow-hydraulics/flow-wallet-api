@@ -1,19 +1,25 @@
 import * as httpStatus from "http-status"
-import config from "../config"
-import logger from "../logger"
-import ApiError from "../errors/ApiError"
+import * as express from "express"
 
-const errorsMiddleware = (err, req, res, next) => {
+import config from "src/config"
+import logger from "src/logger"
+import ApiError from "src/errors/ApiError"
+
+function errorsMiddleware(
+  err: ApiError,
+  req: express.Request,
+  res: express.Response
+): void {
   let {statusCode, message} = err
 
   if (!(err instanceof ApiError)) {
     statusCode = httpStatus.INTERNAL_SERVER_ERROR
-    message = httpStatus[httpStatus.INTERNAL_SERVER_ERROR]
+    message = httpStatus[httpStatus.INTERNAL_SERVER_ERROR] as string
   } else if (
     config.env === "production" &&
     statusCode === httpStatus.INTERNAL_SERVER_ERROR
   ) {
-    message = httpStatus[httpStatus.INTERNAL_SERVER_ERROR]
+    message = httpStatus[httpStatus.INTERNAL_SERVER_ERROR] as string
   }
 
   const response = {

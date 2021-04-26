@@ -1,18 +1,19 @@
-import config from "../config"
-import {AccountAuthorizer, getAuthorization} from "../lib/flow"
-import * as Crypto from "../lib/crypto"
-import Service from "./service"
-import * as models from "../database/models"
-import getLeastRecentAdminSignerKey from "../database/getLeastRecentAdminSignerKey"
+import {PrismaClient} from "@prisma/client"
+
+import {AccountAuthorizer, getAuthorization} from "src/lib/flow"
+import getLeastRecentAdminSignerKey from "src/database/getLeastRecentAdminSignerKey"
+import * as models from "src/database/models"
 import {
   getAccount,
   getAccountKey,
   insertAccount,
   listAccounts,
-} from "../database/accounts"
-import {createAccount} from "../lib/flow/createAccount"
-import {Key, KeyManager} from "../lib/keys"
-import {PrismaClient} from "@prisma/client"
+} from "src/database/accounts"
+import {createAccount} from "src/lib/flow/createAccount"
+import {Key, KeyManager} from "src/lib/keys"
+import config from "src/config"
+
+import Service from "./service"
 
 const adminAccount: models.Account = {
   address: config.adminAddress,
@@ -44,7 +45,7 @@ export default class AccountsService extends Service {
       userKey.getSignatureAlgorithm(),
       userKey.getHashAlgorithm(),
       adminAuthorization,
-      config.contracts,
+      config.contracts
     )
 
     const userKeyType = this.userKeyManager.keyType

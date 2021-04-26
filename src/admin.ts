@@ -1,6 +1,6 @@
-import config from "./config"
-import {KeyType, Key} from "./lib/keys"
-import InMemoryKeyManager from "./lib/keys/inMemory"
+import config from "src/config"
+import {KeyType, Key} from "src/lib/keys"
+import InMemoryKeyManager from "src/lib/keys/inMemory"
 
 export function getAdminKey(): Key {
   switch (config.adminKeyType) {
@@ -12,7 +12,7 @@ export function getAdminKey(): Key {
 function getAdminInMemoryKey(): Key {
   const keyManager = new InMemoryKeyManager(
     config.adminSigAlgo,
-    config.adminHashAlgo,
+    config.adminHashAlgo
   )
 
   return keyManager.load(config.adminPrivateKey)

@@ -1,6 +1,8 @@
 import * as express from "express"
-import AccountsController from "../../controllers/accounts"
-import FungibleTokensController from "../../controllers/fungibleTokens"
+
+import AccountsController from "src/controllers/accounts"
+import FungibleTokensController from "src/controllers/fungibleTokens"
+
 import createAccountsRouter from "./accounts"
 
 function createRouter(

@@ -1,20 +1,17 @@
-import * as dotenv from "dotenv"
-dotenv.config()
-
 import * as express from "express"
-import morganMiddleware from "./middleware/morgan"
-import errorsMiddleware from "./middleware/errors"
-import NotFoundError from "./errors/NotFoundError"
+import {PrismaClient} from "@prisma/client"
 
-import createRouter from "./routes/v1"
-import AccountsController from "./controllers/accounts"
-import AccountsService from "./services/accounts"
-import {PrismaClient} from ".prisma/client"
-import FungibleTokensService from "./services/fungibleTokens"
-import FungibleTokensController from "./controllers/fungibleTokens"
-import InMemoryKeyManager from "./lib/keys/inMemory"
-import config from "./config"
-import {getAdminKey} from "./admin"
+import morganMiddleware from "src/middleware/morgan"
+import errorsMiddleware from "src/middleware/errors"
+import NotFoundError from "src/errors/NotFoundError"
+import createRouter from "src/routes/v1"
+import AccountsController from "src/controllers/accounts"
+import AccountsService from "src/services/accounts"
+import FungibleTokensService from "src/services/fungibleTokens"
+import FungibleTokensController from "src/controllers/fungibleTokens"
+import InMemoryKeyManager from "src/lib/keys/inMemory"
+import config from "src/config"
+import {getAdminKey} from "src/admin"
 
 const app = express()
 
@@ -27,7 +24,7 @@ const prisma = new PrismaClient()
 const userKeyManager = new InMemoryKeyManager(
   config.userSigAlgo,
   config.userHashAlgo,
-  config.userEncryptionKey,
+  config.userEncryptionKey
 )
 
 const adminKey = getAdminKey()

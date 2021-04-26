@@ -2,12 +2,12 @@ import * as fcl from "@onflow/fcl"
 
 import {AccountAuthorizer} from "./index"
 
-interface Argument {
+export interface Argument {
   value: string
   xform: any // eslint-disable-line
 }
 
-type Transaction = {
+export type Transaction = {
   transaction: string
   args: Argument[]
   proposer: AccountAuthorizer
@@ -15,11 +15,11 @@ type Transaction = {
   payer: AccountAuthorizer
 }
 
-interface Event {
+export interface Event {
   data: any // eslint-disable-line
 }
 
-type TransactionResult = {
+export type TransactionResult = {
   id: string
   error: string
   events: Event[]

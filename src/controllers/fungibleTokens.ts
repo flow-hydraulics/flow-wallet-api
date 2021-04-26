@@ -1,8 +1,11 @@
 import * as httpStatus from "http-status"
-import {isValidToken} from "../lib/fungibleTokens"
-import FungibleTokensService from "../services/fungibleTokens"
-import ApiError from "../errors/ApiError"
-import InvalidFungibleTokenError from "../errors/InvalidFungibleTokenError"
+
+import * as express from "express"
+
+import {isValidToken} from "src/lib/fungibleTokens"
+import FungibleTokensService from "src/services/fungibleTokens"
+import ApiError from "src/errors/ApiError"
+import InvalidFungibleTokenError from "src/errors/InvalidFungibleTokenError"
 
 export default class FungibleTokensController {
   private fungibleTokens: FungibleTokensService
@@ -11,13 +14,13 @@ export default class FungibleTokensController {
     this.fungibleTokens = fungibleTokens
   }
 
-  async getTokens(req, res) {
+  async getTokens(req: express.Request, res: express.Response): Promise<void> {
     const tokens = await this.fungibleTokens.query()
 
     res.json(tokens)
   }
 
-  async getToken(req, res) {
+  async getToken(req: express.Request, res: express.Response): Promise<void> {
     const tokenName = req.params.tokenName
 
     if (!isValidToken(tokenName)) {
@@ -30,16 +33,25 @@ export default class FungibleTokensController {
   }
 
   // TODO: implement withdrawal getters
-  async getWithdrawals(req, res) {
+  async getWithdrawals(
+    req: express.Request,
+    res: express.Response
+  ): Promise<void> {
     res.send("TODO: implement me")
   }
 
   // TODO: implement withdrawal getters
-  async getWithdrawal(req, res) {
+  async getWithdrawal(
+    req: express.Request,
+    res: express.Response
+  ): Promise<void> {
     res.send("TODO: implement me")
   }
 
-  async createWithdrawal(req, res) {
+  async createWithdrawal(
+    req: express.Request,
+    res: express.Response
+  ): Promise<void> {
     const sender = req.params.address
     const tokenName = req.params.tokenName
 

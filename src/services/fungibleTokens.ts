@@ -1,6 +1,8 @@
-import {PrismaClient} from ".prisma/client"
-import config from "../config"
-import {getTokenTransferFunc, tokens} from "../lib/fungibleTokens"
+import {PrismaClient} from "@prisma/client"
+
+import config from "src/config"
+import {transfer, tokens} from "src/lib/fungibleTokens"
+
 import Service from "./service"
 import AccountsService from "./accounts"
 
@@ -35,9 +37,8 @@ export default class FungibleTokensService extends Service {
   ): Promise<string> {
     const userAuthorization = await this.accounts.getAuthorization(sender)
 
-    const transfer = getTokenTransferFunc(tokenName)
-
-    const { id } = await transfer(
+    const {id} = await transfer(
+      tokenName,
       recipient,
       amount,
       userAuthorization,

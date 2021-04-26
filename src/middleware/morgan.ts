@@ -1,5 +1,6 @@
 import * as morgan from "morgan"
-import logger from "../logger"
+
+import logger from "src/logger"
 
 const stream = {
   write: message => logger.info(message),

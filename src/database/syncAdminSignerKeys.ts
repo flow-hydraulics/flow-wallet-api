@@ -1,9 +1,8 @@
 import * as fcl from "@onflow/fcl"
 import * as dotenv from "dotenv"
+import {PrismaClient} from "@prisma/client"
 
 dotenv.config()
-
-import {PrismaClient} from "@prisma/client"
 
 const prisma = new PrismaClient()
 

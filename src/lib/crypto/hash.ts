@@ -1,4 +1,5 @@
 import {createHash, Hash} from "crypto"
+
 import {SHA3} from "sha3"
 
 export enum HashAlgorithm {

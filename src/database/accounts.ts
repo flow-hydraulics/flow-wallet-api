@@ -1,5 +1,7 @@
-import {AccountKey, Prisma, PrismaClient} from "@prisma/client"
-import {KeyType} from "../lib/keys"
+import {AccountKey, PrismaClient} from "@prisma/client"
+
+import {KeyType} from "src/lib/keys"
+
 import {Account} from "./models"
 
 export async function insertAccount(

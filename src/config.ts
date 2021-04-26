@@ -1,5 +1,8 @@
-import {HashAlgorithm, SignatureAlgorithm} from "./lib/crypto"
-import {KeyType} from "./lib/keys"
+import * as dotenv from "dotenv"
+dotenv.config()
+
+import {HashAlgorithm, SignatureAlgorithm} from "src/lib/crypto"
+import {KeyType} from "src/lib/keys"
 
 const chainEmulator = "emulator"
 const chainTestnet = "testnet"

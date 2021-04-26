@@ -1,6 +1,6 @@
 import * as dedent from "dedent-js"
 
-export default function template(contracts) {
+export default function template(contracts: {[key: string]: string}): string {
   return dedent`
   import FungibleToken from ${contracts.FungibleToken}
   import FlowToken from ${contracts.FlowToken}

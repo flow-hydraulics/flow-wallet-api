@@ -1,5 +1,7 @@
 import * as Crypto from "../crypto"
-import { decrypt, encrypt } from "./encryption"
+
+import {decrypt, encrypt} from "./encryption"
+
 import {Key, KeyManager, KeyType} from "./index"
 
 class InMemoryKey implements Key {
@@ -40,7 +42,7 @@ export default class InMemoryKeyManager implements KeyManager<InMemoryKey> {
   constructor(
     sigAlgo: Crypto.SignatureAlgorithm,
     hashAlgo: Crypto.HashAlgorithm,
-    encryptionKey?: Buffer,
+    encryptionKey?: Buffer
   ) {
     this.sigAlgo = sigAlgo
     this.hashAlgo = hashAlgo

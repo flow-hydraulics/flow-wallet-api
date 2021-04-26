@@ -1,7 +1,6 @@
 import * as fcl from "@onflow/fcl"
 import * as t from "@onflow/types"
 import * as dedent from "dedent-js"
-
 import {
   ECDSA_P256,
   ECDSA_secp256k1,
@@ -11,7 +10,9 @@ import {
 } from "@onflow/util-encode-key"
 
 import * as Crypto from "../crypto"
+
 import sendTransaction from "./sendTransaction"
+
 import {AccountAuthorizer} from "./index"
 
 const sigAlgos = {
@@ -64,7 +65,7 @@ export async function createAccount(
   sigAlgo: Crypto.SignatureAlgorithm,
   hashAlgo: Crypto.HashAlgorithm,
   authorization: AccountAuthorizer,
-  contracts,
+  contracts: {[key: string]: string}
 ): Promise<string> {
   const encodedPublicKey = encodeKey(
     publicKey.toHex(),
