@@ -8,6 +8,7 @@
     "deploy-contracts": "flow project deploy --network=emulator --update",
     "db-migrate-dev": "prisma migrate dev --preview-feature",
     "db-migrate-deploy": "prisma migrate deploy --preview-feature",
+    "db-generate-client": "prisma generate",
     "db-sync-admin-keys": "ts-node ./src/database/syncAdminSignerKeys.ts",
     "lint": "eslint .",
     "lint-fix": "eslint . --fix"

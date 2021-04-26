@@ -1,21 +1,28 @@
-import catchAsync from "../errors/catchAsync"
 import NotFoundError from "../errors/NotFoundError"
-import {getAccountByAddress, queryAccounts} from "../services/accounts"
+import AccountsService from "../services/accounts"
 
-export const getAccounts = catchAsync(async (req, res) => {
-  const accounts = await queryAccounts()
+export default class AccountsController {
+  private accounts: AccountsService
 
-  res.json(accounts)
-})
-
-export const getAccount = catchAsync(async (req, res) => {
-  const address = req.params.address
-
-  const account = await getAccountByAddress(address)
-
-  if (account === null) {
-    throw new NotFoundError()
+  constructor(accounts: AccountsService) {
+    this.accounts = accounts
   }
 
-  res.json(account)
-})
+  async getAccounts(req, res) {
+    const accounts = await this.accounts.query()
+
+    res.json(accounts)
+  }
+
+  async getAccount(req, res) {
+    const address = req.params.address
+
+    const account = await this.accounts.getByAddress(address)
+
+    if (account === null) {
+      throw new NotFoundError()
+    }
+
+    res.json(account)
+  }
+}

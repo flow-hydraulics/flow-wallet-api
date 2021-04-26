@@ -1,13 +1,26 @@
 import * as express from "express"
-import * as fungibleTokensController from "../../../../controllers/fungibleTokens"
-import withdrawals from "./withdrawals"
+import FungibleTokensController from "../../../../controllers/fungibleTokens"
+import catchAsync from "../../../../errors/catchAsync"
+import createWithdrawalsRouter from "./withdrawals"
 
-const router = express.Router({mergeParams: true})
+function createRouter(
+  fungibleTokens: FungibleTokensController
+): express.Router {
+  const router = express.Router({mergeParams: true})
 
-router.route("/").get(fungibleTokensController.getTokens)
+  const withdrawalsRouter = createWithdrawalsRouter(fungibleTokens)
 
-router.route("/:tokenName").get(fungibleTokensController.getToken)
+  router
+    .route("/")
+    .get(catchAsync((req, res) => fungibleTokens.getTokens(req, res)))
 
-router.use("/:tokenName/withdrawals", withdrawals)
+  router
+    .route("/:tokenName")
+    .get(catchAsync((req, res) => fungibleTokens.getToken(req, res)))
 
-export default router
+  router.use("/:tokenName/withdrawals", withdrawalsRouter)
+
+  return router
+}
+
+export default createRouter

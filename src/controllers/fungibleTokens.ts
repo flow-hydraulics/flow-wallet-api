@@ -1,73 +1,76 @@
 import * as httpStatus from "http-status"
-import config from "../config"
-import {tokens, isValidToken, getTokenTransferFunc} from "../lib/fungibleTokens"
-import {getAccountAuthorization} from "../services/accounts"
-import catchAsync from "../errors/catchAsync"
+import {isValidToken} from "../lib/fungibleTokens"
+import FungibleTokensService from "../services/fungibleTokens"
 import ApiError from "../errors/ApiError"
 import InvalidFungibleTokenError from "../errors/InvalidFungibleTokenError"
 
-const makeToken = tokenName => ({name: tokenName})
-const allTokens = tokens.map(tokenName => makeToken(tokenName))
+export default class FungibleTokensController {
+  private fungibleTokens: FungibleTokensService
 
-export const getTokens = catchAsync(async (req, res) => res.json(allTokens))
-
-export const getToken = catchAsync(async (req, res) => {
-  const tokenName = req.params.tokenName
-
-  if (!isValidToken(tokenName)) {
-    throw new InvalidFungibleTokenError(tokenName)
+  constructor(fungibleTokens: FungibleTokensService) {
+    this.fungibleTokens = fungibleTokens
   }
 
-  const token = makeToken(tokenName)
+  async getTokens(req, res) {
+    const tokens = await this.fungibleTokens.query()
 
-  res.json(token)
-})
-
-// TODO: implement withdrawal getters
-export const getWithdrawals = catchAsync(async (req, res) => {
-  res.send("TODO: implement me")
-})
-
-// TODO: implement withdrawal getters
-export const getWithdrawal = catchAsync(async (req, res) => {
-  res.send("TODO: implement me")
-})
-
-export const createWithdrawal = catchAsync(async (req, res) => {
-  const address = req.params.address
-  const tokenName = req.params.tokenName
-
-  if (!isValidToken(tokenName)) {
-    throw new InvalidFungibleTokenError(tokenName)
+    res.json(tokens)
   }
 
-  // TODO: validate recipient and amount
-  const {recipient, amount} = req.body
+  async getToken(req, res) {
+    const tokenName = req.params.tokenName
 
-  const authorization = await getAccountAuthorization(address)
-
-  const transfer = getTokenTransferFunc(tokenName)
-
-  try {
-    const transactionId = await transfer(
-      recipient,
-      amount,
-      authorization,
-      config.contracts
-    )
-
-    const response = {
-      transactionId,
-      recipient,
-      amount,
+    if (!isValidToken(tokenName)) {
+      throw new InvalidFungibleTokenError(tokenName)
     }
 
-    res.json(response)
-  } catch (e) {
-    console.log(e)
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "failed to complete withdrawal"
-    )
+    const token = await this.fungibleTokens.getByName(tokenName)
+
+    res.json(token)
   }
-})
+
+  // TODO: implement withdrawal getters
+  async getWithdrawals(req, res) {
+    res.send("TODO: implement me")
+  }
+
+  // TODO: implement withdrawal getters
+  async getWithdrawal(req, res) {
+    res.send("TODO: implement me")
+  }
+
+  async createWithdrawal(req, res) {
+    const sender = req.params.address
+    const tokenName = req.params.tokenName
+
+    if (!isValidToken(tokenName)) {
+      throw new InvalidFungibleTokenError(tokenName)
+    }
+
+    // TODO: validate recipient and amount
+    const {recipient, amount} = req.body
+
+    try {
+      const transactionId = await this.fungibleTokens.createWithdrawal(
+        sender,
+        recipient,
+        tokenName,
+        amount
+      )
+
+      const response = {
+        transactionId,
+        recipient,
+        amount,
+      }
+
+      res.json(response)
+    } catch (e) {
+      console.log(e)
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        "failed to complete withdrawal"
+      )
+    }
+  }
+}

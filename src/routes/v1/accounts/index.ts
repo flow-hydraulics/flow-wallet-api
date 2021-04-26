@@ -1,13 +1,28 @@
 import * as express from "express"
-import * as accountsController from "../../../controllers/accounts"
-import fungibleTokens from "./fungibleTokens"
+import AccountsController from "../../../controllers/accounts"
+import FungibleTokensController from "../../../controllers/fungibleTokens"
+import catchAsync from "../../../errors/catchAsync"
+import createFungibleTokensRouter from "./fungibleTokens"
 
-const router = express.Router()
+function createRouter(
+  accounts: AccountsController,
+  fungibleTokens: FungibleTokensController
+): express.Router {
+  const router = express.Router()
 
-router.route("/").get(accountsController.getAccounts)
+  const fungibleTokensRouter = createFungibleTokensRouter(fungibleTokens)
 
-router.route("/:address").get(accountsController.getAccount)
+  router
+    .route("/")
+    .get(catchAsync((req, res) => accounts.getAccounts(req, res)))
 
-router.use("/:address/fungible-tokens", fungibleTokens)
+  router
+    .route("/:address")
+    .get(catchAsync((req, res) => accounts.getAccount(req, res)))
 
-export default router
+  router.use("/:address/fungible-tokens", fungibleTokensRouter)
+
+  return router
+}
+
+export default createRouter

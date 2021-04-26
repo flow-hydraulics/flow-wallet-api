@@ -6,7 +6,12 @@ import morganMiddleware from "./middleware/morgan"
 import errorsMiddleware from "./middleware/errors"
 import NotFoundError from "./errors/NotFoundError"
 
-import routes from "./routes/v1"
+import createRouter from "./routes/v1"
+import AccountsController from "./controllers/accounts"
+import AccountsService from "./services/accounts"
+import {PrismaClient} from ".prisma/client"
+import FungibleTokensService from "./services/fungibleTokens"
+import FungibleTokensController from "./controllers/fungibleTokens"
 
 const app = express()
 
@@ -14,7 +19,19 @@ app.use(morganMiddleware)
 app.use(express.json())
 app.use(express.urlencoded({extended: false}))
 
-app.use("/v1", routes)
+const prisma = new PrismaClient()
+
+const accountsService = new AccountsService(prisma)
+const accountsController = new AccountsController(accountsService)
+
+const fungiblTokensService = new FungibleTokensService(prisma, accountsService)
+const fungiblTokensController = new FungibleTokensController(
+  fungiblTokensService
+)
+
+const v1Router = createRouter(accountsController, fungiblTokensController)
+
+app.use("/v1", v1Router)
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

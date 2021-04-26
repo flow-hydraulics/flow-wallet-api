@@ -1,8 +1,19 @@
 import * as express from "express"
-import accounts from "./accounts"
+import AccountsController from "../../controllers/accounts"
+import FungibleTokensController from "../../controllers/fungibleTokens"
+import createAccountsRouter from "./accounts"
 
-const router = express.Router()
+function createRouter(
+  accounts: AccountsController,
+  fungibleTokens: FungibleTokensController
+): express.Router {
+  const router = express.Router()
 
-router.use("/accounts", accounts)
+  const accountsRouter = createAccountsRouter(accounts, fungibleTokens)
 
-export default router
+  router.use("/accounts", accountsRouter)
+
+  return router
+}
+
+export default createRouter

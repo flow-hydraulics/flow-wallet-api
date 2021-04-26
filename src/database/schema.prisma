@@ -10,6 +10,14 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model Account {
+  @@map(name: "accounts")
+
+  address String @id
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
 model AdminSignerKey {
   @@map(name: "admin_signer_keys")
 

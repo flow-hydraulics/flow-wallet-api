@@ -1,7 +1,5 @@
 import {PrismaClient} from "@prisma/client"
 
-const prisma = new PrismaClient()
-
 const getLeastRecentAccountKeySql = `
 UPDATE admin_signer_keys
 SET updated_at = current_timestamp
@@ -14,7 +12,9 @@ WHERE index = (
 RETURNING index
 `
 
-export default async function getLeastRecentAdminSignerKey(): Promise<number> {
+export default async function getLeastRecentAdminSignerKey(
+  prisma: PrismaClient
+): Promise<number> {
   const results = await prisma.$queryRaw(getLeastRecentAccountKeySql)
   return results[0].index
 }

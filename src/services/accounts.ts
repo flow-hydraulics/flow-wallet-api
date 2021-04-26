@@ -1,60 +1,60 @@
 import config from "../config"
-
-import getLeastRecentAdminSignerKey from "../database/getLeastRecentAdminSignerKey"
 import {AccountAuthorizer, getAuthorization} from "../lib/flow"
 import * as Crypto from "../lib/crypto"
-
-interface Account {
-  address: string
-}
+import Service from "./service"
+import * as models from "../database/models"
+import getLeastRecentAdminSignerKey from "../database/getLeastRecentAdminSignerKey"
+import {insertAccount} from "../database/accounts"
 
 // TODO: add support for user accounts
 //
 // The current API is hard-coded to only support the admin account
-const adminAccount: Account = {
+const adminAccount: models.Account = {
   address: config.adminAddress,
+  created_at: null,
+  updated_at: null,
 }
 
-const allAccounts: Account[] = [adminAccount]
-
-export const queryAccounts = async (): Promise<Account[]> => {
-  return allAccounts
-}
-
-export const getAccountByAddress = async (
-  address: string
-): Promise<Account | null> => {
-  if (address === adminAccount.address) {
-    return adminAccount
+export default class AccountsService extends Service {
+  async create(address: string) {
+    await insertAccount(this.prisma, {address: address})
   }
 
-  return null
-}
+  async query(): Promise<models.Account[]> {
+    // TODO: add support for user accounts
+    return [adminAccount]
+  }
 
-const getSignerByAddress = async (
-  address: string
-): Promise<Crypto.Signer | null> => {
-  // TODO: add support for user accounts
-  if (address !== adminAccount.address) {
+  async getByAddress(address: string): Promise<models.Account | null> {
+    // TODO: add support for user accounts
+    if (address === adminAccount.address) {
+      return adminAccount
+    }
+
     return null
   }
 
-  const privateKey = Crypto.InMemoryPrivateKey.fromHex(
-    config.adminPrivateKey,
-    config.adminSigAlgo
-  )
+  async getSignerByAddress(address: string): Promise<Crypto.Signer | null> {
+    // TODO: add support for user accounts
+    if (address !== adminAccount.address) {
+      return null
+    }
 
-  return new Crypto.InMemorySigner(privateKey, config.adminHashAlgo)
-}
+    const privateKey = Crypto.InMemoryPrivateKey.fromHex(
+      config.adminPrivateKey,
+      config.adminSigAlgo
+    )
 
-export const getAccountAuthorization = async (
-  address: string
-): Promise<AccountAuthorizer> => {
-  const account = await getAccountByAddress(address)
+    return new Crypto.InMemorySigner(privateKey, config.adminHashAlgo)
+  }
 
-  const signer = await getSignerByAddress(address)
+  async getAuthorization(address: string): Promise<AccountAuthorizer> {
+    const account = await this.getByAddress(address)
 
-  const keyIndex = await getLeastRecentAdminSignerKey()
+    const signer = await this.getSignerByAddress(address)
 
-  return getAuthorization(account.address, keyIndex, signer)
+    const keyIndex = await getLeastRecentAdminSignerKey(this.prisma)
+
+    return getAuthorization(account.address, keyIndex, signer)
+  }
 }
