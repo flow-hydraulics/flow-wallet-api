@@ -1,14 +1,16 @@
 package store
 
-import "github.com/google/uuid"
+import "github.com/onflow/flow-go-sdk"
 
 type DataStore interface {
 	AccountStore
 }
 
 type AccountStore interface {
-	Account(id uuid.UUID) (Account, error)
-	Accounts() ([]Account, error)
-	CreateAccount(a *Account) error
-	DeleteAccount(id uuid.UUID) error
+	Account(address flow.Address) (Account, error)
+	InsertAccount(a Account) error
+	DeleteAccount(address flow.Address) error
+	AccountKey(address flow.Address) (AccountKey, error)
+	InsertAccountKey(k AccountKey) error
+	DeleteAccountKey(address flow.Address) error
 }
