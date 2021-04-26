@@ -14,14 +14,14 @@ model Account {
   @@map(name: "accounts")
 
   address String @id
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }
 
 model AdminSignerKey {
   @@map(name: "admin_signer_keys")
 
   index      Int      @id
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }

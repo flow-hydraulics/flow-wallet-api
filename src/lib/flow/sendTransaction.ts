@@ -1,18 +1,28 @@
 import * as fcl from "@onflow/fcl"
 
-import {AccountAuthorization} from "./index"
+import {AccountAuthorizer} from "./index"
 
 interface Argument {
   value: string
   xform: any // eslint-disable-line
 }
 
-interface Transaction {
+type Transaction = {
   transaction: string
   args: Argument[]
-  proposer: string
-  authorizations: AccountAuthorization[]
-  payer: string
+  proposer: AccountAuthorizer
+  authorizations: AccountAuthorizer[]
+  payer: AccountAuthorizer
+}
+
+interface Event {
+  data: any // eslint-disable-line
+}
+
+type TransactionResult = {
+  id: string
+  error: string
+  events: Event[]
 }
 
 export default async function sendTransaction({
@@ -21,7 +31,7 @@ export default async function sendTransaction({
   proposer,
   authorizations,
   payer,
-}: Transaction): Promise<string> {
+}: Transaction): Promise<TransactionResult> {
   const response = await fcl.send([
     fcl.transaction(transaction),
     fcl.args(args),
@@ -32,8 +42,11 @@ export default async function sendTransaction({
   ])
 
   const {transactionId} = response
+  const {error, events} = await fcl.tx(response).onceSealed()
 
-  await fcl.tx(response).onceSealed()
-
-  return transactionId
+  return {
+    id: transactionId,
+    error: error,
+    events: events,
+  }
 }

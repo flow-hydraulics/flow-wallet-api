@@ -8,6 +8,12 @@ export default class AccountsController {
     this.accounts = accounts
   }
 
+  async createAccount(req, res) {
+    const account = await this.accounts.create()
+
+    res.json(account)
+  }
+
   async getAccounts(req, res) {
     const accounts = await this.accounts.query()
 

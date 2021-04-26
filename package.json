@@ -19,6 +19,7 @@
   "dependencies": {
     "@onflow/fcl": "0.0.67",
     "@onflow/types": "0.0.4",
+    "@onflow/util-encode-key": "0.0.2",
     "@prisma/client": "^2.21.2",
     "dedent-js": "^1.0.1",
     "dotenv": "^8.2.0",

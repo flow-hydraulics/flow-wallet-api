@@ -15,6 +15,7 @@ function createRouter(
   router
     .route("/")
     .get(catchAsync((req, res) => accounts.getAccounts(req, res)))
+    .post(catchAsync((req, res) => accounts.createAccount(req, res)))
 
   router
     .route("/:address")
