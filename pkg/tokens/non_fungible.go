@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/flow_helpers"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
@@ -17,13 +17,13 @@ type NftInfo struct {
 	Name        string
 }
 
-func SetupNFT(ctx context.Context, fc *client.Client, ks store.KeyStore, addr flow.Address, n NftInfo) (*flow.TransactionResult, error) {
+func SetupNFT(ctx context.Context, fc *client.Client, ks keys.KeyStore, address string, n NftInfo) (*flow.TransactionResult, error) {
 	serviceAuth, err := ks.ServiceAuthorizer(ctx, fc)
 	if err != nil {
 		return &flow.TransactionResult{}, err
 	}
 
-	accountAuth, err := ks.AccountAuthorizer(ctx, fc, addr)
+	accountAuth, err := ks.AccountAuthorizer(ctx, fc, address)
 	if err != nil {
 		return &flow.TransactionResult{}, err
 	}

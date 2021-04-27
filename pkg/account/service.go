@@ -4,22 +4,22 @@ import (
 	"context"
 	"log"
 
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
-	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
 type Service struct {
 	l  *log.Logger
 	db store.DataStore
-	ks store.KeyStore
+	ks keys.KeyStore
 	fc *client.Client
 }
 
 func NewService(
 	l *log.Logger,
 	db store.DataStore,
-	ks store.KeyStore,
+	ks keys.KeyStore,
 	fc *client.Client) *Service {
 	return &Service{l, db, ks, fc}
 }
@@ -33,7 +33,7 @@ func (s *Service) List(context.Context) ([]store.Account, error) {
 }
 
 func (s *Service) Create(ctx context.Context) (store.Account, error) {
-	account, key, err := New(ctx, s.fc, s.ks)
+	account, key, err := Create(ctx, s.fc, s.ks)
 	if err != nil {
 		return store.Account{}, err
 	}
@@ -47,8 +47,8 @@ func (s *Service) Create(ctx context.Context) (store.Account, error) {
 	return account, nil
 }
 
-func (s *Service) Details(ctx context.Context, addr flow.Address) (store.Account, error) {
-	account, err := s.db.Account(addr)
+func (s *Service) Details(ctx context.Context, address string) (store.Account, error) {
+	account, err := s.db.Account(address)
 	if err != nil {
 		return store.Account{}, err
 	}

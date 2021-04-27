@@ -13,26 +13,31 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys/simple"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/gorm"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/memory"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/simple"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 )
 
 type config struct {
-	Host                   string `env:"HOST" envDefault:""`
+	Host                   string `env:"HOST"`
 	Port                   int    `env:"PORT" envDefault:"3000"`
-	DefaultKeyManager      string `env:"DEFAULT_KEY_MANAGER" envDefault:"local"`
-	FlowGateway            string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
-	EncryptionKey          string `env:"ENCRYPTION_KEY" envDefault:""`
 	ServiceAccountAddress  string `env:"SERVICE_ACC_ADDRESS,required"`
 	ServiceAccountKeyIndex int    `env:"SERVICE_ACC_KEY_INDEX" envDefault:"0"`
 	ServiceAccountKeyType  string `env:"SERVICE_ACC_KEY_TYPE" envDefault:"local"`
 	ServiceAccountKeyValue string `env:"SERVICE_ACC_KEY_VALUE,required"`
+	DefaultKeyManager      string `env:"DEFAULT_KEY_MANAGER" envDefault:"local"`
+	EncryptionKey          string `env:"ENCRYPTION_KEY"`
+	DatabaseDSN            string `env:"DB_DSN"`
+	DatabaseType           string `env:"DB_TYPE" envDefault:"memory"`
+	FlowGateway            string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
 }
 
 func main() {
@@ -62,7 +67,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err := memory.NewDataStore()
+	var db store.DataStore
+	switch cfg.DatabaseType {
+	case store.DB_TYPE_MEMORY:
+		db, err = memory.NewDataStore()
+	case store.DB_TYPE_POSTGRESQL:
+		db, err = gorm.NewDataStore(postgres.Open(cfg.DatabaseDSN))
+	case store.DB_TYPE_MYSQL:
+		db, err = gorm.NewDataStore(mysql.Open(cfg.DatabaseDSN))
+	case store.DB_TYPE_SQLITE:
+		db, err = gorm.NewDataStore(sqlite.Open(cfg.DatabaseDSN))
+	default:
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,7 +86,7 @@ func main() {
 	ks, err := simple.NewKeyStore(
 		db,
 		store.AccountKey{
-			AccountAddress: flow.HexToAddress(cfg.ServiceAccountAddress),
+			AccountAddress: cfg.ServiceAccountAddress,
 			Index:          cfg.ServiceAccountKeyIndex,
 			Type:           cfg.ServiceAccountKeyType,
 			Value:          cfg.ServiceAccountKeyValue,

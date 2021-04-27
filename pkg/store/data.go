@@ -1,14 +1,24 @@
 package store
 
-import "github.com/onflow/flow-go-sdk"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Account struct {
-	Address flow.Address `json:"address"`
+	Address   string         `json:"address" gorm:"primaryKey"`
+	CreatedAt time.Time      `json:"-"`
+	UpdatedAt time.Time      `json:"-"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 type AccountKey struct {
-	AccountAddress flow.Address `json:"address"`
-	Index          int          `json:"index"`
-	Type           string       `json:"type"`  // local, google_kms
-	Value          string       `json:"value"` // local: private key, google_kms: resource id
+	AccountAddress string         `json:"address" gorm:"primaryKey"`
+	Index          int            `json:"index"`
+	Type           string         `json:"type"`  // local, google_kms
+	Value          string         `json:"value"` // local: private key, google_kms: resource id
+	CreatedAt      time.Time      `json:"-"`
+	UpdatedAt      time.Time      `json:"-"`
+	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }

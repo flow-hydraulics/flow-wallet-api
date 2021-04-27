@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk/client"
@@ -13,14 +14,14 @@ type FungibleTokens struct {
 	l  *log.Logger
 	c  *client.Client
 	db store.DataStore
-	ks store.KeyStore
+	ks keys.KeyStore
 }
 
 func NewFungibleTokens(
 	l *log.Logger,
 	c *client.Client,
 	db store.DataStore,
-	ks store.KeyStore) *FungibleTokens {
+	ks keys.KeyStore) *FungibleTokens {
 	return &FungibleTokens{l, c, db, ks}
 }
 

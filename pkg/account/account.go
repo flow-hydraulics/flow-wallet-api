@@ -5,13 +5,14 @@ import (
 	"fmt"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/flow_helpers"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/templates"
 )
 
-func New(ctx context.Context, fc *client.Client, ks store.KeyStore) (store.Account, store.AccountKey, error) {
+func Create(ctx context.Context, fc *client.Client, ks keys.KeyStore) (store.Account, store.AccountKey, error) {
 	serviceAuth, err := ks.ServiceAuthorizer(ctx, fc)
 	if err != nil {
 		return store.Account{}, store.AccountKey{}, err
@@ -56,15 +57,15 @@ func New(ctx context.Context, fc *client.Client, ks store.KeyStore) (store.Accou
 	}
 
 	// Grab the new address from transaction events
-	var newAddress flow.Address
+	var newAddress string
 	for _, event := range result.Events {
 		if event.Type == flow.EventAccountCreated {
 			accountCreatedEvent := flow.AccountCreatedEvent(event)
-			newAddress = accountCreatedEvent.Address()
+			newAddress = accountCreatedEvent.Address().Hex()
 		}
 	}
 
-	if (flow.Address{}) == newAddress {
+	if (flow.Address{}.Hex()) == newAddress {
 		// TODO: check what needs to be reverted
 		return store.Account{}, store.AccountKey{}, fmt.Errorf("something went wrong when waiting for address")
 	}

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
 	"github.com/onflow/flow-go-sdk/client"
 )
@@ -12,14 +13,14 @@ type Transactions struct {
 	l  *log.Logger
 	c  *client.Client
 	db store.DataStore
-	ks store.KeyStore
+	ks keys.KeyStore
 }
 
 func NewTransactions(
 	l *log.Logger,
 	c *client.Client,
 	db store.DataStore,
-	ks store.KeyStore) *Transactions {
+	ks keys.KeyStore) *Transactions {
 	return &Transactions{l, c, db, ks}
 }
 

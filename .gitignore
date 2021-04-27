@@ -12,5 +12,7 @@
 *.out
 
 flow.json
-
 .env
+*.db
+__debug_bin
+.vscode
