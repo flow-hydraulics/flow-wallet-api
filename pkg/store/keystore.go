@@ -16,6 +16,7 @@ const (
 type KeyStore interface {
 	Generate(ctx context.Context, keyIndex int, weight int) (NewKeyWrapper, error)
 	Save(AccountKey) error
+	Delete(addr flow.Address, keyIndex int) error
 	ServiceAuthorizer(ctx context.Context, fc *client.Client) (Authorizer, error)
 	AccountAuthorizer(ctx context.Context, fc *client.Client, addr flow.Address) (Authorizer, error)
 }

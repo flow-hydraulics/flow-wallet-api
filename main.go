@@ -86,31 +86,36 @@ func main() {
 
 	// Handle "/accounts"
 	ra := rv.PathPrefix("/accounts").Subrouter()
+
+	// Account list
 	ra.HandleFunc("", accounts.List).Methods("GET")
+
+	// Account create
 	if !disable_account_mgmt {
 		ra.HandleFunc("", accounts.Create).Methods("POST")
 	}
 
-	// Handle "/accounts/{address}"
-	raa := ra.PathPrefix("/{address}").Subrouter()
-	raa.HandleFunc("", accounts.Details).Methods("GET")
+	// Account details
+	ra.HandleFunc("/{address}", accounts.Details).Methods("GET")
+
+	// Account delete
 	if !disable_account_mgmt {
-		raa.HandleFunc("", accounts.Update).Methods("PUT")
-		raa.HandleFunc("", accounts.Delete).Methods("DELETE")
+		ra.HandleFunc("/{address}", accounts.Delete).Methods("DELETE")
 	}
 
+	// Account send raw transaction
 	if !disable_raw_tx {
-		raa.HandleFunc("/transactions", transactions.SendTransaction).Methods("POST")
+		ra.HandleFunc("/{address}/transactions", transactions.SendTransaction).Methods("POST")
 	}
 
-	// Handle "/accounts/{address}/fungible-tokens/{tokenName}"
 	if !disable_ft {
-		rft := raa.PathPrefix("/fungible-tokens/{tokenName}").Subrouter()
-		rft.HandleFunc("", fungibleTokens.Details).Methods("GET")
-		rft.HandleFunc("", fungibleTokens.Init).Methods("POST")
-		rft.HandleFunc("/withdrawals", fungibleTokens.ListWithdrawals).Methods("GET")
-		rft.HandleFunc("/withdrawals", fungibleTokens.CreateWithdrawal).Methods("POST")
-		rft.HandleFunc("/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods("GET")
+		// Handle "/accounts/{address}/fungible-tokens"
+		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
+		rft.HandleFunc("/{tokenName}", fungibleTokens.Details).Methods("GET")
+		rft.HandleFunc("/{tokenName}", fungibleTokens.Init).Methods("POST")
+		rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods("GET")
+		rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal).Methods("POST")
+		rft.HandleFunc("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods("GET")
 	}
 
 	// TODO: nfts

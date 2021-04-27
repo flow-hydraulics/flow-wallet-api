@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/flow_helpers"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
@@ -55,12 +56,21 @@ func Create(ctx context.Context, fc *client.Client, ks store.KeyStore) (flow.Add
 	}
 
 	// Grab the new address from transaction events
-	var newAddress flow.Address
+	var (
+		newAddress   flow.Address
+		newAddressOk bool
+	)
 	for _, event := range result.Events {
 		if event.Type == flow.EventAccountCreated {
 			accountCreatedEvent := flow.AccountCreatedEvent(event)
 			newAddress = accountCreatedEvent.Address()
+			newAddressOk = true
 		}
+	}
+
+	if !newAddressOk {
+		// TODO: check what needs to be reverted
+		return flow.Address{}, fmt.Errorf("something went wrong when waiting for address")
 	}
 
 	// Store the new key

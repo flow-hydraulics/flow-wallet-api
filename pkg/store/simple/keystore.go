@@ -34,9 +34,15 @@ func NewKeyStore(
 }
 
 func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (store.NewKeyWrapper, error) {
+	// TODO: get account key type
 	panic("not implemented") // TODO: implement
 }
+
 func (s *KeyStore) Save(store.AccountKey) error {
+	panic("not implemented") // TODO: implement
+}
+
+func (s *KeyStore) Delete(addr flow.Address, keyIndex int) error {
 	panic("not implemented") // TODO: implement
 }
 
@@ -89,7 +95,7 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 			return authorizer, err
 		}
 
-		accountKMSKey, err := cloudkms.KeyFromResourceID(accountKey.Value)
+		kmsKey, err := cloudkms.KeyFromResourceID(accountKey.Value)
 		if err != nil {
 			return authorizer, err
 		}
@@ -97,7 +103,7 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 		sig, err := kmsClient.SignerForKey(
 			ctx,
 			addr,
-			accountKMSKey,
+			kmsKey,
 		)
 		if err != nil {
 			return authorizer, err
