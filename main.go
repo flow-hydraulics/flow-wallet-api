@@ -24,13 +24,32 @@ import (
 func main() {
 	godotenv.Load(".env")
 
-	var wait time.Duration
+	// Configs
+	var (
+		wait                 time.Duration
+		disable_account_mgmt bool
+		disable_raw_tx       bool = false
+		disable_ft           bool = false
+		// disable_nft   bool   = false
+		flow_gateway string = "localhost:3569"
+	)
+	s_acc_addr := flow.HexToAddress(os.Getenv("SERVICE_ACC_ADDRESS"))
+	s_key_type := os.Getenv("SERVICE_ACC_KEY_TYPE")
+	s_key_value := os.Getenv("SERVICE_ACC_KEY_VALUE")
+	s_key_idx, err := strconv.ParseUint(os.Getenv("SERVICE_ACC_KEY_INDEX"), 10, 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
+	flag.BoolVar(&disable_account_mgmt, "disable-account-mgmt", false, "disable account management")
+	flag.BoolVar(&disable_raw_tx, "disable-raw-tx", false, "disable sending raw transactions for an account")
+	flag.BoolVar(&disable_ft, "disable-ft", false, "disable fungible token functionality")
 	flag.Parse()
 
 	l := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
-	fc, err := client.New("localhost:3569", grpc.WithInsecure())
+	fc, err := client.New(flow_gateway, grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,18 +59,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s_key_idx, err := strconv.ParseUint(os.Getenv("SERVICE_INDEX"), 10, 64)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	ks, err := simple.NewKeyStore(
 		db,
 		store.AccountKey{
-			AccountAddress: flow.HexToAddress(os.Getenv("SERVICE_ADDRESS")),
+			AccountAddress: s_acc_addr,
 			Index:          int(s_key_idx),
-			Type:           os.Getenv("SERVICE_TYPE"),
-			Value:          os.Getenv("SERVICE_VALUE"),
+			Type:           s_key_type,
+			Value:          s_key_value,
 		},
 		"1234",
 	)
@@ -70,23 +84,34 @@ func main() {
 
 	// Handle "/accounts"
 	ra := rv.PathPrefix("/accounts").Subrouter()
-	ra.HandleFunc("", accounts.List)
-	ra.HandleFunc("", accounts.Create).Methods("POST")
+	ra.HandleFunc("", accounts.List).Methods("GET")
+	if !disable_account_mgmt {
+		ra.HandleFunc("", accounts.Create).Methods("POST")
+	}
 
 	// Handle "/accounts/{address}"
 	raa := ra.PathPrefix("/{address}").Subrouter()
 	raa.HandleFunc("", accounts.Details).Methods("GET")
-	raa.HandleFunc("", accounts.Update).Methods("PUT")
-	raa.HandleFunc("", accounts.Delete).Methods("DELETE")
-	raa.HandleFunc("/transactions", transactions.SendTransaction).Methods("POST")
+	if !disable_account_mgmt {
+		raa.HandleFunc("", accounts.Update).Methods("PUT")
+		raa.HandleFunc("", accounts.Delete).Methods("DELETE")
+	}
+
+	if !disable_raw_tx {
+		raa.HandleFunc("/transactions", transactions.SendTransaction).Methods("POST")
+	}
 
 	// Handle "/accounts/{address}/fungible-tokens/{tokenName}"
-	rft := raa.PathPrefix("/fungible-tokens/{tokenName}").Subrouter()
-	rft.HandleFunc("", fungibleTokens.Details).Methods("GET")
-	rft.HandleFunc("", fungibleTokens.Init).Methods("POST")
-	rft.HandleFunc("/withdrawals", fungibleTokens.ListWithdrawals).Methods("GET")
-	rft.HandleFunc("/withdrawals", fungibleTokens.CreateWithdrawal).Methods("POST")
-	rft.HandleFunc("/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods("GET")
+	if !disable_ft {
+		rft := raa.PathPrefix("/fungible-tokens/{tokenName}").Subrouter()
+		rft.HandleFunc("", fungibleTokens.Details).Methods("GET")
+		rft.HandleFunc("", fungibleTokens.Init).Methods("POST")
+		rft.HandleFunc("/withdrawals", fungibleTokens.ListWithdrawals).Methods("GET")
+		rft.HandleFunc("/withdrawals", fungibleTokens.CreateWithdrawal).Methods("POST")
+		rft.HandleFunc("/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods("GET")
+	}
+
+	// TODO: nfts
 
 	srv := &http.Server{
 		Handler:      r,

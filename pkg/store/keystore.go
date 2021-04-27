@@ -8,6 +8,11 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
+const (
+	ACCOUNT_KEY_TYPE_LOCAL      = "local"
+	ACCOUNT_KEY_TYPE_GOOGLE_KMS = "google_kms"
+)
+
 type KeyStore interface {
 	Generate(ctx context.Context, keyIndex int, weight int) (NewKeyWrapper, error)
 	Save(AccountKey) error

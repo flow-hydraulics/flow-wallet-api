@@ -13,11 +13,3 @@ type Server struct {
 	db store.DataStore
 	ks store.KeyStore
 }
-
-func New(
-	l *log.Logger,
-	fc *client.Client,
-	db store.DataStore,
-	ks store.KeyStore) *Server {
-	return &Server{l, fc, db, ks}
-}

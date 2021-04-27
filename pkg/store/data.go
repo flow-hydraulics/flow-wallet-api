@@ -12,8 +12,3 @@ type AccountKey struct {
 	Type           string       `json:"type"`  // local, google_kms
 	Value          string       `json:"value"` // local: private key, google_kms: resource id
 }
-
-const (
-	ACCOUNT_KEY_TYPE_LOCAL      = "local"
-	ACCOUNT_KEY_TYPE_GOOGLE_KMS = "google_kms"
-)

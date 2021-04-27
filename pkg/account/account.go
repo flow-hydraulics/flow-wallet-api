@@ -10,10 +10,6 @@ import (
 	"github.com/onflow/flow-go-sdk/templates"
 )
 
-type AccountService interface {
-	Create(context.Context, *client.Client, store.KeyStore)
-}
-
 func Create(ctx context.Context, fc *client.Client, ks store.KeyStore) (flow.Address, error) {
 	serviceAuth, err := ks.ServiceAuthorizer(ctx, fc)
 	if err != nil {
