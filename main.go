@@ -25,13 +25,15 @@ func main() {
 	godotenv.Load(".env")
 
 	// Configs
+	// TODO: put these in a separate package
 	var (
 		wait                 time.Duration
 		disable_account_mgmt bool
-		disable_raw_tx       bool = false
-		disable_ft           bool = false
-		// disable_nft   bool   = false
-		flow_gateway string = "localhost:3569"
+		disable_raw_tx       bool
+		disable_ft           bool
+		// disable_nft   bool
+		flow_gateway   string = "localhost:3569" // TODO
+		encryption_key string = "1234"           // TODO
 	)
 	s_acc_addr := flow.HexToAddress(os.Getenv("SERVICE_ACC_ADDRESS"))
 	s_key_type := os.Getenv("SERVICE_ACC_KEY_TYPE")
@@ -67,7 +69,7 @@ func main() {
 			Type:           s_key_type,
 			Value:          s_key_value,
 		},
-		"1234",
+		encryption_key,
 	)
 	if err != nil {
 		log.Fatal(err)
