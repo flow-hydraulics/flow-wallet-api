@@ -12,3 +12,5 @@
 *.out
 
 flow.json
+
+.env*

@@ -12,21 +12,24 @@ import (
 )
 
 type KeyStore struct {
-	db            store.DataStore
-	serviceAcct   store.AccountKey
-	encryptionKey string
-	signAlgo      crypto.SignatureAlgorithm
-	hashAlgo      crypto.HashAlgorithm
+	db                store.DataStore
+	serviceAcct       store.AccountKey
+	defaultKeyManager string
+	encryptionKey     string
+	signAlgo          crypto.SignatureAlgorithm
+	hashAlgo          crypto.HashAlgorithm
 }
 
 func NewKeyStore(
 	db store.DataStore,
 	serviceAcct store.AccountKey,
+	defaultKeyManager string,
 	encryptionKey string,
 ) (*KeyStore, error) {
 	return &KeyStore{
 		db,
 		serviceAcct,
+		defaultKeyManager,
 		encryptionKey,
 		crypto.ECDSA_P256, // TODO: config
 		crypto.SHA3_256,   // TODO: config
@@ -34,11 +37,14 @@ func NewKeyStore(
 }
 
 func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (store.NewKeyWrapper, error) {
-	// TODO: get account key type
+	// TODO: get account key type, s.defaultKeyManager
 	panic("not implemented") // TODO: implement
 }
 
 func (s *KeyStore) Save(store.AccountKey) error {
+	// TODO:
+	// 1. encrypt AccountKey.Value, if AccountKey.Type == store.ACCOUNT_KEY_TYPE_LOCAL
+	// 2. store
 	panic("not implemented") // TODO: implement
 }
 
@@ -70,7 +76,10 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 			return authorizer, err
 		}
 		accountKey = ak
-		// TODO: decrypt accountKey.Value
+		if s.encryptionKey != "" {
+			// TODO: decrypt accountKey.Value
+			panic("decryption not implemented") // TODO
+		}
 	}
 
 	flowAcc, err := fc.GetAccount(ctx, addr)
@@ -81,7 +90,7 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 	authorizer.Key = flowAcc.Keys[accountKey.Index]
 
 	// TODO: Decide whether we want to allow this kind of flexibility
-	// or should we just panic if `AccountKey.Type` != configured type
+	// or should we just panic if `accountKey.Type` != `s.defaultKeyManager`
 	switch accountKey.Type {
 	case store.ACCOUNT_KEY_TYPE_LOCAL:
 		pk, err := crypto.DecodePrivateKeyHex(s.signAlgo, accountKey.Value)

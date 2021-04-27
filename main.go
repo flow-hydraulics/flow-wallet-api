@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"time"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/memory"
@@ -21,29 +22,33 @@ import (
 	"google.golang.org/grpc"
 )
 
+type config struct {
+	Host                   string `env:"HOST" envDefault:""`
+	Port                   int    `env:"PORT" envDefault:"3000"`
+	DefaultKeyManager      string `env:"DEFAULT_KEY_MANAGER" envDefault:"local"`
+	FlowGateway            string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
+	EncryptionKey          string `env:"ENCRYPTION_KEY" envDefault:""`
+	ServiceAccountAddress  string `env:"SERVICE_ACC_ADDRESS,required"`
+	ServiceAccountKeyIndex int    `env:"SERVICE_ACC_KEY_INDEX" envDefault:"0"`
+	ServiceAccountKeyType  string `env:"SERVICE_ACC_KEY_TYPE" envDefault:"local"`
+	ServiceAccountKeyValue string `env:"SERVICE_ACC_KEY_VALUE,required"`
+}
+
 func main() {
 	godotenv.Load(".env")
 
-	// Configs
-	// TODO: put these in a separate package
-	var (
-		wait                 time.Duration
-		disable_account_mgmt bool
-		disable_raw_tx       bool
-		disable_ft           bool
-		// disable_nft   bool
-		flow_gateway   string = "localhost:3569" // TODO
-		encryption_key string = "1234"           // TODO
-	)
-	s_acc_addr := flow.HexToAddress(os.Getenv("SERVICE_ACC_ADDRESS"))
-	s_key_type := os.Getenv("SERVICE_ACC_KEY_TYPE")
-	s_key_value := os.Getenv("SERVICE_ACC_KEY_VALUE")
-	s_key_idx, err := strconv.ParseUint(os.Getenv("SERVICE_ACC_KEY_INDEX"), 10, 64)
-	if err != nil {
+	cfg := config{}
+	if err := env.Parse(&cfg); err != nil {
 		log.Fatal(err)
 	}
 
-	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
+	var (
+		disable_account_mgmt bool
+		disable_raw_tx       bool
+		disable_ft           bool
+		// disable_nft          bool
+	)
+
 	flag.BoolVar(&disable_account_mgmt, "disable-account-mgmt", false, "disable account management")
 	flag.BoolVar(&disable_raw_tx, "disable-raw-tx", false, "disable sending raw transactions for an account")
 	flag.BoolVar(&disable_ft, "disable-ft", false, "disable fungible token functionality")
@@ -51,7 +56,8 @@ func main() {
 
 	l := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
-	fc, err := client.New(flow_gateway, grpc.WithInsecure())
+	// TODO: WithInsecure()?
+	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,12 +70,13 @@ func main() {
 	ks, err := simple.NewKeyStore(
 		db,
 		store.AccountKey{
-			AccountAddress: s_acc_addr,
-			Index:          int(s_key_idx),
-			Type:           s_key_type,
-			Value:          s_key_value,
+			AccountAddress: flow.HexToAddress(cfg.ServiceAccountAddress),
+			Index:          cfg.ServiceAccountKeyIndex,
+			Type:           cfg.ServiceAccountKeyType,
+			Value:          cfg.ServiceAccountKeyValue,
 		},
-		encryption_key,
+		cfg.DefaultKeyManager,
+		cfg.EncryptionKey,
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -108,6 +115,7 @@ func main() {
 		ra.HandleFunc("/{address}/transactions", transactions.SendTransaction).Methods("POST")
 	}
 
+	// Fungible tokens
 	if !disable_ft {
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
@@ -122,7 +130,7 @@ func main() {
 
 	srv := &http.Server{
 		Handler:      r,
-		Addr:         ":3000",
+		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
@@ -147,7 +155,7 @@ func main() {
 	l.Printf("Got signal: %s. Shutting down..\n", sig)
 
 	// Create a deadline to wait for.
-	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	srv.Shutdown(ctx)
 	os.Exit(0)

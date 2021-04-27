@@ -3,6 +3,7 @@ module github.com/eqlabs/flow-nft-wallet-service
 go 1.16
 
 require (
+	github.com/caarlos0/env/v6 v6.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.3.0
 	github.com/onflow/flow-go-sdk v0.18.0
