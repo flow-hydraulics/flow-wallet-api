@@ -8,7 +8,12 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
-type Transactions Server
+type Transactions struct {
+	l  *log.Logger
+	c  *client.Client
+	db store.DataStore
+	ks store.KeyStore
+}
 
 func NewTransactions(
 	l *log.Logger,

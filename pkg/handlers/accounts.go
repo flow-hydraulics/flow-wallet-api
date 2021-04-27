@@ -1,31 +1,63 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
-	"github.com/onflow/flow-go-sdk/client"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
+	"github.com/gorilla/mux"
+	"github.com/onflow/flow-go-sdk"
 )
 
-type Accounts Server
+type Accounts struct {
+	l  *log.Logger
+	as *account.Service
+}
 
-func NewAccounts(
-	l *log.Logger,
-	c *client.Client,
-	db store.DataStore,
-	ks store.KeyStore) *Accounts {
-	return &Accounts{l, c, db, ks}
+func NewAccounts(l *log.Logger, as *account.Service) *Accounts {
+	return &Accounts{l, as}
 }
 
 func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("List accounts")
+	accounts, err := s.as.List(context.Background())
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("Error"))
+		return
+	}
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(accounts)
 }
 
 func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Create account")
+	account, err := s.as.Create(context.Background())
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("Error"))
+		return
+	}
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(account)
 }
 
 func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Account details")
+	vars := mux.Vars(r)
+	addr := flow.HexToAddress(vars["address"])
+	account, err := s.as.Details(context.Background(), addr)
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("Error"))
+		return
+	}
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(account)
+
 }

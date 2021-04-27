@@ -21,6 +21,10 @@ func newAccountStore() *AccountStore {
 	return &AccountStore{}
 }
 
+func (s *AccountStore) Accounts() ([]store.Account, error) {
+	panic("not implemented") // TODO: Implement
+}
+
 func (s *AccountStore) Account(address flow.Address) (store.Account, error) {
 	panic("not implemented") // TODO: Implement
 }
@@ -30,6 +34,10 @@ func (s *AccountStore) InsertAccount(a store.Account) error {
 }
 
 func (s *AccountStore) DeleteAccount(address flow.Address) error {
+	panic("not implemented") // TODO: Implement
+}
+
+func (s *AccountStore) AccountKeys() ([]store.AccountKey, error) {
 	panic("not implemented") // TODO: Implement
 }
 

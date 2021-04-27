@@ -10,7 +10,8 @@ type DataStore struct {
 }
 
 type AccountStore struct {
-	StoredAccounts map[flow.Address]store.Account
+	StoredAccounts    map[flow.Address]store.Account
+	StoredAccountKeys map[flow.Address]store.AccountKey
 }
 
 func NewDataStore() (*DataStore, error) {
@@ -20,7 +21,18 @@ func NewDataStore() (*DataStore, error) {
 }
 
 func newAccountStore() *AccountStore {
-	return &AccountStore{StoredAccounts: make(map[flow.Address]store.Account)}
+	return &AccountStore{
+		StoredAccounts:    make(map[flow.Address]store.Account),
+		StoredAccountKeys: make(map[flow.Address]store.AccountKey),
+	}
+}
+
+func (s *AccountStore) Accounts() ([]store.Account, error) {
+	values := []store.Account{}
+	for _, value := range s.StoredAccounts {
+		values = append(values, value)
+	}
+	return values, nil
 }
 
 func (s *AccountStore) Account(address flow.Address) (store.Account, error) {
@@ -28,10 +40,15 @@ func (s *AccountStore) Account(address flow.Address) (store.Account, error) {
 }
 
 func (s *AccountStore) InsertAccount(a store.Account) error {
-	panic("not implemented") // TODO: Implement
+	s.StoredAccounts[a.Address] = a
+	return nil
 }
 
 func (s *AccountStore) DeleteAccount(address flow.Address) error {
+	panic("not implemented") // TODO: Implement
+}
+
+func (s *AccountStore) AccountKeys() ([]store.AccountKey, error) {
 	panic("not implemented") // TODO: Implement
 }
 
@@ -39,8 +56,9 @@ func (s *AccountStore) AccountKey(address flow.Address) (store.AccountKey, error
 	panic("not implemented") // TODO: Implement
 }
 
-func (s *AccountStore) InsertAccountKey(a store.AccountKey) error {
-	panic("not implemented") // TODO: Implement
+func (s *AccountStore) InsertAccountKey(k store.AccountKey) error {
+	s.StoredAccountKeys[k.AccountAddress] = k
+	return nil
 }
 
 func (s *AccountStore) DeleteAccountKey(address flow.Address) error {

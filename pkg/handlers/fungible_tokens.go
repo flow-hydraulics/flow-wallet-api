@@ -9,7 +9,12 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
-type FungibleTokens Server
+type FungibleTokens struct {
+	l  *log.Logger
+	c  *client.Client
+	db store.DataStore
+	ks store.KeyStore
+}
 
 func NewFungibleTokens(
 	l *log.Logger,

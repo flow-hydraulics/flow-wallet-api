@@ -2,6 +2,7 @@ package simple
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
@@ -37,15 +38,49 @@ func NewKeyStore(
 }
 
 func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (store.NewKeyWrapper, error) {
-	// TODO: get account key type, s.defaultKeyManager
-	panic("not implemented") // TODO: implement
+	switch s.defaultKeyManager {
+	case store.ACCOUNT_KEY_TYPE_LOCAL:
+		seed := make([]byte, crypto.MinSeedLength)
+		_, err := rand.Read(seed)
+		if err != nil {
+			return store.NewKeyWrapper{}, err
+		}
+		privateKey, err := crypto.GeneratePrivateKey(s.signAlgo, seed)
+		if err != nil {
+			return store.NewKeyWrapper{}, err
+		}
+
+		flowKey := flow.NewAccountKey().
+			FromPrivateKey(privateKey).
+			SetHashAlgo(s.hashAlgo).
+			SetWeight(weight)
+		flowKey.Index = keyIndex
+
+		accountKey := store.AccountKey{
+			Index: keyIndex,
+			Type:  store.ACCOUNT_KEY_TYPE_LOCAL,
+			Value: privateKey.String(),
+		}
+		return store.NewKeyWrapper{FlowKey: flowKey, AccountKey: accountKey}, nil
+	default:
+		// TODO: google_kms
+		return store.NewKeyWrapper{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.defaultKeyManager)
+	}
 }
 
-func (s *KeyStore) Save(store.AccountKey) error {
-	// TODO:
-	// 1. encrypt AccountKey.Value, if AccountKey.Type == store.ACCOUNT_KEY_TYPE_LOCAL
-	// 2. store
-	panic("not implemented") // TODO: implement
+func (s *KeyStore) Save(key store.AccountKey) error {
+	switch key.Type {
+	case store.ACCOUNT_KEY_TYPE_LOCAL:
+		// TODO: encrypt key.Value
+		if s.encryptionKey != "" {
+			panic("key encryption not implemented")
+		}
+		err := s.db.InsertAccountKey(key)
+		return err
+	default:
+		// TODO: google_kms
+		return fmt.Errorf("keyStore.Save() not implmented for %s", s.defaultKeyManager)
+	}
 }
 
 func (s *KeyStore) Delete(addr flow.Address, keyIndex int) error {
@@ -78,7 +113,7 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 		accountKey = ak
 		if s.encryptionKey != "" {
 			// TODO: decrypt accountKey.Value
-			panic("decryption not implemented") // TODO
+			panic("key decryption not implemented")
 		}
 	}
 
@@ -120,7 +155,7 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 		authorizer.Signer = sig
 	default:
 		return authorizer,
-			fmt.Errorf("AccountKey.Type not recognised: %s", accountKey.Type)
+			fmt.Errorf("accountKey.Type not recognised: %s", accountKey.Type)
 	}
 
 	return authorizer, nil

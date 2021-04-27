@@ -11,21 +11,21 @@ import (
 	"github.com/onflow/flow-go-sdk/templates"
 )
 
-func Create(ctx context.Context, fc *client.Client, ks store.KeyStore) (flow.Address, error) {
+func New(ctx context.Context, fc *client.Client, ks store.KeyStore) (store.Account, store.AccountKey, error) {
 	serviceAuth, err := ks.ServiceAuthorizer(ctx, fc)
 	if err != nil {
-		return flow.Address{}, err
+		return store.Account{}, store.AccountKey{}, err
 	}
 
 	referenceBlockID, err := flow_helpers.GetLatestBlockId(ctx, fc)
 	if err != nil {
-		return flow.Address{}, err
+		return store.Account{}, store.AccountKey{}, err
 	}
 
 	// Generate a new key pair
 	newKey, err := ks.Generate(ctx, 0, flow.AccountKeyWeightThreshold)
 	if err != nil {
-		return flow.Address{}, err
+		return store.Account{}, store.AccountKey{}, err
 	}
 
 	// Setup a transaction to create an account
@@ -38,47 +38,38 @@ func Create(ctx context.Context, fc *client.Client, ks store.KeyStore) (flow.Add
 	err = tx.SignEnvelope(serviceAuth.Address, serviceAuth.Key.Index, serviceAuth.Signer)
 	if err != nil {
 		// TODO: check what needs to be reverted
-		return flow.Address{}, err
+		return store.Account{}, store.AccountKey{}, err
 	}
 
 	// Send the transaction to the network
 	err = fc.SendTransaction(ctx, *tx)
 	if err != nil {
 		// TODO: check what needs to be reverted
-		return flow.Address{}, err
+		return store.Account{}, store.AccountKey{}, err
 	}
 
 	// Wait for the transaction to be sealed
 	result, err := flow_helpers.WaitForSeal(ctx, fc, tx.ID())
 	if err != nil {
 		// TODO: check what needs to be reverted
-		return flow.Address{}, err
+		return store.Account{}, store.AccountKey{}, err
 	}
 
 	// Grab the new address from transaction events
-	var (
-		newAddress   flow.Address
-		newAddressOk bool
-	)
+	var newAddress flow.Address
 	for _, event := range result.Events {
 		if event.Type == flow.EventAccountCreated {
 			accountCreatedEvent := flow.AccountCreatedEvent(event)
 			newAddress = accountCreatedEvent.Address()
-			newAddressOk = true
 		}
 	}
 
-	if !newAddressOk {
+	if (flow.Address{}) == newAddress {
 		// TODO: check what needs to be reverted
-		return flow.Address{}, fmt.Errorf("something went wrong when waiting for address")
+		return store.Account{}, store.AccountKey{}, fmt.Errorf("something went wrong when waiting for address")
 	}
 
-	// Store the new key
 	newKey.AccountKey.AccountAddress = newAddress
-	if err = ks.Save(newKey.AccountKey); err != nil {
-		// TODO: check what needs to be reverted
-		return flow.Address{}, err
-	}
 
-	return newAddress, nil
+	return store.Account{Address: newAddress}, newKey.AccountKey, nil
 }

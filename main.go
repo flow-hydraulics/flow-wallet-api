@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/memory"
@@ -81,8 +82,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	accounts := handlers.NewAccounts(l, fc, db, ks)
-	transactions := handlers.NewTransactions(l, fc, db, ks)
+	accountService := account.NewService(l, db, ks, fc)
+
+	accounts := handlers.NewAccounts(l, accountService)
+	// transactions := handlers.NewTransactions(l, fc, db, ks)
 	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, ks)
 
 	r := mux.NewRouter()
@@ -96,13 +99,13 @@ func main() {
 	ra.HandleFunc("", accounts.Create).Methods("POST")           // create
 	ra.HandleFunc("/{address}", accounts.Details).Methods("GET") // details
 
-	// Account raw transactions
-	if !disable_raw_tx {
-		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
-		rt.HandleFunc("", transactions.List).Methods("GET")                    // list
-		rt.HandleFunc("", transactions.Create).Methods("POST")                 // create
-		rt.HandleFunc("/{transactionId}", transactions.Details).Methods("GET") // details
-	}
+	// // Account raw transactions
+	// if !disable_raw_tx {
+	// 	rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
+	// 	rt.HandleFunc("", transactions.List).Methods("GET")                    // list
+	// 	rt.HandleFunc("", transactions.Create).Methods("POST")                 // create
+	// 	rt.HandleFunc("/{transactionId}", transactions.Details).Methods("GET") // details
+	// }
 
 	// // Fungible tokens
 	// if !disable_ft {
