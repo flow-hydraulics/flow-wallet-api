@@ -18,6 +18,14 @@ func NewTransactions(
 	return &Transactions{l, c, db, ks}
 }
 
-func (s *Transactions) SendTransaction(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Send transaction")
+func (s *Transactions) List(rw http.ResponseWriter, r *http.Request) {
+	s.l.Println("List transactions")
+}
+
+func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
+	s.l.Println("Create transaction")
+}
+
+func (s *Transactions) Details(rw http.ResponseWriter, r *http.Request) {
+	s.l.Println("Transaction details")
 }

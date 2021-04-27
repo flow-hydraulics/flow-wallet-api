@@ -43,15 +43,14 @@ func main() {
 	}
 
 	var (
-		disable_account_mgmt bool
-		disable_raw_tx       bool
-		disable_ft           bool
-		// disable_nft          bool
+		disable_raw_tx bool
+		disable_ft     bool
+		disable_nft    bool
 	)
 
-	flag.BoolVar(&disable_account_mgmt, "disable-account-mgmt", false, "disable account management")
 	flag.BoolVar(&disable_raw_tx, "disable-raw-tx", false, "disable sending raw transactions for an account")
 	flag.BoolVar(&disable_ft, "disable-ft", false, "disable fungible token functionality")
+	flag.BoolVar(&disable_nft, "disable-nft", false, "disable non-fungible token functionality")
 	flag.Parse()
 
 	l := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
@@ -84,47 +83,37 @@ func main() {
 
 	accounts := handlers.NewAccounts(l, fc, db, ks)
 	transactions := handlers.NewTransactions(l, fc, db, ks)
-	fungibleTokens := handlers.NewFungibleTokens(l, fc, db, ks)
+	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, ks)
 
 	r := mux.NewRouter()
 
 	// Catch the api version
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
-	// Handle "/accounts"
+	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()
+	ra.HandleFunc("", accounts.List).Methods("GET")              // list
+	ra.HandleFunc("", accounts.Create).Methods("POST")           // create
+	ra.HandleFunc("/{address}", accounts.Details).Methods("GET") // details
 
-	// Account list
-	ra.HandleFunc("", accounts.List).Methods("GET")
-
-	// Account create
-	if !disable_account_mgmt {
-		ra.HandleFunc("", accounts.Create).Methods("POST")
-	}
-
-	// Account details
-	ra.HandleFunc("/{address}", accounts.Details).Methods("GET")
-
-	// Account delete
-	if !disable_account_mgmt {
-		ra.HandleFunc("/{address}", accounts.Delete).Methods("DELETE")
-	}
-
-	// Account send raw transaction
+	// Account raw transactions
 	if !disable_raw_tx {
-		ra.HandleFunc("/{address}/transactions", transactions.SendTransaction).Methods("POST")
+		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
+		rt.HandleFunc("", transactions.List).Methods("GET")                    // list
+		rt.HandleFunc("", transactions.Create).Methods("POST")                 // create
+		rt.HandleFunc("/{transactionId}", transactions.Details).Methods("GET") // details
 	}
 
-	// Fungible tokens
-	if !disable_ft {
-		// Handle "/accounts/{address}/fungible-tokens"
-		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
-		rft.HandleFunc("/{tokenName}", fungibleTokens.Details).Methods("GET")
-		rft.HandleFunc("/{tokenName}", fungibleTokens.Init).Methods("POST")
-		rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods("GET")
-		rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal).Methods("POST")
-		rft.HandleFunc("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods("GET")
-	}
+	// // Fungible tokens
+	// if !disable_ft {
+	// 	// Handle "/accounts/{address}/fungible-tokens"
+	// 	rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
+	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Details).Methods("GET")
+	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Init).Methods("POST")
+	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods("GET")
+	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal).Methods("POST")
+	// 	rft.HandleFunc("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods("GET")
+	// }
 
 	// TODO: nfts
 

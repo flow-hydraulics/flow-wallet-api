@@ -29,7 +29,3 @@ func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Account details")
 }
-
-func (s *Accounts) Delete(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Delete account")
-}
