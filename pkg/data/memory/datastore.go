@@ -1,11 +1,9 @@
 package memory
 
-import (
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
-)
+import "github.com/eqlabs/flow-nft-wallet-service/pkg/data"
 
 type DataStore struct {
-	store.AccountStore
+	data.AccountStore
 }
 
 func NewDataStore() (*DataStore, error) {

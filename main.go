@@ -12,11 +12,11 @@ import (
 
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/data/gorm"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/data/memory"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys/simple"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/gorm"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store/memory"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk/client"
@@ -67,15 +67,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var db store.DataStore
+	var db data.Store
 	switch cfg.DatabaseType {
-	case store.DB_TYPE_MEMORY:
+	case data.DB_TYPE_MEMORY:
 		db, err = memory.NewDataStore()
-	case store.DB_TYPE_POSTGRESQL:
+	case data.DB_TYPE_POSTGRESQL:
 		db, err = gorm.NewDataStore(postgres.Open(cfg.DatabaseDSN))
-	case store.DB_TYPE_MYSQL:
+	case data.DB_TYPE_MYSQL:
 		db, err = gorm.NewDataStore(mysql.Open(cfg.DatabaseDSN))
-	case store.DB_TYPE_SQLITE:
+	case data.DB_TYPE_SQLITE:
 		db, err = gorm.NewDataStore(sqlite.Open(cfg.DatabaseDSN))
 	default:
 	}
@@ -85,7 +85,7 @@ func main() {
 
 	ks, err := simple.NewKeyStore(
 		db,
-		store.AccountKey{
+		data.AccountKey{
 			AccountAddress: cfg.ServiceAccountAddress,
 			Index:          cfg.ServiceAccountKeyIndex,
 			Type:           cfg.ServiceAccountKeyType,

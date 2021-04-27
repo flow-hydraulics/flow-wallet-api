@@ -1,12 +1,12 @@
 package gorm
 
 import (
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
 	"gorm.io/gorm"
 )
 
 type DataStore struct {
-	store.AccountStore
+	data.AccountStore
 }
 
 func NewDataStore(dialector gorm.Dialector) (*DataStore, error) {

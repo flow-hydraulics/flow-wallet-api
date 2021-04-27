@@ -5,8 +5,8 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -14,8 +14,8 @@ import (
 )
 
 type KeyStore struct {
-	db                store.DataStore
-	serviceAcct       store.AccountKey
+	db                data.Store
+	serviceAcct       data.AccountKey
 	defaultKeyManager string
 	encryptionKey     string
 	signAlgo          crypto.SignatureAlgorithm
@@ -23,8 +23,8 @@ type KeyStore struct {
 }
 
 func NewKeyStore(
-	db store.DataStore,
-	serviceAcct store.AccountKey,
+	db data.Store,
+	serviceAcct data.AccountKey,
 	defaultKeyManager string,
 	encryptionKey string,
 ) (*KeyStore, error) {
@@ -57,7 +57,7 @@ func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys
 			SetWeight(weight)
 		flowKey.Index = keyIndex
 
-		accountKey := store.AccountKey{
+		accountKey := data.AccountKey{
 			Index: keyIndex,
 			Type:  keys.ACCOUNT_KEY_TYPE_LOCAL,
 			Value: privateKey.String(),
@@ -69,7 +69,7 @@ func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys
 	}
 }
 
-func (s *KeyStore) Save(key store.AccountKey) error {
+func (s *KeyStore) Save(key data.AccountKey) error {
 	switch key.Type {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		// TODO: encrypt key.Value
@@ -98,7 +98,7 @@ func (s *KeyStore) AccountAuthorizer(ctx context.Context, fc *client.Client, add
 
 func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, address string) (keys.Authorizer, error) {
 	var (
-		accountKey store.AccountKey
+		accountKey data.AccountKey
 		authorizer keys.Authorizer = keys.Authorizer{}
 		err        error
 	)

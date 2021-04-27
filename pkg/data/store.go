@@ -1,4 +1,4 @@
-package store
+package data
 
 const (
 	DB_TYPE_MEMORY     = "memory"
@@ -7,7 +7,7 @@ const (
 	DB_TYPE_SQLITE     = "sqlite"
 )
 
-type DataStore interface {
+type Store interface {
 	AccountStore
 }
 
