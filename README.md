@@ -12,4 +12,6 @@ Dependencies:
 Run:
 
     ./scripts/emulator.sh
-    go run cmd/server/rest.go
+    cp .env.example .env
+    # edit .env
+    go run main.go
