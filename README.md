@@ -15,8 +15,8 @@ implements a simple custodial wallet service for the Flow blockchain.
 
 ### 2. Transaction Execution
 
-- [ ] Send an arbitrary transaction from the admin account
-- [ ] Send an arbitrary transaction from a user account
+- [x] Send an arbitrary transaction from the admin account
+- [x] Send an arbitrary transaction from a user account
 
 ### 3. Fungible Tokens
 
