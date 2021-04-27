@@ -48,7 +48,7 @@ export default class AccountsService extends Service {
       config.contracts
     )
 
-    const userKeyType = this.userKeyManager.keyType
+    const userKeyType = this.userKeyManager.getKeyType()
     const userKeyValue = this.userKeyManager.save(userKey)
 
     return await insertAccount(this.prisma, address, userKeyType, userKeyValue)

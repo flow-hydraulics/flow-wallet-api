@@ -34,7 +34,8 @@ class InMemoryKey implements Key {
 }
 
 export default class InMemoryKeyManager implements KeyManager<InMemoryKey> {
-  keyType = KeyType.InMemory
+  static keyType = KeyType.InMemory
+
   sigAlgo: crypto.SignatureAlgorithm
   hashAlgo: crypto.HashAlgorithm
   encryptionKey: Buffer
@@ -47,6 +48,10 @@ export default class InMemoryKeyManager implements KeyManager<InMemoryKey> {
     this.sigAlgo = sigAlgo
     this.hashAlgo = hashAlgo
     this.encryptionKey = encryptionKey
+  }
+
+  getKeyType(): KeyType {
+    return InMemoryKeyManager.keyType
   }
 
   generate(): InMemoryKey {

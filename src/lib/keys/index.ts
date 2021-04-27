@@ -13,8 +13,7 @@ export interface Key {
 }
 
 export interface KeyManager<T extends Key> {
-  keyType: KeyType
-
+  getKeyType(): KeyType
   generate(): T
   save(key: T): string
   load(value: string): T
