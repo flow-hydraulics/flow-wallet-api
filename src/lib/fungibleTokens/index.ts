@@ -1,5 +1,4 @@
 import * as fcl from "@onflow/fcl"
-import * as t from "@onflow/types"
 
 import {AccountAuthorizer} from "../flow"
 import sendTransaction, {TransactionResult} from "../flow/sendTransaction"
@@ -37,10 +36,16 @@ export async function transfer(
   const template = getTransferTemplate(tokenName)
 
   return await sendTransaction({
-    transaction: template(contracts),
+    code: template(contracts),
     args: [
-      fcl.arg(fcl.withPrefix(recipient), t.Address),
-      fcl.arg(amount, t.UFix64),
+      {
+        type: "Address",
+        value: fcl.withPrefix(recipient),
+      },
+      {
+        type: "UFix64",
+        value: amount,
+      },
     ],
     authorizations: [authorization],
     payer: authorization,

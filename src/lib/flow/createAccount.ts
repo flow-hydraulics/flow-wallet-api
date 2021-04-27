@@ -1,5 +1,3 @@
-import * as fcl from "@onflow/fcl"
-import * as t from "@onflow/types"
 import * as dedent from "dedent-js"
 import {
   ECDSA_P256,
@@ -75,8 +73,13 @@ export async function createAccount(
   )
 
   const result = await sendTransaction({
-    transaction: txCreateAccount(contracts),
-    args: [fcl.arg(encodedPublicKey, t.String)],
+    code: txCreateAccount(contracts),
+    args: [
+      {
+        type: "String",
+        value: encodedPublicKey,
+      },
+    ],
     authorizations: [authorization],
     payer: authorization,
     proposer: authorization,

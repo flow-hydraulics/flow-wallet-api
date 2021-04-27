@@ -1,14 +1,15 @@
 import * as fcl from "@onflow/fcl"
+import * as types from "@onflow/types"
 
 import {AccountAuthorizer} from "./index"
 
-export interface Argument {
+export type Argument = {
+  type: string
   value: string
-  xform: any // eslint-disable-line
 }
 
 export type Transaction = {
-  transaction: string
+  code: string
   args: Argument[]
   proposer: AccountAuthorizer
   authorizations: AccountAuthorizer[]
@@ -26,15 +27,15 @@ export type TransactionResult = {
 }
 
 export default async function sendTransaction({
-  transaction,
+  code,
   args,
   proposer,
   authorizations,
   payer,
 }: Transaction): Promise<TransactionResult> {
   const response = await fcl.send([
-    fcl.transaction(transaction),
-    fcl.args(args),
+    fcl.transaction(code),
+    fcl.args(args.map(arg => fcl.arg(arg.value, types[arg.type]))),
     fcl.proposer(proposer),
     fcl.authorizations(authorizations),
     fcl.payer(payer),

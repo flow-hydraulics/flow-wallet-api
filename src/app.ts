@@ -9,6 +9,8 @@ import AccountsController from "src/controllers/accounts"
 import AccountsService from "src/services/accounts"
 import FungibleTokensService from "src/services/fungibleTokens"
 import FungibleTokensController from "src/controllers/fungibleTokens"
+import TransactionsController from "src/controllers/transactions"
+import TransactionsService from "src/services/transactions"
 import InMemoryKeyManager from "src/lib/keys/inMemory"
 import config from "src/config"
 import {getAdminKey} from "src/admin"
@@ -32,12 +34,19 @@ const adminKey = getAdminKey()
 const accountsService = new AccountsService(prisma, adminKey, userKeyManager)
 const accountsController = new AccountsController(accountsService)
 
-const fungiblTokensService = new FungibleTokensService(prisma, accountsService)
-const fungiblTokensController = new FungibleTokensController(
-  fungiblTokensService
+const transactionsService = new TransactionsService(prisma, accountsService)
+const transactionsController = new TransactionsController(transactionsService)
+
+const fungibleTokensService = new FungibleTokensService(prisma, accountsService)
+const fungibleTokensController = new FungibleTokensController(
+  fungibleTokensService
 )
 
-const v1Router = createRouter(accountsController, fungiblTokensController)
+const v1Router = createRouter(
+  accountsController,
+  transactionsController,
+  fungibleTokensController
+)
 
 app.use("/v1", v1Router)
 
