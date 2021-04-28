@@ -1,8 +1,9 @@
-package store
+package keys
 
 import (
 	"context"
 
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -13,12 +14,12 @@ const (
 	ACCOUNT_KEY_TYPE_GOOGLE_KMS = "google_kms"
 )
 
-type KeyStore interface {
+type Store interface {
 	Generate(ctx context.Context, keyIndex int, weight int) (NewKeyWrapper, error)
-	Save(AccountKey) error
-	Delete(addr flow.Address, keyIndex int) error
+	Save(data.AccountKey) error
+	Delete(address string, keyIndex int) error
 	ServiceAuthorizer(ctx context.Context, fc *client.Client) (Authorizer, error)
-	AccountAuthorizer(ctx context.Context, fc *client.Client, addr flow.Address) (Authorizer, error)
+	AccountAuthorizer(ctx context.Context, fc *client.Client, address string) (Authorizer, error)
 }
 
 type Authorizer struct {
@@ -29,5 +30,5 @@ type Authorizer struct {
 
 type NewKeyWrapper struct {
 	FlowKey    *flow.AccountKey
-	AccountKey AccountKey
+	AccountKey data.AccountKey
 }

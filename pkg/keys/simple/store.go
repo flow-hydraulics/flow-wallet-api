@@ -5,7 +5,8 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/store"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
+	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -13,8 +14,8 @@ import (
 )
 
 type KeyStore struct {
-	db                store.DataStore
-	serviceAcct       store.AccountKey
+	db                data.Store
+	serviceAcct       data.AccountKey
 	defaultKeyManager string
 	encryptionKey     string
 	signAlgo          crypto.SignatureAlgorithm
@@ -22,8 +23,8 @@ type KeyStore struct {
 }
 
 func NewKeyStore(
-	db store.DataStore,
-	serviceAcct store.AccountKey,
+	db data.Store,
+	serviceAcct data.AccountKey,
 	defaultKeyManager string,
 	encryptionKey string,
 ) (*KeyStore, error) {
@@ -37,17 +38,17 @@ func NewKeyStore(
 	}, nil
 }
 
-func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (store.NewKeyWrapper, error) {
+func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys.NewKeyWrapper, error) {
 	switch s.defaultKeyManager {
-	case store.ACCOUNT_KEY_TYPE_LOCAL:
+	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		seed := make([]byte, crypto.MinSeedLength)
 		_, err := rand.Read(seed)
 		if err != nil {
-			return store.NewKeyWrapper{}, err
+			return keys.NewKeyWrapper{}, err
 		}
 		privateKey, err := crypto.GeneratePrivateKey(s.signAlgo, seed)
 		if err != nil {
-			return store.NewKeyWrapper{}, err
+			return keys.NewKeyWrapper{}, err
 		}
 
 		flowKey := flow.NewAccountKey().
@@ -56,21 +57,21 @@ func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (stor
 			SetWeight(weight)
 		flowKey.Index = keyIndex
 
-		accountKey := store.AccountKey{
+		accountKey := data.AccountKey{
 			Index: keyIndex,
-			Type:  store.ACCOUNT_KEY_TYPE_LOCAL,
+			Type:  keys.ACCOUNT_KEY_TYPE_LOCAL,
 			Value: privateKey.String(),
 		}
-		return store.NewKeyWrapper{FlowKey: flowKey, AccountKey: accountKey}, nil
+		return keys.NewKeyWrapper{FlowKey: flowKey, AccountKey: accountKey}, nil
 	default:
 		// TODO: google_kms
-		return store.NewKeyWrapper{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.defaultKeyManager)
+		return keys.NewKeyWrapper{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.defaultKeyManager)
 	}
 }
 
-func (s *KeyStore) Save(key store.AccountKey) error {
+func (s *KeyStore) Save(key data.AccountKey) error {
 	switch key.Type {
-	case store.ACCOUNT_KEY_TYPE_LOCAL:
+	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		// TODO: encrypt key.Value
 		if s.encryptionKey != "" {
 			panic("key encryption not implemented")
@@ -83,41 +84,41 @@ func (s *KeyStore) Save(key store.AccountKey) error {
 	}
 }
 
-func (s *KeyStore) Delete(addr flow.Address, keyIndex int) error {
+func (s *KeyStore) Delete(address string, keyIndex int) error {
 	panic("not implemented") // TODO: implement
 }
 
-func (s *KeyStore) ServiceAuthorizer(ctx context.Context, fc *client.Client) (store.Authorizer, error) {
+func (s *KeyStore) ServiceAuthorizer(ctx context.Context, fc *client.Client) (keys.Authorizer, error) {
 	return s.MakeAuthorizer(ctx, fc, s.serviceAcct.AccountAddress)
 }
 
-func (s *KeyStore) AccountAuthorizer(ctx context.Context, fc *client.Client, addr flow.Address) (store.Authorizer, error) {
-	return s.MakeAuthorizer(ctx, fc, addr)
+func (s *KeyStore) AccountAuthorizer(ctx context.Context, fc *client.Client, address string) (keys.Authorizer, error) {
+	return s.MakeAuthorizer(ctx, fc, address)
 }
 
-func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr flow.Address) (store.Authorizer, error) {
+func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, address string) (keys.Authorizer, error) {
 	var (
-		accountKey store.AccountKey
-		authorizer store.Authorizer = store.Authorizer{}
+		accountKey data.AccountKey
+		authorizer keys.Authorizer = keys.Authorizer{}
+		err        error
 	)
 
-	authorizer.Address = addr
+	authorizer.Address = flow.HexToAddress(address)
 
-	if addr == s.serviceAcct.AccountAddress {
+	if address == s.serviceAcct.AccountAddress {
 		accountKey = s.serviceAcct
 	} else {
-		ak, err := s.db.AccountKey(addr)
+		accountKey, err = s.db.AccountKey(address)
 		if err != nil {
 			return authorizer, err
 		}
-		accountKey = ak
 		if s.encryptionKey != "" {
 			// TODO: decrypt accountKey.Value
 			panic("key decryption not implemented")
 		}
 	}
 
-	flowAcc, err := fc.GetAccount(ctx, addr)
+	flowAcc, err := fc.GetAccount(ctx, flow.HexToAddress(address))
 	if err != nil {
 		return authorizer, err
 	}
@@ -127,13 +128,13 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 	// TODO: Decide whether we want to allow this kind of flexibility
 	// or should we just panic if `accountKey.Type` != `s.defaultKeyManager`
 	switch accountKey.Type {
-	case store.ACCOUNT_KEY_TYPE_LOCAL:
+	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		pk, err := crypto.DecodePrivateKeyHex(s.signAlgo, accountKey.Value)
 		if err != nil {
 			return authorizer, err
 		}
 		authorizer.Signer = crypto.NewInMemorySigner(pk, s.hashAlgo)
-	case store.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
+	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		kmsClient, err := cloudkms.NewClient(ctx)
 		if err != nil {
 			return authorizer, err
@@ -146,7 +147,7 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addr f
 
 		sig, err := kmsClient.SignerForKey(
 			ctx,
-			addr,
+			flow.HexToAddress(address),
 			kmsKey,
 		)
 		if err != nil {

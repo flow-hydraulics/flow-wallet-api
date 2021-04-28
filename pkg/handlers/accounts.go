@@ -8,7 +8,6 @@ import (
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
 	"github.com/gorilla/mux"
-	"github.com/onflow/flow-go-sdk"
 )
 
 type Accounts struct {
@@ -49,8 +48,7 @@ func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Account details")
 	vars := mux.Vars(r)
-	addr := flow.HexToAddress(vars["address"])
-	account, err := s.as.Details(context.Background(), addr)
+	account, err := s.as.Details(context.Background(), vars["address"])
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte("Error"))
