@@ -14,40 +14,42 @@ func newAccountStore(db *gorm.DB) *AccountStore {
 	return &AccountStore{db}
 }
 
-func (s *AccountStore) Accounts() ([]data.Account, error) {
-	var accounts []data.Account
+// List all accounts
+func (s *AccountStore) Accounts() (accounts []data.Account, err error) {
 	result := s.db.Find(&accounts)
-	return accounts, result.Error
+	err = result.Error
+	return
 }
 
-func (s *AccountStore) Account(address string) (data.Account, error) {
-	panic("not implemented") // TODO: Implement
-}
-
-func (s *AccountStore) InsertAccount(a data.Account) error {
-	result := s.db.Create(&a)
+// Insert new account
+func (s *AccountStore) InsertAccount(account data.Account) error {
+	result := s.db.Create(&account)
 	return result.Error
 }
 
-func (s *AccountStore) DeleteAccount(address string) error {
-	panic("not implemented") // TODO: Implement
+// Get account details
+func (s *AccountStore) Account(address string) (account data.Account, err error) {
+	result := s.db.First(&account, "address = ?", address)
+	err = result.Error
+	return
 }
 
-func (s *AccountStore) AccountKeys() ([]data.AccountKey, error) {
-	var keys []data.AccountKey
+// List all account keys
+func (s *AccountStore) AccountKeys() (keys []data.AccountKey, err error) {
 	result := s.db.Find(&keys)
-	return keys, result.Error
+	err = result.Error
+	return
 }
 
-func (s *AccountStore) AccountKey(address string) (data.AccountKey, error) {
-	panic("not implemented") // TODO: Implement
-}
-
-func (s *AccountStore) InsertAccountKey(k data.AccountKey) error {
-	result := s.db.Create(&k)
+// Insert new account key
+func (s *AccountStore) InsertAccountKey(key data.AccountKey) error {
+	result := s.db.Create(&key)
 	return result.Error
 }
 
-func (s *AccountStore) DeleteAccountKey(address string) error {
-	panic("not implemented") // TODO: Implement
+// Get account key details
+func (s *AccountStore) AccountKey(address string) (key data.AccountKey, err error) {
+	result := s.db.First(&key, "address = ?", address)
+	err = result.Error
+	return
 }

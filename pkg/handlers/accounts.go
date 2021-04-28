@@ -23,6 +23,7 @@ func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("List accounts")
 	accounts, err := s.as.List(context.Background())
 	if err != nil {
+		s.l.Printf("Error: %s\n", err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte("Error"))
 		return
@@ -36,6 +37,7 @@ func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Create account")
 	account, err := s.as.Create(context.Background())
 	if err != nil {
+		s.l.Printf("Error: %s\n", err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte("Error"))
 		return
@@ -50,6 +52,7 @@ func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	account, err := s.as.Details(context.Background(), vars["address"])
 	if err != nil {
+		s.l.Printf("Error: %s\n", err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write([]byte("Error"))
 		return

@@ -2,18 +2,21 @@ package account
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
+	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
 type Service struct {
-	l  *log.Logger
-	db data.Store
-	ks keys.Store
-	fc *client.Client
+	l       *log.Logger
+	db      data.Store
+	ks      keys.Store
+	fc      *client.Client
+	chainId flow.ChainID // TODO: how do we want to handle different chains?
 }
 
 func NewService(
@@ -21,36 +24,45 @@ func NewService(
 	db data.Store,
 	ks keys.Store,
 	fc *client.Client) *Service {
-	return &Service{l, db, ks, fc}
+	return &Service{l, db, ks, fc, flow.Emulator}
 }
 
-func (s *Service) List(context.Context) ([]data.Account, error) {
-	accounts, err := s.db.Accounts()
-	if err != nil {
-		return []data.Account{}, err
-	}
-	return accounts, nil
+func (s *Service) List(ctx context.Context) (accounts []data.Account, err error) {
+	accounts, err = s.db.Accounts()
+	return
 }
 
-func (s *Service) Create(ctx context.Context) (data.Account, error) {
+func (s *Service) Create(ctx context.Context) (account data.Account, err error) {
 	account, key, err := Create(ctx, s.fc, s.ks)
 	if err != nil {
-		return data.Account{}, err
+		return
 	}
 
 	// Store the generated key
-	s.ks.Save(key)
+	err = s.ks.Save(key)
+	if err != nil {
+		return
+	}
 
 	// Store the account
-	s.db.InsertAccount(account)
+	err = s.db.InsertAccount(account)
 
-	return account, nil
+	return
 }
 
-func (s *Service) Details(ctx context.Context, address string) (data.Account, error) {
-	account, err := s.db.Account(address)
+func (s *Service) Details(ctx context.Context, address string) (account data.Account, err error) {
+	err = s.ValidateAddress(address)
 	if err != nil {
-		return data.Account{}, err
+		return
 	}
-	return account, nil
+	account, err = s.db.Account(address)
+	return
+}
+
+func (s *Service) ValidateAddress(address string) (err error) {
+	flowAddress := flow.HexToAddress(address)
+	if !flowAddress.IsValid(s.chainId) {
+		err = fmt.Errorf("'address': %s is not a valid address in '%s' chain", address, s.chainId)
+	}
+	return
 }
