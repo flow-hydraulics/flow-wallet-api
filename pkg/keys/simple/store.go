@@ -23,7 +23,7 @@ type KeyStore struct {
 	db                data.Store
 	serviceAcct       data.AccountKey
 	defaultKeyManager string
-	encryptionKey     string
+	crypter           *SymmetricCrypter
 	signAlgo          crypto.SignatureAlgorithm
 	hashAlgo          crypto.HashAlgorithm
 }
@@ -44,7 +44,7 @@ func NewKeyStore(
 		db,
 		serviceAcct,
 		defaultKeyManager,
-		encryptionKey,
+		NewCrypter([]byte(encryptionKey)),
 		crypto.ECDSA_P256, // TODO: config
 		crypto.SHA3_256,   // TODO: config
 	}, nil
@@ -129,11 +129,12 @@ func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys
 func (s *KeyStore) Save(key data.AccountKey) error {
 	switch key.Type {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
-		// TODO: encrypt key.Value
-		if s.encryptionKey != "" {
-			panic("key encryption not implemented")
+		encValue, err := s.crypter.Encrypt([]byte(key.Value))
+		if err != nil {
+			return err
 		}
-		err := s.db.InsertAccountKey(key)
+		key.Value = string(encValue)
+		err = s.db.InsertAccountKey(key)
 		return err
 	default:
 		// TODO: google_kms
@@ -169,10 +170,11 @@ func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, addres
 		if err != nil {
 			return authorizer, err
 		}
-		if s.encryptionKey != "" {
-			// TODO: decrypt accountKey.Value
-			panic("key decryption not implemented")
+		decValue, err := s.crypter.Decrypt([]byte(accountKey.Value))
+		if err != nil {
+			return authorizer, err
 		}
+		accountKey.Value = string(decValue)
 	}
 
 	flowAcc, err := fc.GetAccount(ctx, flow.HexToAddress(address))
