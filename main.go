@@ -14,7 +14,6 @@ import (
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/data/gorm"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/data/memory"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
 	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys/simple"
 	"github.com/gorilla/mux"
@@ -35,8 +34,8 @@ type config struct {
 	ServiceAccountKeyValue string `env:"SERVICE_ACC_KEY_VALUE,required"`
 	DefaultKeyManager      string `env:"DEFAULT_KEY_MANAGER" envDefault:"local"`
 	EncryptionKey          string `env:"ENCRYPTION_KEY"`
-	DatabaseDSN            string `env:"DB_DSN"`
-	DatabaseType           string `env:"DB_TYPE" envDefault:"memory"`
+	DatabaseDSN            string `env:"DB_DSN" envDefault:"wallet.db"`
+	DatabaseType           string `env:"DB_TYPE" envDefault:"sqlite"`
 	FlowGateway            string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
 }
 
@@ -69,8 +68,6 @@ func main() {
 
 	var db data.Store
 	switch cfg.DatabaseType {
-	case data.DB_TYPE_MEMORY:
-		db, err = memory.NewDataStore()
 	case data.DB_TYPE_POSTGRESQL:
 		db, err = gorm.NewDataStore(postgres.Open(cfg.DatabaseDSN))
 	case data.DB_TYPE_MYSQL:
@@ -78,6 +75,7 @@ func main() {
 	case data.DB_TYPE_SQLITE:
 		db, err = gorm.NewDataStore(sqlite.Open(cfg.DatabaseDSN))
 	default:
+		err = fmt.Errorf("database type '%s' not supported", cfg.DatabaseType)
 	}
 	if err != nil {
 		log.Fatal(err)
