@@ -10,46 +10,29 @@ type AccountStore struct {
 }
 
 func newAccountStore(db *gorm.DB) *AccountStore {
-	db.AutoMigrate(&data.Account{}, &data.AccountKey{})
+	db.AutoMigrate(&data.Account{}, &data.Key{})
 	return &AccountStore{db}
 }
 
 // List all accounts
 func (s *AccountStore) Accounts() (accounts []data.Account, err error) {
-	result := s.db.Find(&accounts)
-	err = result.Error
+	err = s.db.Select("address").Find(&accounts).Error
 	return
 }
 
 // Insert new account
 func (s *AccountStore) InsertAccount(account data.Account) error {
-	result := s.db.Create(&account)
-	return result.Error
+	return s.db.Create(&account).Error
 }
 
 // Get account details
 func (s *AccountStore) Account(address string) (account data.Account, err error) {
-	result := s.db.First(&account, "address = ?", address)
-	err = result.Error
+	err = s.db.Preload("Keys").First(&account, "address = ?", address).Error
 	return
 }
 
-// List all account keys
-func (s *AccountStore) AccountKeys() (keys []data.AccountKey, err error) {
-	result := s.db.Find(&keys)
-	err = result.Error
-	return
-}
-
-// Insert new account key
-func (s *AccountStore) InsertAccountKey(key data.AccountKey) error {
-	result := s.db.Create(&key)
-	return result.Error
-}
-
-// Get account key details
-func (s *AccountStore) AccountKey(address string) (key data.AccountKey, err error) {
-	result := s.db.First(&key, "address = ?", address)
-	err = result.Error
+// Get account key with index
+func (s *AccountStore) AccountKey(address string, index int) (key data.Key, err error) {
+	err = s.db.Where("account_address = ? AND index = ?", address, index).First(&key).Error
 	return
 }

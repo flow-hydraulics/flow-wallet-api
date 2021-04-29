@@ -14,15 +14,15 @@ type FungibleTokens struct {
 	l  *log.Logger
 	c  *client.Client
 	db data.Store
-	ks keys.Store
+	km keys.Manager
 }
 
 func NewFungibleTokens(
 	l *log.Logger,
 	c *client.Client,
 	db data.Store,
-	ks keys.Store) *FungibleTokens {
-	return &FungibleTokens{l, c, db, ks}
+	km keys.Manager) *FungibleTokens {
+	return &FungibleTokens{l, c, db, km}
 }
 
 func (s *FungibleTokens) Details(rw http.ResponseWriter, r *http.Request) {

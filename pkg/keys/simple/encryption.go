@@ -17,11 +17,13 @@ func NewCrypter(key []byte) *SymmetricCrypter {
 }
 
 func (s *SymmetricCrypter) Encrypt(original []byte) ([]byte, error) {
+	// TODO: research if these could be stored in the struct
 	c, err := aes.NewCipher(s.key)
 	if err != nil {
 		return []byte(""), err
 	}
 
+	// TODO: research if these could be stored in the struct
 	gcm, err := cipher.NewGCM(c)
 	if err != nil {
 		return []byte(""), err
@@ -36,11 +38,13 @@ func (s *SymmetricCrypter) Encrypt(original []byte) ([]byte, error) {
 }
 
 func (s *SymmetricCrypter) Decrypt(original []byte) ([]byte, error) {
+	// TODO: research if these could be stored in the struct
 	c, err := aes.NewCipher(s.key)
 	if err != nil {
 		return []byte(""), err
 	}
 
+	// TODO: research if these could be stored in the struct
 	gcm, err := cipher.NewGCM(c)
 	if err != nil {
 		return []byte(""), err

@@ -15,13 +15,13 @@ import (
 func Create(
 	ctx context.Context,
 	fc *client.Client,
-	ks keys.Store,
+	km keys.Manager,
 ) (
 	newAccount data.Account,
-	newAccountKey data.AccountKey,
+	newKey keys.Key,
 	err error,
 ) {
-	serviceAuth, err := ks.ServiceAuthorizer(ctx, fc)
+	serviceAuth, err := km.AdminAuthorizer()
 	if err != nil {
 		return
 	}
@@ -32,12 +32,12 @@ func Create(
 	}
 
 	// Generate a new key pair
-	wrapped, err := ks.Generate(ctx, 0, flow.AccountKeyWeightThreshold)
+	wrapped, err := km.Generate(0, flow.AccountKeyWeightThreshold)
 	if err != nil {
 		return
 	}
 	publicKey := wrapped.FlowKey
-	newAccountKey = wrapped.AccountKey
+	newKey = wrapped.AccountKey
 
 	// Setup a transaction to create an account
 	tx := templates.CreateAccount([]*flow.AccountKey{publicKey}, nil, serviceAuth.Address)
@@ -82,7 +82,6 @@ func Create(
 		return
 	}
 
-	newAccountKey.AccountAddress = newAddress
 	newAccount.Address = newAddress
 
 	return

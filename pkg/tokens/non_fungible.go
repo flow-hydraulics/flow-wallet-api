@@ -17,13 +17,13 @@ type NftInfo struct {
 	Name        string
 }
 
-func SetupNFT(ctx context.Context, fc *client.Client, ks keys.Store, address string, n NftInfo) (*flow.TransactionResult, error) {
-	serviceAuth, err := ks.ServiceAuthorizer(ctx, fc)
+func SetupNFT(ctx context.Context, fc *client.Client, km keys.Manager, address string, n NftInfo) (*flow.TransactionResult, error) {
+	serviceAuth, err := km.AdminAuthorizer()
 	if err != nil {
 		return &flow.TransactionResult{}, err
 	}
 
-	accountAuth, err := ks.AccountAuthorizer(ctx, fc, address)
+	accountAuth, err := km.UserAuthorizer(address)
 	if err != nil {
 		return &flow.TransactionResult{}, err
 	}

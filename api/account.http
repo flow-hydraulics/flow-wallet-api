@@ -6,5 +6,5 @@ POST http://localhost:3000/v1/accounts HTTP/1.1
 content-type: application/json
 
 ###
-GET http://localhost:3000/v1/accounts/test HTTP/1.1
+GET http://localhost:3000/v1/accounts/0f7025fa05b578e3 HTTP/1.1
 content-type: application/json

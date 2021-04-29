@@ -14,7 +14,7 @@ import (
 type Service struct {
 	l       *log.Logger
 	db      data.Store
-	ks      keys.Store
+	km      keys.Manager
 	fc      *client.Client
 	chainId flow.ChainID // TODO: how do we want to handle different chains?
 }
@@ -22,9 +22,9 @@ type Service struct {
 func NewService(
 	l *log.Logger,
 	db data.Store,
-	ks keys.Store,
+	km keys.Manager,
 	fc *client.Client) *Service {
-	return &Service{l, db, ks, fc, flow.Emulator}
+	return &Service{l, db, km, fc, flow.Emulator}
 }
 
 func (s *Service) List(ctx context.Context) (accounts []data.Account, err error) {
@@ -33,18 +33,18 @@ func (s *Service) List(ctx context.Context) (accounts []data.Account, err error)
 }
 
 func (s *Service) Create(ctx context.Context) (account data.Account, err error) {
-	account, key, err := Create(ctx, s.fc, s.ks)
+	account, key, err := Create(ctx, s.fc, s.km)
 	if err != nil {
 		return
 	}
 
-	// Store the generated key
-	err = s.ks.Save(key)
+	accountKey, err := s.km.Save(key)
 	if err != nil {
 		return
 	}
+	account.Keys = []data.Key{accountKey}
 
-	// Store the account
+	// Store
 	err = s.db.InsertAccount(account)
 
 	return
@@ -55,7 +55,15 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 	if err != nil {
 		return
 	}
+
+	// keys, err := s.db.AccountKeys(address)
+	// if err != nil {
+	// 	return
+	// }
+
 	account, err = s.db.Account(address)
+	// account.Keys = keys
+
 	return
 }
 

@@ -13,15 +13,15 @@ type Transactions struct {
 	l  *log.Logger
 	c  *client.Client
 	db data.Store
-	ks keys.Store
+	km keys.Manager
 }
 
 func NewTransactions(
 	l *log.Logger,
 	c *client.Client,
 	db data.Store,
-	ks keys.Store) *Transactions {
-	return &Transactions{l, c, db, ks}
+	km keys.Manager) *Transactions {
+	return &Transactions{l, c, db, km}
 }
 
 func (s *Transactions) List(rw http.ResponseWriter, r *http.Request) {

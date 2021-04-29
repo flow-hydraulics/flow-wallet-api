@@ -5,16 +5,16 @@ import (
 	"gorm.io/gorm"
 )
 
-type DataStore struct {
+type Store struct {
 	data.AccountStore
 }
 
-func NewDataStore(dialector gorm.Dialector) (*DataStore, error) {
+func NewStore(dialector gorm.Dialector) (*Store, error) {
 	db, err := gorm.Open(dialector, &gorm.Config{})
 	if err != nil {
-		return &DataStore{}, nil
+		return &Store{}, err
 	}
-	return &DataStore{
+	return &Store{
 		AccountStore: newAccountStore(db),
 	}, nil
 }

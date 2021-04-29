@@ -19,9 +19,11 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-type KeyStore struct {
+type KeyManager struct {
 	db                data.Store
-	serviceAcct       data.AccountKey
+	fc                *client.Client
+	serviceAddress    string
+	serviceKey        keys.Key
 	defaultKeyManager string
 	crypter           *SymmetricCrypter
 	signAlgo          crypto.SignatureAlgorithm
@@ -34,15 +36,19 @@ type GoogleKMSConfig struct {
 	KeyRingID  string
 }
 
-func NewKeyStore(
+func NewKeyManager(
 	db data.Store,
-	serviceAcct data.AccountKey,
+	fc *client.Client,
+	serviceAddress string,
+	serviceKey keys.Key,
 	defaultKeyManager string,
 	encryptionKey string,
-) (*KeyStore, error) {
-	return &KeyStore{
+) (*KeyManager, error) {
+	return &KeyManager{
 		db,
-		serviceAcct,
+		fc,
+		serviceAddress,
+		serviceKey,
 		defaultKeyManager,
 		NewCrypter([]byte(encryptionKey)),
 		crypto.ECDSA_P256, // TODO: config
@@ -50,17 +56,17 @@ func NewKeyStore(
 	}, nil
 }
 
-func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys.NewKeyWrapper, error) {
+func (s *KeyManager) Generate(keyIndex int, weight int) (keys.Wrapped, error) {
 	switch s.defaultKeyManager {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		seed := make([]byte, crypto.MinSeedLength)
 		_, err := rand.Read(seed)
 		if err != nil {
-			return keys.NewKeyWrapper{}, err
+			return keys.Wrapped{}, err
 		}
 		privateKey, err := crypto.GeneratePrivateKey(s.signAlgo, seed)
 		if err != nil {
-			return keys.NewKeyWrapper{}, err
+			return keys.Wrapped{}, err
 		}
 
 		flowKey := flow.NewAccountKey().
@@ -69,12 +75,17 @@ func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys
 			SetWeight(weight)
 		flowKey.Index = keyIndex
 
-		accountKey := data.AccountKey{
+		encPrivKey, err := s.crypter.Encrypt([]byte(privateKey.String()))
+		if err != nil {
+			return keys.Wrapped{}, err
+		}
+
+		accountKey := keys.Key{
 			Index: keyIndex,
 			Type:  keys.ACCOUNT_KEY_TYPE_LOCAL,
-			Value: privateKey.String(),
+			Value: string(encPrivKey),
 		}
-		return keys.NewKeyWrapper{FlowKey: flowKey, AccountKey: accountKey}, nil
+		return keys.Wrapped{FlowKey: flowKey, AccountKey: accountKey}, nil
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		// TODO: Take this as a param / config instead
 		gkmsConfig := GoogleKMSConfig{
@@ -84,31 +95,33 @@ func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys
 		}
 		keyUUID := uuid.New()
 
+		ctx := context.Background()
+
 		// Create the new key in Google KMS
-		createdKey, err := createKeyAsymmetricSign(
+		createdKey, err := createKeyAsymmetricSigningKey(
 			ctx,
 			fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gkmsConfig.ProjectID, gkmsConfig.LocationID, gkmsConfig.KeyRingID),
 			fmt.Sprintf("flow-wallet-account-key-%s", keyUUID.String()),
 		)
 		if err != nil {
 			fmt.Println(err)
-			return keys.NewKeyWrapper{}, err
+			return keys.Wrapped{}, err
 		}
 
 		client, err := cloudkms.NewClient(ctx)
 		if err != nil {
 			fmt.Println(err)
-			return keys.NewKeyWrapper{}, err
+			return keys.Wrapped{}, err
 		}
 
 		// Get the public key (using flow-go-sdk's cloudkms.Client)
 		publicKey, hashAlgorithm, err := client.GetPublicKey(ctx, createdKey)
 		if err != nil {
 			fmt.Println(err)
-			return keys.NewKeyWrapper{}, err
+			return keys.Wrapped{}, err
 		}
 
-		accountKey := data.AccountKey{
+		accountKey := keys.Key{
 			Index: keyIndex,
 			Type:  keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS,
 			Value: createdKey.ResourceID(),
@@ -120,64 +133,62 @@ func (s *KeyStore) Generate(ctx context.Context, keyIndex int, weight int) (keys
 			SetWeight(weight)
 		flowKey.Index = keyIndex
 
-		return keys.NewKeyWrapper{FlowKey: flowKey, AccountKey: accountKey}, nil
+		return keys.Wrapped{FlowKey: flowKey, AccountKey: accountKey}, nil
 	default:
-		return keys.NewKeyWrapper{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.defaultKeyManager)
+		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.defaultKeyManager)
 	}
 }
 
-func (s *KeyStore) Save(key data.AccountKey) error {
-	switch key.Type {
-	case keys.ACCOUNT_KEY_TYPE_LOCAL:
-		encValue, err := s.crypter.Encrypt([]byte(key.Value))
-		if err != nil {
-			return err
-		}
-		key.Value = string(encValue)
-		err = s.db.InsertAccountKey(key)
-		return err
-	default:
-		// TODO: google_kms
-		return fmt.Errorf("keyStore.Save() not implmented for %s", s.defaultKeyManager)
+func (s *KeyManager) Save(key keys.Key) (result data.Key, err error) {
+	encValue, err := s.crypter.Encrypt([]byte(key.Value))
+	if err != nil {
+		return
 	}
+	result.Index = key.Index
+	result.Type = key.Type
+	result.Value = encValue
+	return
 }
 
-func (s *KeyStore) Delete(address string, keyIndex int) error {
-	panic("not implemented") // TODO: implement
+func (s *KeyManager) Load(key data.Key) (result keys.Key, err error) {
+	decValue, err := s.crypter.Decrypt([]byte(key.Value))
+	if err != nil {
+		return
+	}
+	result.Index = key.Index
+	result.Type = key.Type
+	result.Value = string(decValue)
+	return
 }
 
-func (s *KeyStore) ServiceAuthorizer(ctx context.Context, fc *client.Client) (keys.Authorizer, error) {
-	return s.MakeAuthorizer(ctx, fc, s.serviceAcct.AccountAddress)
+func (s *KeyManager) AdminAuthorizer() (keys.Authorizer, error) {
+	return s.MakeAuthorizer(s.serviceAddress)
 }
 
-func (s *KeyStore) AccountAuthorizer(ctx context.Context, fc *client.Client, address string) (keys.Authorizer, error) {
-	return s.MakeAuthorizer(ctx, fc, address)
+func (s *KeyManager) UserAuthorizer(address string) (keys.Authorizer, error) {
+	return s.MakeAuthorizer(address)
 }
 
-func (s *KeyStore) MakeAuthorizer(ctx context.Context, fc *client.Client, address string) (keys.Authorizer, error) {
-	var (
-		accountKey data.AccountKey
-		authorizer keys.Authorizer = keys.Authorizer{}
-		err        error
-	)
+func (s *KeyManager) MakeAuthorizer(address string) (authorizer keys.Authorizer, err error) {
+	var accountKey keys.Key
+	ctx := context.Background()
 
 	authorizer.Address = flow.HexToAddress(address)
 
-	if address == s.serviceAcct.AccountAddress {
-		accountKey = s.serviceAcct
+	if address == s.serviceAddress {
+		accountKey = s.serviceKey
 	} else {
-		accountKey, err = s.db.AccountKey(address)
+		dbKey, err := s.db.AccountKey(address, 0)
 		if err != nil {
 			return authorizer, err
 		}
-		decValue, err := s.crypter.Decrypt([]byte(accountKey.Value))
+		accountKey, err = s.Load(dbKey)
 		if err != nil {
 			return authorizer, err
 		}
-		accountKey.Value = string(decValue)
 	}
 
-	flowAcc, err := fc.GetAccount(ctx, flow.HexToAddress(address))
+	flowAcc, err := s.fc.GetAccount(ctx, flow.HexToAddress(address))
 	if err != nil {
 		return authorizer, err
 	}
