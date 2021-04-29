@@ -176,19 +176,20 @@ func (s *KeyManager) MakeAuthorizer(address string) (authorizer keys.Authorizer,
 	if address == s.serviceAddress {
 		accountKey = s.serviceKey
 	} else {
-		dbKey, err := s.db.AccountKey(address, 0)
+		var rawKey data.Key
+		rawKey, err = s.db.AccountKey(address, 0)
 		if err != nil {
-			return authorizer, err
+			return
 		}
-		accountKey, err = s.Load(dbKey)
+		accountKey, err = s.Load(rawKey)
 		if err != nil {
-			return authorizer, err
+			return
 		}
 	}
 
 	flowAcc, err := s.fc.GetAccount(ctx, flow.HexToAddress(address))
 	if err != nil {
-		return authorizer, err
+		return
 	}
 
 	authorizer.Key = flowAcc.Keys[accountKey.Index]
@@ -199,18 +200,18 @@ func (s *KeyManager) MakeAuthorizer(address string) (authorizer keys.Authorizer,
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		pk, err := crypto.DecodePrivateKeyHex(s.signAlgo, accountKey.Value)
 		if err != nil {
-			return authorizer, err
+			break
 		}
 		authorizer.Signer = crypto.NewInMemorySigner(pk, s.hashAlgo)
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		kmsClient, err := cloudkms.NewClient(ctx)
 		if err != nil {
-			return authorizer, err
+			break
 		}
 
 		kmsKey, err := cloudkms.KeyFromResourceID(accountKey.Value)
 		if err != nil {
-			return authorizer, err
+			break
 		}
 
 		sig, err := kmsClient.SignerForKey(
@@ -219,13 +220,12 @@ func (s *KeyManager) MakeAuthorizer(address string) (authorizer keys.Authorizer,
 			kmsKey,
 		)
 		if err != nil {
-			return authorizer, err
+			break
 		}
 		authorizer.Signer = sig
 	default:
-		return authorizer,
-			fmt.Errorf("accountKey.Type not recognised: %s", accountKey.Type)
+		err = fmt.Errorf("accountKey.Type not recognised: %s", accountKey.Type)
 	}
 
-	return authorizer, nil
+	return
 }
