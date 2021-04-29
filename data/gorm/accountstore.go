@@ -1,7 +1,7 @@
 package gorm
 
 import (
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
+	"github.com/eqlabs/flow-nft-wallet-service/data"
 	"gorm.io/gorm"
 )
 

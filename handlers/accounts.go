@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
+	"github.com/eqlabs/flow-nft-wallet-service/account"
 	"github.com/gorilla/mux"
 )
 

@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
+	"github.com/eqlabs/flow-nft-wallet-service/data"
+	"github.com/eqlabs/flow-nft-wallet-service/keys"
 	"github.com/onflow/flow-go-sdk/client"
 )
 

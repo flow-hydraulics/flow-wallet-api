@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys/google"
+	"github.com/eqlabs/flow-nft-wallet-service/data"
+	"github.com/eqlabs/flow-nft-wallet-service/keys"
+	"github.com/eqlabs/flow-nft-wallet-service/keys/google"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/crypto"
