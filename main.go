@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/account"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/data"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/data/gorm"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/handlers"
-	"github.com/eqlabs/flow-nft-wallet-service/pkg/keys/simple"
+	"github.com/eqlabs/flow-nft-wallet-service/account"
+	"github.com/eqlabs/flow-nft-wallet-service/data"
+	"github.com/eqlabs/flow-nft-wallet-service/data/gorm"
+	"github.com/eqlabs/flow-nft-wallet-service/handlers"
+	"github.com/eqlabs/flow-nft-wallet-service/keys"
+	"github.com/eqlabs/flow-nft-wallet-service/keys/simple"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk/client"
@@ -69,11 +70,11 @@ func main() {
 	var db data.Store
 	switch cfg.DatabaseType {
 	case data.DB_TYPE_POSTGRESQL:
-		db, err = gorm.NewDataStore(postgres.Open(cfg.DatabaseDSN))
+		db, err = gorm.NewStore(postgres.Open(cfg.DatabaseDSN))
 	case data.DB_TYPE_MYSQL:
-		db, err = gorm.NewDataStore(mysql.Open(cfg.DatabaseDSN))
+		db, err = gorm.NewStore(mysql.Open(cfg.DatabaseDSN))
 	case data.DB_TYPE_SQLITE:
-		db, err = gorm.NewDataStore(sqlite.Open(cfg.DatabaseDSN))
+		db, err = gorm.NewStore(sqlite.Open(cfg.DatabaseDSN))
 	default:
 		err = fmt.Errorf("database type '%s' not supported", cfg.DatabaseType)
 	}
@@ -81,13 +82,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ks, err := simple.NewKeyStore(
+	km, err := simple.NewKeyManager(
 		db,
-		data.AccountKey{
-			AccountAddress: cfg.ServiceAccountAddress,
-			Index:          cfg.ServiceAccountKeyIndex,
-			Type:           cfg.ServiceAccountKeyType,
-			Value:          cfg.ServiceAccountKeyValue,
+		fc,
+		cfg.ServiceAccountAddress,
+		keys.Key{
+			Index: cfg.ServiceAccountKeyIndex,
+			Type:  cfg.ServiceAccountKeyType,
+			Value: cfg.ServiceAccountKeyValue,
 		},
 		cfg.DefaultKeyManager,
 		cfg.EncryptionKey,
@@ -96,11 +98,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	accountService := account.NewService(l, db, ks, fc)
+	accountService := account.NewService(l, db, km, fc)
 
 	accounts := handlers.NewAccounts(l, accountService)
-	// transactions := handlers.NewTransactions(l, fc, db, ks)
-	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, ks)
+	// transactions := handlers.NewTransactions(l, fc, db, km)
+	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, km)
 
 	r := mux.NewRouter()
 
