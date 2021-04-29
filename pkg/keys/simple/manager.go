@@ -96,7 +96,7 @@ func (s *KeyManager) Generate(keyIndex int, weight int) (result keys.Wrapped, er
 		keyUUID := uuid.New()
 
 		// Create the new key in Google KMS
-		createdKey, err := google.AsyncKey(
+		createdKey, err := google.AsymKey(
 			ctx,
 			fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gkmsConfig.ProjectID, gkmsConfig.LocationID, gkmsConfig.KeyRingID),
 			fmt.Sprintf("flow-wallet-account-key-%s", keyUUID.String()),

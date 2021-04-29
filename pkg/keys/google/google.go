@@ -12,7 +12,7 @@ import (
 )
 
 // Creates a new asymmetric signing key in Google KMS and returns a cloudkms.Key (the "raw" result isn't needed)
-func AsyncKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, err error) {
+func AsymKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, err error) {
 	kmsClient, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
 		return
