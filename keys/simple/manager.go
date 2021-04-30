@@ -2,137 +2,94 @@ package simple
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
-	"os"
+	"log"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-nft-wallet-service/data"
 	"github.com/eqlabs/flow-nft-wallet-service/keys"
+	"github.com/eqlabs/flow-nft-wallet-service/keys/encryption"
 	"github.com/eqlabs/flow-nft-wallet-service/keys/google"
+	"github.com/eqlabs/flow-nft-wallet-service/keys/local"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/crypto"
-	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
-
-	"github.com/google/uuid"
 )
 
 type KeyManager struct {
-	db                data.Store
-	fc                *client.Client
-	serviceAddress    string
-	serviceKey        keys.Key
-	defaultKeyManager string
-	crypter           *SymmetricCrypter
-	signAlgo          crypto.SignatureAlgorithm
-	hashAlgo          crypto.HashAlgorithm
+	l               *log.Logger
+	db              data.Store
+	fc              *client.Client
+	cfg             Config
+	googleCfg       google.Config
+	crypter         *encryption.SymmetricCrypter
+	signAlgo        crypto.SignatureAlgorithm
+	hashAlgo        crypto.HashAlgorithm
+	adminAccountKey keys.Key
 }
 
-type GoogleKMSConfig struct {
-	ProjectID  string
-	LocationID string
-	KeyRingID  string
+type Config struct {
+	AdminAccountAddress  string `env:"ADMIN_ACC_ADDRESS,required"`
+	AdminAccountKeyIndex int    `env:"ADMIN_ACC_KEY_INDEX" envDefault:"0"`
+	AdminAccountKeyType  string `env:"ADMIN_ACC_KEY_TYPE" envDefault:"local"`
+	AdminAccountKeyValue string `env:"ADMIN_ACC_KEY_VALUE,required"`
+	DefaultKeyManager    string `env:"DEFAULT_KEY_MANAGER" envDefault:"local"`
+	EncryptionKey        string `env:"ENCRYPTION_KEY"`
 }
 
-func NewKeyManager(
-	db data.Store,
-	fc *client.Client,
-	serviceAddress string,
-	serviceKey keys.Key,
-	defaultKeyManager string,
-	encryptionKey string,
-) (*KeyManager, error) {
-	return &KeyManager{
+func NewKeyManager(l *log.Logger, db data.Store, fc *client.Client) (result *KeyManager, err error) {
+	cfg := Config{}
+	if err = env.Parse(&cfg); err != nil {
+		return
+	}
+
+	googleCfg := google.Config{}
+	if err = env.Parse(&googleCfg); err != nil {
+		return
+	}
+
+	adminAccountKey := keys.Key{
+		Index: cfg.AdminAccountKeyIndex,
+		Type:  cfg.AdminAccountKeyType,
+		Value: cfg.AdminAccountKeyValue,
+	}
+
+	crypter := encryption.NewCrypter([]byte(cfg.EncryptionKey))
+
+	result = &KeyManager{
+		l,
 		db,
 		fc,
-		serviceAddress,
-		serviceKey,
-		defaultKeyManager,
-		NewCrypter([]byte(encryptionKey)),
+		cfg,
+		googleCfg,
+		crypter,
 		crypto.ECDSA_P256, // TODO: config
 		crypto.SHA3_256,   // TODO: config
-	}, nil
+		adminAccountKey,
+	}
+
+	return
 }
 
-func (s *KeyManager) Generate(keyIndex int, weight int) (result keys.Wrapped, err error) {
-	switch s.defaultKeyManager {
+func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err error) {
+	switch s.cfg.DefaultKeyManager {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
-		seed := make([]byte, crypto.MinSeedLength)
-		_, err := rand.Read(seed)
-		if err != nil {
-			break
-		}
-
-		privateKey, err := crypto.GeneratePrivateKey(s.signAlgo, seed)
-		if err != nil {
-			break
-		}
-
-		flowKey := flow.NewAccountKey().
-			FromPrivateKey(privateKey).
-			SetHashAlgo(s.hashAlgo).
-			SetWeight(weight)
-		flowKey.Index = keyIndex
-
-		accountKey := keys.Key{
-			Index: keyIndex,
-			Type:  keys.ACCOUNT_KEY_TYPE_LOCAL,
-			Value: privateKey.String(),
-		}
-
-		result.AccountKey = accountKey
-		result.FlowKey = flowKey
-
-	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
-		// TODO: Take this as a param / config instead
-		gkmsConfig := GoogleKMSConfig{
-			ProjectID:  os.Getenv("GOOGLE_KMS_PROJECT_ID"),
-			LocationID: os.Getenv("GOOGLE_KMS_LOCATION_ID"),
-			KeyRingID:  os.Getenv("GOOGLE_KMS_KEYRING_ID"),
-		}
-
-		ctx := context.Background()
-
-		keyUUID := uuid.New()
-
-		// Create the new key in Google KMS
-		createdKey, err := google.AsymKey(
-			ctx,
-			fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", gkmsConfig.ProjectID, gkmsConfig.LocationID, gkmsConfig.KeyRingID),
-			fmt.Sprintf("flow-wallet-account-key-%s", keyUUID.String()),
+		result, err = local.Generate(
+			s.signAlgo,
+			s.hashAlgo,
+			keyIndex,
+			weight,
 		)
-		if err != nil {
-			break
-		}
-
-		client, err := cloudkms.NewClient(ctx)
-		if err != nil {
-			break
-		}
-
-		// Get the public key (using flow-go-sdk's cloudkms.Client)
-		publicKey, hashAlgorithm, err := client.GetPublicKey(ctx, createdKey)
-		if err != nil {
-			break
-		}
-
-		accountKey := keys.Key{
-			Index: keyIndex,
-			Type:  keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS,
-			Value: createdKey.ResourceID(),
-		}
-
-		flowKey := flow.NewAccountKey().
-			SetPublicKey(publicKey).
-			SetHashAlgo(hashAlgorithm).
-			SetWeight(weight)
-		flowKey.Index = keyIndex
-
-		result.AccountKey = accountKey
-		result.FlowKey = flowKey
-
+	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
+		result, err = google.Generate(
+			s.googleCfg.ProjectID,
+			s.googleCfg.LocationID,
+			s.googleCfg.KeyRingID,
+			keyIndex,
+			weight,
+		)
 	default:
-		err = fmt.Errorf("keyStore.Generate() not implmented for %s", s.defaultKeyManager)
+		err = fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyManager)
 	}
 	return
 }
@@ -160,28 +117,28 @@ func (s *KeyManager) Load(key data.Key) (result keys.Key, err error) {
 }
 
 func (s *KeyManager) AdminAuthorizer() (keys.Authorizer, error) {
-	return s.MakeAuthorizer(s.serviceAddress)
+	return s.MakeAuthorizer(s.cfg.AdminAccountAddress)
 }
 
 func (s *KeyManager) UserAuthorizer(address string) (keys.Authorizer, error) {
 	return s.MakeAuthorizer(address)
 }
 
-func (s *KeyManager) MakeAuthorizer(address string) (authorizer keys.Authorizer, err error) {
-	var accountKey keys.Key
+func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err error) {
+	var key keys.Key
 	ctx := context.Background()
 
-	authorizer.Address = flow.HexToAddress(address)
+	result.Address = flow.HexToAddress(address)
 
-	if address == s.serviceAddress {
-		accountKey = s.serviceKey
+	if address == s.cfg.AdminAccountAddress {
+		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key
 		rawKey, err = s.db.AccountKey(address, 0)
 		if err != nil {
 			return
 		}
-		accountKey, err = s.Load(rawKey)
+		key, err = s.Load(rawKey)
 		if err != nil {
 			return
 		}
@@ -192,39 +149,25 @@ func (s *KeyManager) MakeAuthorizer(address string) (authorizer keys.Authorizer,
 		return
 	}
 
-	authorizer.Key = flowAcc.Keys[accountKey.Index]
+	result.Key = flowAcc.Keys[key.Index]
 
 	// TODO: Decide whether we want to allow this kind of flexibility
-	// or should we just panic if `accountKey.Type` != `s.defaultKeyManager`
-	switch accountKey.Type {
+	// or should we just panic if `key.Type` != `s.defaultKeyManager`
+	switch key.Type {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
-		pk, err := crypto.DecodePrivateKeyHex(s.signAlgo, accountKey.Value)
+		signer, err := local.Signer(s.signAlgo, s.hashAlgo, key)
 		if err != nil {
 			break
 		}
-		authorizer.Signer = crypto.NewInMemorySigner(pk, s.hashAlgo)
+		result.Signer = signer
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
-		kmsClient, err := cloudkms.NewClient(ctx)
+		signer, err := google.Signer(ctx, address, key)
 		if err != nil {
 			break
 		}
-
-		kmsKey, err := cloudkms.KeyFromResourceID(accountKey.Value)
-		if err != nil {
-			break
-		}
-
-		sig, err := kmsClient.SignerForKey(
-			ctx,
-			flow.HexToAddress(address),
-			kmsKey,
-		)
-		if err != nil {
-			break
-		}
-		authorizer.Signer = sig
+		result.Signer = signer
 	default:
-		err = fmt.Errorf("accountKey.Type not recognised: %s", accountKey.Type)
+		err = fmt.Errorf("key.Type not recognised: %s", key.Type)
 	}
 
 	return

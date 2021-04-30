@@ -3,56 +3,87 @@ package google
 import (
 	"context"
 	"fmt"
-	"strings"
 
+	"github.com/eqlabs/flow-nft-wallet-service/keys"
+	"github.com/google/uuid"
+	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
-
-	kms "cloud.google.com/go/kms/apiv1"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-// Creates a new asymmetric signing key in Google KMS and returns a cloudkms.Key (the "raw" result isn't needed)
-func AsymKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, err error) {
-	kmsClient, err := kms.NewKeyManagementClient(ctx)
+type Config struct {
+	ProjectID  string `env:"GOOGLE_KMS_PROJECT_ID"`
+	LocationID string `env:"GOOGLE_KMS_LOCATION_ID"`
+	KeyRingID  string `env:"GOOGLE_KMS_KEYRING_ID"`
+}
+
+func Generate(
+	projectId, locationId, KeyRingId string,
+	keyIndex, weight int,
+) (result keys.Wrapped, err error) {
+	ctx := context.Background()
+
+	keyUUID := uuid.New()
+
+	// Create the new key in Google KMS
+	createdKey, err := AsymKey(
+		ctx,
+		fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", projectId, locationId, KeyRingId),
+		fmt.Sprintf("flow-wallet-account-key-%s", keyUUID.String()),
+	)
 	if err != nil {
 		return
 	}
 
-	req := &kmspb.CreateCryptoKeyRequest{
-		Parent:      parent,
-		CryptoKeyId: id,
-		CryptoKey: &kmspb.CryptoKey{
-			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
-				Algorithm: kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256,
-			},
-			// TODO: Set relevant labels at creation, update post-creation if necessary
-			Labels: map[string]string{
-				"service":         "flow-nft-wallet-service",
-				"account_address": "",
-				"chain_id":        "",
-				"environment":     "development",
-			},
-		},
-	}
-
-	googleKey, err := kmsClient.CreateCryptoKey(ctx, req)
+	client, err := cloudkms.NewClient(ctx)
 	if err != nil {
 		return
 	}
 
-	// Append cryptoKeyVersions so that we can utilize the KeyFromResourceID method
-	createdKey, err = cloudkms.KeyFromResourceID(fmt.Sprintf("%s/cryptoKeyVersions/1", googleKey.Name))
+	// Get the public key (using flow-go-sdk's cloudkms.Client)
+	publicKey, hashAlgorithm, err := client.GetPublicKey(ctx, createdKey)
 	if err != nil {
-		fmt.Println("Could not create cloudkms.Key from ResourceId:", googleKey.Name)
 		return
 	}
 
-	// Validate key name
-	if !strings.HasPrefix(createdKey.ResourceID(), googleKey.Name) {
-		fmt.Println("WARNING: created Google KMS key name does not match the expected", createdKey.ResourceID(), " vs ", googleKey.Name)
-		// TODO: Handle scenario
+	key := keys.Key{
+		Index: keyIndex,
+		Type:  keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS,
+		Value: createdKey.ResourceID(),
 	}
+
+	flowKey := flow.NewAccountKey().
+		SetPublicKey(publicKey).
+		SetHashAlgo(hashAlgorithm).
+		SetWeight(weight)
+	flowKey.Index = keyIndex
+
+	result.AccountKey = key
+	result.FlowKey = flowKey
+
+	return
+}
+
+func Signer(
+	ctx context.Context,
+	address string,
+	key keys.Key,
+) (result crypto.Signer, err error) {
+	kmsClient, err := cloudkms.NewClient(ctx)
+	if err != nil {
+		return
+	}
+
+	kmsKey, err := cloudkms.KeyFromResourceID(key.Value)
+	if err != nil {
+		return
+	}
+
+	result, err = kmsClient.SignerForKey(
+		ctx,
+		flow.HexToAddress(address),
+		kmsKey,
+	)
 
 	return
 }

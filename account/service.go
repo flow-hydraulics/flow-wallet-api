@@ -70,7 +70,7 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 func (s *Service) ValidateAddress(address string) (err error) {
 	flowAddress := flow.HexToAddress(address)
 	if !flowAddress.IsValid(s.chainId) {
-		err = fmt.Errorf("'address': %s is not a valid address in '%s' chain", address, s.chainId)
+		err = fmt.Errorf("'%s' is not a valid address in '%s' chain", address, s.chainId)
 	}
 	return
 }
