@@ -16,9 +16,13 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
+type Datastore interface {
+	AccountKey(address string, index int) (data.Key, error)
+}
+
 type KeyManager struct {
 	l               *log.Logger
-	db              data.Store
+	db              Datastore
 	fc              *client.Client
 	cfg             Config
 	googleCfg       google.Config
@@ -37,7 +41,7 @@ type Config struct {
 	EncryptionKey        string `env:"ENCRYPTION_KEY"`
 }
 
-func NewKeyManager(l *log.Logger, db data.Store, fc *client.Client) (result *KeyManager, err error) {
+func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyManager, err error) {
 	cfg := Config{}
 	if err = env.Parse(&cfg); err != nil {
 		return
