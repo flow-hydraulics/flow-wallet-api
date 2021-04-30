@@ -1,17 +1,20 @@
 package gorm
 
 import (
+	"log"
+
 	"github.com/eqlabs/flow-nft-wallet-service/data"
 	"gorm.io/gorm"
 )
 
 type AccountStore struct {
+	l  *log.Logger
 	db *gorm.DB
 }
 
-func newAccountStore(db *gorm.DB) *AccountStore {
+func newAccountStore(l *log.Logger, db *gorm.DB) *AccountStore {
 	db.AutoMigrate(&data.Account{}, &data.Key{})
-	return &AccountStore{db}
+	return &AccountStore{l, db}
 }
 
 // List all accounts

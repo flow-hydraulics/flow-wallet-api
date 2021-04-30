@@ -12,32 +12,19 @@ import (
 
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-nft-wallet-service/account"
-	"github.com/eqlabs/flow-nft-wallet-service/data"
 	"github.com/eqlabs/flow-nft-wallet-service/data/gorm"
 	"github.com/eqlabs/flow-nft-wallet-service/handlers"
-	"github.com/eqlabs/flow-nft-wallet-service/keys"
 	"github.com/eqlabs/flow-nft-wallet-service/keys/simple"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 )
 
 type config struct {
-	Host                   string `env:"HOST"`
-	Port                   int    `env:"PORT" envDefault:"3000"`
-	ServiceAccountAddress  string `env:"SERVICE_ACC_ADDRESS,required"`
-	ServiceAccountKeyIndex int    `env:"SERVICE_ACC_KEY_INDEX" envDefault:"0"`
-	ServiceAccountKeyType  string `env:"SERVICE_ACC_KEY_TYPE" envDefault:"local"`
-	ServiceAccountKeyValue string `env:"SERVICE_ACC_KEY_VALUE,required"`
-	DefaultKeyManager      string `env:"DEFAULT_KEY_MANAGER" envDefault:"local"`
-	EncryptionKey          string `env:"ENCRYPTION_KEY"`
-	DatabaseDSN            string `env:"DB_DSN" envDefault:"wallet.db"`
-	DatabaseType           string `env:"DB_TYPE" envDefault:"sqlite"`
-	FlowGateway            string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
+	Host        string `env:"HOST"`
+	Port        int    `env:"PORT" envDefault:"3000"`
+	FlowGateway string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
 }
 
 func main() {
@@ -59,46 +46,32 @@ func main() {
 	flag.BoolVar(&disable_nft, "disable-nft", false, "disable non-fungible token functionality")
 	flag.Parse()
 
+	// Application wide logger
 	l := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 
+	// Flow client
 	// TODO: WithInsecure()?
 	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var db data.Store
-	switch cfg.DatabaseType {
-	case data.DB_TYPE_POSTGRESQL:
-		db, err = gorm.NewStore(postgres.Open(cfg.DatabaseDSN))
-	case data.DB_TYPE_MYSQL:
-		db, err = gorm.NewStore(mysql.Open(cfg.DatabaseDSN))
-	case data.DB_TYPE_SQLITE:
-		db, err = gorm.NewStore(sqlite.Open(cfg.DatabaseDSN))
-	default:
-		err = fmt.Errorf("database type '%s' not supported", cfg.DatabaseType)
-	}
+	// Database
+	db, err := gorm.NewStore(l)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	km, err := simple.NewKeyManager(
-		db,
-		fc,
-		cfg.ServiceAccountAddress,
-		keys.Key{
-			Index: cfg.ServiceAccountKeyIndex,
-			Type:  cfg.ServiceAccountKeyType,
-			Value: cfg.ServiceAccountKeyValue,
-		},
-		cfg.DefaultKeyManager,
-		cfg.EncryptionKey,
-	)
+	// Key manager
+	km, err := simple.NewKeyManager(l, db, fc)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Services
 	accountService := account.NewService(l, db, km, fc)
+
+	// HTTP handling
 
 	accounts := handlers.NewAccounts(l, accountService)
 	// transactions := handlers.NewTransactions(l, fc, db, km)
@@ -135,6 +108,8 @@ func main() {
 	// }
 
 	// TODO: nfts
+
+	// Server boilerplate
 
 	srv := &http.Server{
 		Handler:      r,
