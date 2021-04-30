@@ -11,9 +11,15 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
+type Datastore interface {
+	Accounts() ([]data.Account, error)
+	InsertAccount(a data.Account) error
+	Account(address string) (data.Account, error)
+}
+
 type Service struct {
 	l       *log.Logger
-	db      data.Store
+	db      Datastore
 	km      keys.Manager
 	fc      *client.Client
 	chainId flow.ChainID // TODO: how do we want to handle different chains?
@@ -21,7 +27,7 @@ type Service struct {
 
 func NewService(
 	l *log.Logger,
-	db data.Store,
+	db Datastore,
 	km keys.Manager,
 	fc *client.Client) *Service {
 	return &Service{l, db, km, fc, flow.Emulator}
@@ -56,13 +62,7 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 		return
 	}
 
-	// keys, err := s.db.AccountKeys(address)
-	// if err != nil {
-	// 	return
-	// }
-
 	account, err = s.db.Account(address)
-	// account.Keys = keys
 
 	return
 }
