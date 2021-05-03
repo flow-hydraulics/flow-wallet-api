@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-nft-wallet-service/data"
 	"github.com/eqlabs/flow-nft-wallet-service/keys"
 	"github.com/eqlabs/flow-nft-wallet-service/keys/encryption"
@@ -24,34 +23,13 @@ type KeyManager struct {
 	l               *log.Logger
 	db              Datastore
 	fc              *client.Client
-	cfg             Config
-	googleCfg       google.Config
 	crypter         *encryption.SymmetricCrypter
 	signAlgo        crypto.SignatureAlgorithm
 	hashAlgo        crypto.HashAlgorithm
 	adminAccountKey keys.Key
 }
 
-type Config struct {
-	AdminAccountAddress  string `env:"ADMIN_ACC_ADDRESS,required"`
-	AdminAccountKeyIndex int    `env:"ADMIN_ACC_KEY_INDEX" envDefault:"0"`
-	AdminAccountKeyType  string `env:"ADMIN_ACC_KEY_TYPE" envDefault:"local"`
-	AdminAccountKeyValue string `env:"ADMIN_ACC_KEY_VALUE,required"`
-	DefaultKeyManager    string `env:"DEFAULT_KEY_MANAGER" envDefault:"local"`
-	EncryptionKey        string `env:"ENCRYPTION_KEY"`
-}
-
 func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyManager, err error) {
-	cfg := Config{}
-	if err = env.Parse(&cfg); err != nil {
-		return
-	}
-
-	googleCfg := google.Config{}
-	if err = env.Parse(&googleCfg); err != nil {
-		return
-	}
-
 	adminAccountKey := keys.Key{
 		Index: cfg.AdminAccountKeyIndex,
 		Type:  cfg.AdminAccountKeyType,
@@ -64,8 +42,6 @@ func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyM
 		l,
 		db,
 		fc,
-		cfg,
-		googleCfg,
 		crypter,
 		crypto.ECDSA_P256, // TODO: config
 		crypto.SHA3_256,   // TODO: config
@@ -75,8 +51,12 @@ func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyM
 	return
 }
 
+func (s *KeyManager) GenerateDefault() (keys.Wrapped, error) {
+	return s.Generate(cfg.DefaultKeyIndex, cfg.DefaultKeyWeight)
+}
+
 func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err error) {
-	switch s.cfg.DefaultKeyManager {
+	switch cfg.DefaultKeyStorage {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		result, err = local.Generate(
 			s.signAlgo,
@@ -86,14 +66,14 @@ func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err er
 		)
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		result, err = google.Generate(
-			s.googleCfg.ProjectID,
-			s.googleCfg.LocationID,
-			s.googleCfg.KeyRingID,
+			googleCfg.ProjectID,
+			googleCfg.LocationID,
+			googleCfg.KeyRingID,
 			keyIndex,
 			weight,
 		)
 	default:
-		err = fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyManager)
+		err = fmt.Errorf("keyStore.Generate() not implmented for %s", cfg.DefaultKeyStorage)
 	}
 	return
 }
@@ -121,7 +101,7 @@ func (s *KeyManager) Load(key data.Key) (result keys.Key, err error) {
 }
 
 func (s *KeyManager) AdminAuthorizer() (keys.Authorizer, error) {
-	return s.MakeAuthorizer(s.cfg.AdminAccountAddress)
+	return s.MakeAuthorizer(cfg.AdminAccountAddress)
 }
 
 func (s *KeyManager) UserAuthorizer(address string) (keys.Authorizer, error) {
@@ -134,7 +114,7 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 
 	result.Address = flow.HexToAddress(address)
 
-	if address == s.cfg.AdminAccountAddress {
+	if address == cfg.AdminAccountAddress {
 		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key

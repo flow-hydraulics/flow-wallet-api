@@ -18,11 +18,10 @@ type Datastore interface {
 }
 
 type Service struct {
-	l       *log.Logger
-	db      Datastore
-	km      keys.Manager
-	fc      *client.Client
-	chainId flow.ChainID // TODO: how do we want to handle different chains?
+	l  *log.Logger
+	db Datastore
+	km keys.Manager
+	fc *client.Client
 }
 
 func NewService(
@@ -30,7 +29,7 @@ func NewService(
 	db Datastore,
 	km keys.Manager,
 	fc *client.Client) *Service {
-	return &Service{l, db, km, fc, flow.Emulator}
+	return &Service{l, db, km, fc}
 }
 
 func (s *Service) List(ctx context.Context) (accounts []data.Account, err error) {
@@ -69,8 +68,8 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 
 func (s *Service) ValidateAddress(address string) (err error) {
 	flowAddress := flow.HexToAddress(address)
-	if !flowAddress.IsValid(s.chainId) {
-		err = fmt.Errorf("'%s' is not a valid address in '%s' chain", address, s.chainId)
+	if !flowAddress.IsValid(cfg.ChainId) {
+		err = fmt.Errorf("'%s' is not a valid address in '%s' chain", address, cfg.ChainId)
 	}
 	return
 }

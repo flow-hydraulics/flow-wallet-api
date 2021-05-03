@@ -13,6 +13,7 @@ const (
 
 type Manager interface {
 	Generate(keyIndex int, weight int) (Wrapped, error)
+	GenerateDefault() (Wrapped, error)
 	Save(Key) (data.Key, error)
 	Load(data.Key) (Key, error)
 	AdminAuthorizer() (Authorizer, error)

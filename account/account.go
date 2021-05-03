@@ -32,7 +32,7 @@ func Create(
 	}
 
 	// Generate a new key pair
-	wrapped, err := km.Generate(0, flow.AccountKeyWeightThreshold)
+	wrapped, err := km.GenerateDefault()
 	if err != nil {
 		return
 	}
