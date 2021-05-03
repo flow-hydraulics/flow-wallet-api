@@ -3,7 +3,6 @@ package simple
 import (
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-wallet-service/keys/google"
-	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
 )
 
@@ -18,11 +17,7 @@ type Config struct {
 	EncryptionKey        string `env:"ENCRYPTION_KEY"`
 }
 
-var cfg Config
-var googleCfg google.Config
-
-func init() {
-	godotenv.Load(".env")
+func ParseConfig() (cfg Config, googleCfg google.Config) {
 
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
@@ -35,4 +30,6 @@ func init() {
 	if err := env.Parse(&googleCfg); err != nil {
 		panic(err)
 	}
+
+	return
 }

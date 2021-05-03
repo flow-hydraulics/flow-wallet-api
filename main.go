@@ -21,22 +21,20 @@ import (
 	"google.golang.org/grpc"
 )
 
-type config struct {
+type Config struct {
 	Host        string `env:"HOST"`
 	Port        int    `env:"PORT" envDefault:"3000"`
-	FlowGateway string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
-}
-
-var cfg config
-
-func init() {
-	godotenv.Load(".env")
-	if err := env.Parse(&cfg); err != nil {
-		panic(err)
-	}
+	FlowGateway string `env:"FLOW_GATEWAY,required"`
 }
 
 func main() {
+	godotenv.Load(".env")
+
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		panic(err)
+	}
+
 	var (
 		disable_raw_tx bool
 		disable_ft     bool

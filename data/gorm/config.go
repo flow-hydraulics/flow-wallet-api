@@ -22,9 +22,7 @@ type Config struct {
 	Dialector    gorm.Dialector
 }
 
-var cfg Config
-
-func init() {
+func ParseConfig() (cfg Config) {
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
 	}
@@ -42,4 +40,6 @@ func init() {
 	}
 
 	cfg.Dialector = d
+
+	return
 }

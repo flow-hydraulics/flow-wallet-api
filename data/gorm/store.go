@@ -12,6 +12,8 @@ type Store struct {
 }
 
 func NewStore(l *log.Logger) (result *Store, err error) {
+	cfg := ParseConfig()
+
 	db, err := gorm.Open(cfg.Dialector, &gorm.Config{})
 	if err != nil {
 		return

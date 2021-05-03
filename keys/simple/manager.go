@@ -27,9 +27,13 @@ type KeyManager struct {
 	signAlgo        crypto.SignatureAlgorithm
 	hashAlgo        crypto.HashAlgorithm
 	adminAccountKey keys.Key
+	cfg             Config
+	googleCfg       google.Config
 }
 
 func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyManager, err error) {
+	cfg, googleCfg := ParseConfig()
+
 	adminAccountKey := keys.Key{
 		Index: cfg.AdminAccountKeyIndex,
 		Type:  cfg.AdminAccountKeyType,
@@ -46,17 +50,19 @@ func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyM
 		crypto.ECDSA_P256, // TODO: config
 		crypto.SHA3_256,   // TODO: config
 		adminAccountKey,
+		cfg,
+		googleCfg,
 	}
 
 	return
 }
 
 func (s *KeyManager) GenerateDefault() (keys.Wrapped, error) {
-	return s.Generate(cfg.DefaultKeyIndex, cfg.DefaultKeyWeight)
+	return s.Generate(s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 
 func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err error) {
-	switch cfg.DefaultKeyStorage {
+	switch s.cfg.DefaultKeyStorage {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		result, err = local.Generate(
 			s.signAlgo,
@@ -66,14 +72,14 @@ func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err er
 		)
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		result, err = google.Generate(
-			googleCfg.ProjectID,
-			googleCfg.LocationID,
-			googleCfg.KeyRingID,
+			s.googleCfg.ProjectID,
+			s.googleCfg.LocationID,
+			s.googleCfg.KeyRingID,
 			keyIndex,
 			weight,
 		)
 	default:
-		err = fmt.Errorf("keyStore.Generate() not implmented for %s", cfg.DefaultKeyStorage)
+		err = fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyStorage)
 	}
 	return
 }
@@ -101,7 +107,7 @@ func (s *KeyManager) Load(key data.Key) (result keys.Key, err error) {
 }
 
 func (s *KeyManager) AdminAuthorizer() (keys.Authorizer, error) {
-	return s.MakeAuthorizer(cfg.AdminAccountAddress)
+	return s.MakeAuthorizer(s.cfg.AdminAccountAddress)
 }
 
 func (s *KeyManager) UserAuthorizer(address string) (keys.Authorizer, error) {
@@ -114,7 +120,7 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 
 	result.Address = flow.HexToAddress(address)
 
-	if address == cfg.AdminAccountAddress {
+	if address == s.cfg.AdminAccountAddress {
 		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key
