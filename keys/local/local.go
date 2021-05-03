@@ -3,7 +3,7 @@ package local
 import (
 	"crypto/rand"
 
-	"github.com/eqlabs/flow-nft-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 )

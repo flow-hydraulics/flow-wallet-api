@@ -2,7 +2,7 @@ package simple
 
 import (
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-nft-wallet-service/keys/google"
+	"github.com/eqlabs/flow-wallet-service/keys/google"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
 )
