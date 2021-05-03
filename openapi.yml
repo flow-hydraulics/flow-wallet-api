@@ -1,0 +1,255 @@
+openapi: 3.0.3
+info:
+  title: Flow Custodial Wallet API
+  version: 0.0.1
+servers:
+  - url: /v1
+components:
+  schemas:
+    account:
+      type: object
+      properties:
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211Z"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211Z"
+    transaction:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211Z"
+    fungibleToken:
+      type: object
+      properties:
+        name:
+          type: string
+          example: FLOW
+          enum: [FLOW, FUSD]
+        balance:
+          type: string
+          example: "42.0"
+    fungibleTokenWithdrawal:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+        recipient:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        amount:
+          type: string
+          example: "42.0"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211Z"
+  parameters:
+    address:
+      name: address
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "0xf8d6e0586b0a20c7"
+    tokenName:
+      name: tokenName
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [FLOW, FUSD]
+        example: FLOW
+    transactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema:
+        type: string   
+        example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0" 
+paths:
+  /accounts:
+    get:
+      summary: List all accounts
+      description: Get a list of all accounts manged by the wallet service.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/account"
+    post:
+      summary: Create an account
+      description: Create a new account that will be managed by the wallet service.
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/account"
+  /accounts/{address}:
+    get:
+      summary: Get an account
+      description: Get the details of a specific account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/account"
+  /accounts/{address}/transactions:
+    get:
+      summary: List all account transactions
+      description: Get a list of all transactions sent by an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/transaction"
+    post:
+      summary: Create a transaction
+      description: Send a transaction from an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                arguments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      value:
+                        type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transaction"
+  /accounts/{address}/transactions/{transactionId}:
+    get:
+      summary: Get a transaction
+      description: Get the details of a transaction sent by an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/transactionId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transaction"
+  /accounts/{address}/fungible-tokens:
+    get:
+      summary: List account fungible tokens
+      description: Get a list of all fungible tokens held by an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleToken"
+  /accounts/{address}/fungible-tokens/{tokenName}:
+    get:
+      summary: Get an account fungible token
+      description: Get the details of a fungible token held by an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fungibleToken"
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
+    get:
+      summary: List account fungible token withdrawals
+      description: Get a list of all fungible token withdrawals sent by an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleTokenWithdrawal"
+    post:
+      summary: Create a fungible token withdrawal
+      description: Send a fungible token withdrawal transaction from an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipient:
+                  type: string
+                amount:
+                  type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fungibleTokenWithdrawal"
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
+    get:
+      summary: Get an account fungible token withdrawal
+      description: Get the details of a fungible token withdrawal sent by an account.
+      parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/transactionId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fungibleTokenWithdrawal"
