@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eqlabs/flow-nft-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/google/uuid"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"

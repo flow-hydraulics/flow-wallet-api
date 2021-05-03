@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/eqlabs/flow-nft-wallet-service/flow_helpers"
-	"github.com/eqlabs/flow-nft-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/flow_helpers"
+	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )

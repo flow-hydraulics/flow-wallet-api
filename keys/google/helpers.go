@@ -28,7 +28,7 @@ func AsymKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, e
 			},
 			// TODO: Set relevant labels at creation, update post-creation if necessary
 			Labels: map[string]string{
-				"service":         "flow-nft-wallet-service",
+				"service":         "flow-wallet-service",
 				"account_address": "",
 				"chain_id":        "",
 				"environment":     "development",

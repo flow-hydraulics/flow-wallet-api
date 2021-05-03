@@ -1,6 +1,6 @@
-# Flow NFT Wallet service
+# Flow Wallet service
 
-A custodial wallet service for NTFs on the Flow blockchain.
+A custodial wallet service for tokens on the Flow blockchain.
 
 ## Dev
 

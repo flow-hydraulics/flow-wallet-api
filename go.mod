@@ -1,4 +1,4 @@
-module github.com/eqlabs/flow-nft-wallet-service
+module github.com/eqlabs/flow-wallet-service
 
 go 1.16
 
