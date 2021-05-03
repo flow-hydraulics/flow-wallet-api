@@ -20,9 +20,9 @@ type AccountStore interface {
 // Storable account
 type Account struct {
 	Address   string         `json:"address" gorm:"primaryKey"`
-	Keys      []Key          `json:"keys,omitempty" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	CreatedAt time.Time      `json:"-"`
-	UpdatedAt time.Time      `json:"-"`
+	Keys      []Key          `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	CreatedAt time.Time      `json:"createdAt" `
+	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
@@ -33,7 +33,7 @@ type Key struct {
 	Index          int            `json:"index" gorm:"index"`
 	Type           string         `json:"type"`
 	Value          []byte         `json:"-"`
-	CreatedAt      time.Time      `json:"-"`
-	UpdatedAt      time.Time      `json:"-"`
+	CreatedAt      time.Time      `json:"createdAt"`
+	UpdatedAt      time.Time      `json:"updatedAt"`
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }

@@ -51,6 +51,12 @@ func (s *Service) Create(ctx context.Context) (account data.Account, err error) 
 
 	// Store
 	err = s.db.InsertAccount(account)
+	if err != nil {
+		return
+	}
+
+	// Need to get from database to populate `CreatedAt` and `UpdatedAt` fields
+	account, err = s.db.Account(account.Address)
 
 	return
 }
