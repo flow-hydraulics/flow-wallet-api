@@ -19,7 +19,7 @@ func newAccountStore(l *log.Logger, db *gorm.DB) *AccountStore {
 
 // List all accounts
 func (s *AccountStore) Accounts() (accounts []data.Account, err error) {
-	err = s.db.Select("address").Find(&accounts).Error
+	err = s.db.Find(&accounts).Error
 	return
 }
 
@@ -30,7 +30,7 @@ func (s *AccountStore) InsertAccount(account data.Account) error {
 
 // Get account details
 func (s *AccountStore) Account(address string) (account data.Account, err error) {
-	err = s.db.Preload("Keys").First(&account, "address = ?", address).Error
+	err = s.db.First(&account, "address = ?", address).Error
 	return
 }
 
