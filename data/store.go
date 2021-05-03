@@ -26,7 +26,7 @@ type AccountStore interface {
 // Storable account
 type Account struct {
 	Address   string         `json:"address" gorm:"primaryKey"`
-	Keys      []Key          `json:"keys" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Keys      []Key          `json:"keys,omitempty" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	CreatedAt time.Time      `json:"-"`
 	UpdatedAt time.Time      `json:"-"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
