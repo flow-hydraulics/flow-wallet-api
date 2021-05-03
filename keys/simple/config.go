@@ -1,0 +1,38 @@
+package simple
+
+import (
+	"github.com/caarlos0/env/v6"
+	"github.com/eqlabs/flow-nft-wallet-service/keys/google"
+	"github.com/joho/godotenv"
+	"github.com/onflow/flow-go-sdk"
+)
+
+type Config struct {
+	AdminAccountAddress  string `env:"ADMIN_ACC_ADDRESS,required"`
+	AdminAccountKeyIndex int    `env:"ADMIN_ACC_KEY_INDEX" envDefault:"0"`
+	AdminAccountKeyType  string `env:"ADMIN_ACC_KEY_TYPE" envDefault:"local"`
+	AdminAccountKeyValue string `env:"ADMIN_ACC_KEY_VALUE,required"`
+	DefaultKeyStorage    string `env:"DEFAULT_KEY_STORAGE" envDefault:"local"`
+	DefaultKeyIndex      int    `env:"DEFAULT_KEY_INDEX" envDefault:"0"`
+	DefaultKeyWeight     int    `env:"DEFAULT_KEY_WEIGHT" envDefault:"-1"`
+	EncryptionKey        string `env:"ENCRYPTION_KEY"`
+}
+
+var cfg Config
+var googleCfg google.Config
+
+func init() {
+	godotenv.Load(".env")
+
+	if err := env.Parse(&cfg); err != nil {
+		panic(err)
+	}
+
+	if cfg.DefaultKeyWeight < 0 {
+		cfg.DefaultKeyWeight = flow.AccountKeyWeightThreshold
+	}
+
+	if err := env.Parse(&googleCfg); err != nil {
+		panic(err)
+	}
+}

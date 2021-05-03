@@ -6,12 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	DB_TYPE_POSTGRESQL = "psql"
-	DB_TYPE_MYSQL      = "mysql"
-	DB_TYPE_SQLITE     = "sqlite"
-)
-
 type Store interface {
 	AccountStore
 }

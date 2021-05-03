@@ -27,14 +27,16 @@ type config struct {
 	FlowGateway string `env:"FLOW_GATEWAY" envDefault:"localhost:3569"`
 }
 
-func main() {
+var cfg config
+
+func init() {
 	godotenv.Load(".env")
-
-	cfg := config{}
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
+}
 
+func main() {
 	var (
 		disable_raw_tx bool
 		disable_ft     bool
