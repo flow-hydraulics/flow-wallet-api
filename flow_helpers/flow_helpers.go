@@ -16,17 +16,30 @@ func GetLatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, e
 	return block.ID, nil
 }
 
-func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (*flow.TransactionResult, error) {
-	result, err := c.GetTransactionResult(ctx, id)
+func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (result *flow.TransactionResult, err error) {
+	result, err = c.GetTransactionResult(ctx, id)
 	if err != nil {
-		return &flow.TransactionResult{}, err
+		return
 	}
+
+	if result.Error != nil {
+		err = result.Error
+		return
+	}
+
 	for result.Status != flow.TransactionStatusSealed {
 		time.Sleep(time.Second)
 		result, err = c.GetTransactionResult(ctx, id)
+
 		if err != nil {
-			return &flow.TransactionResult{}, err
+			return
+		}
+
+		if result.Error != nil {
+			err = result.Error
+			return
 		}
 	}
+
 	return result, nil
 }
