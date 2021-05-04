@@ -2,6 +2,7 @@ package local
 
 import (
 	"crypto/rand"
+	"strings"
 
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/onflow/flow-go-sdk"
@@ -34,7 +35,7 @@ func Generate(
 	key := keys.Key{
 		Index: keyIndex,
 		Type:  keys.ACCOUNT_KEY_TYPE_LOCAL,
-		Value: privateKey.String(),
+		Value: strings.TrimPrefix(privateKey.String(), "0x"),
 	}
 
 	result.AccountKey = key
