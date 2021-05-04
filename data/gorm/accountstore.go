@@ -36,6 +36,6 @@ func (s *AccountStore) Account(address string) (account data.Account, err error)
 
 // Get account key with index
 func (s *AccountStore) AccountKey(address string, index int) (key data.Key, err error) {
-	err = s.db.Where("account_address = ? AND index = ?", address, index).First(&key).Error
+	err = s.db.Where(&data.Key{AccountAddress: address, Index: index}).First(&key).Error
 	return
 }
