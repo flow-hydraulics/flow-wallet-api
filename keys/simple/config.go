@@ -14,7 +14,7 @@ type Config struct {
 	DefaultKeyStorage    string `env:"DEFAULT_KEY_STORAGE" envDefault:"local"`
 	DefaultKeyIndex      int    `env:"DEFAULT_KEY_INDEX" envDefault:"0"`
 	DefaultKeyWeight     int    `env:"DEFAULT_KEY_WEIGHT" envDefault:"-1"`
-	EncryptionKey        string `env:"ENCRYPTION_KEY"`
+	EncryptionKey        string `env:"ENCRYPTION_KEY,required"`
 }
 
 func ParseConfig() (cfg Config, googleCfg google.Config) {
