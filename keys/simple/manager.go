@@ -124,7 +124,7 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key
-		rawKey, err = s.db.AccountKey(address, 0)
+		rawKey, err = s.db.AccountKey(address, 0) // TODO: use s.cfg.DefaultKeyIndex
 		if err != nil {
 			return
 		}
@@ -141,24 +141,26 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 
 	result.Key = flowAcc.Keys[key.Index]
 
+	var signer crypto.Signer
+
 	// TODO: Decide whether we want to allow this kind of flexibility
 	// or should we just panic if `key.Type` != `s.defaultKeyManager`
 	switch key.Type {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
-		signer, err := local.Signer(s.signAlgo, s.hashAlgo, key)
+		signer, err = local.Signer(s.signAlgo, s.hashAlgo, key)
 		if err != nil {
 			break
 		}
-		result.Signer = signer
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
-		signer, err := google.Signer(ctx, address, key)
+		signer, err = google.Signer(ctx, address, key)
 		if err != nil {
 			break
 		}
-		result.Signer = signer
 	default:
 		err = fmt.Errorf("key.Type not recognised: %s", key.Type)
 	}
+
+	result.Signer = signer
 
 	return
 }
