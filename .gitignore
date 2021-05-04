@@ -12,7 +12,8 @@
 *.out
 
 flow.json
-.env
+.env*
+!.env.example
 *.db
 __debug_bin
 .vscode
