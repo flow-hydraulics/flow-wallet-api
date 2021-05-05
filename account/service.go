@@ -13,12 +13,14 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
+// Datastore is the interface required by account service for data storage and access.
 type Datastore interface {
 	Accounts() ([]data.Account, error)
 	InsertAccount(a data.Account) error
 	Account(address string) (data.Account, error)
 }
 
+// Service defines the API for account management.
 type Service struct {
 	l   *log.Logger
 	db  Datastore
@@ -27,6 +29,7 @@ type Service struct {
 	cfg Config
 }
 
+// NewService initiates a new account service.
 func NewService(
 	l *log.Logger,
 	db Datastore,
@@ -37,43 +40,50 @@ func NewService(
 	return &Service{l, db, km, fc, cfg}
 }
 
-func (s *Service) List(ctx context.Context) (accounts []data.Account, err error) {
-	accounts, err = s.db.Accounts()
-	return
+// List returns all accounts in the datastore.
+func (s *Service) List(ctx context.Context) (result []data.Account, err error) {
+	return s.db.Accounts()
 }
 
-func (s *Service) Create(ctx context.Context) (account data.Account, err error) {
+// Create calls account.Create to generate a new account.
+// It receives a new account with a corresponding private key or resource ID
+// and stores both in datastore.
+// It fetches and returns the new account from datastore.
+func (s *Service) Create(ctx context.Context) (result data.Account, err error) {
 	account, key, err := Create(ctx, s.fc, s.km)
 	if err != nil {
 		return
 	}
 
+	// Convert the key to storable form (encrypt it)
 	accountKey, err := s.km.Save(key)
 	if err != nil {
 		return
 	}
-	account.Keys = []data.Key{accountKey}
 
-	// Store
+	// Store account and key
+	account.Keys = []data.Key{accountKey}
 	err = s.db.InsertAccount(account)
 	if err != nil {
 		return
 	}
 
 	// Need to get from database to populate `CreatedAt` and `UpdatedAt` fields
-	account, err = s.db.Account(account.Address)
-
-	return
+	return s.db.Account(account.Address)
 }
 
-func (s *Service) Details(ctx context.Context, address string) (account data.Account, err error) {
+// Details returns a specific account.
+func (s *Service) Details(ctx context.Context, address string) (result data.Account, err error) {
+	// Check if the input is a valid address
 	err = s.ValidateAddress(address)
 	if err != nil {
 		return
 	}
 
-	account, err = s.db.Account(address)
+	// Get from datastore
+	result, err = s.db.Account(address)
 	if err != nil && err.Error() == "record not found" {
+		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
 			StatusCode: http.StatusNotFound,
 			Err:        fmt.Errorf("account not found"),
@@ -83,6 +93,7 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 	return
 }
 
+// ValidateAddress checks if the given address is valid in the current Flow network.
 func (s *Service) ValidateAddress(address string) (err error) {
 	flowAddress := flow.HexToAddress(address)
 	if !flowAddress.IsValid(s.cfg.ChainId) {
@@ -91,5 +102,6 @@ func (s *Service) ValidateAddress(address string) (err error) {
 			Err:        fmt.Errorf("not a valid address"),
 		}
 	}
+
 	return
 }

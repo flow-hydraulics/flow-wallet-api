@@ -1,3 +1,4 @@
+// Package account provides functions for account management on Flow blockhain.
 package account
 
 import (
@@ -12,6 +13,10 @@ import (
 	"github.com/onflow/flow-go-sdk/templates"
 )
 
+// Create creates a new account on the Flow blockchain.
+// It uses the provided admin account to pay for the creation.
+// It generates a new privatekey and returns it (local key)
+// or a reference to it (Google KMS resource id).
 func Create(
 	ctx context.Context,
 	fc *client.Client,
@@ -21,11 +26,13 @@ func Create(
 	newKey keys.Key,
 	err error,
 ) {
-	serviceAuth, err := km.AdminAuthorizer()
+	// Get admin account authorizer
+	adminAuth, err := km.AdminAuthorizer()
 	if err != nil {
 		return
 	}
 
+	// Get latest blocks id as reference id
 	referenceBlockID, err := flow_helpers.GetLatestBlockId(ctx, fc)
 	if err != nil {
 		return
@@ -36,33 +43,33 @@ func Create(
 	if err != nil {
 		return
 	}
+
+	// Destruct the wrapped key
 	publicKey := wrapped.FlowKey
 	newKey = wrapped.AccountKey
 
 	// Setup a transaction to create an account
-	tx := templates.CreateAccount([]*flow.AccountKey{publicKey}, nil, serviceAuth.Address)
-	tx.SetProposalKey(serviceAuth.Address, serviceAuth.Key.Index, serviceAuth.Key.SequenceNumber)
-	tx.SetReferenceBlockID(referenceBlockID)
-	tx.SetPayer(serviceAuth.Address)
+	tx := templates.
+		CreateAccount([]*flow.AccountKey{publicKey}, nil, adminAuth.Address).
+		SetProposalKey(adminAuth.Address, adminAuth.Key.Index, adminAuth.Key.SequenceNumber).
+		SetReferenceBlockID(referenceBlockID).
+		SetPayer(adminAuth.Address)
 
 	// Sign the transaction with the service account
-	err = tx.SignEnvelope(serviceAuth.Address, serviceAuth.Key.Index, serviceAuth.Signer)
+	err = tx.SignEnvelope(adminAuth.Address, adminAuth.Key.Index, adminAuth.Signer)
 	if err != nil {
-		// TODO: check what needs to be reverted
 		return
 	}
 
 	// Send the transaction to the network
 	err = fc.SendTransaction(ctx, *tx)
 	if err != nil {
-		// TODO: check what needs to be reverted
 		return
 	}
 
 	// Wait for the transaction to be sealed
 	result, err := flow_helpers.WaitForSeal(ctx, fc, tx.ID())
 	if err != nil {
-		// TODO: check what needs to be reverted
 		return
 	}
 
@@ -76,8 +83,8 @@ func Create(
 		}
 	}
 
+	// Check that we actually got a new address
 	if newAddress == (flow.Address{}.Hex()) {
-		// TODO: check what needs to be reverted
 		err = fmt.Errorf("something went wrong when waiting for address")
 		return
 	}

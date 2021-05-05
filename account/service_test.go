@@ -14,7 +14,7 @@ import (
 
 func TestAccountService(t *testing.T) {
 	l := log.New(ioutil.Discard, "", log.LstdFlags|log.Lshortfile)
-	service, err := SetupTestService(l)
+	service, err := TestServiceSetup(l)
 	if err != nil {
 		t.Fatalf("Error while running setup: %s", err)
 	}
@@ -99,5 +99,5 @@ func TestAccountService(t *testing.T) {
 		}
 	})
 
-	TeardDownTestService()
+	TestServiceTearDown()
 }
