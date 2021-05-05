@@ -65,14 +65,14 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "HTTP GET accounts.Details invalid address",
 			method:   "GET",
 			url:      "/invalid-address",
-			expected: "not a valid address",
+			expected: `not a valid address\n`,
 			status:   http.StatusBadRequest,
 		},
 		{
 			name:     "HTTP GET accounts.Details unknown address",
 			method:   "GET",
 			url:      "/0f7025fa05b578e3",
-			expected: "account not found",
+			expected: `account not found\n`,
 			status:   http.StatusNotFound,
 		},
 		{
