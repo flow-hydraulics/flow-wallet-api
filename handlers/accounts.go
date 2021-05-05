@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -21,7 +20,7 @@ func NewAccounts(l *log.Logger, as *account.Service) *Accounts {
 
 func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("List accounts")
-	result, err := s.as.List(context.Background())
+	result, err := s.as.List(r.Context())
 	if err != nil {
 		handleError(err, s.l, rw, r)
 		return
@@ -32,7 +31,7 @@ func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Create account")
-	result, err := s.as.Create(context.Background())
+	result, err := s.as.Create(r.Context())
 	if err != nil {
 		handleError(err, s.l, rw, r)
 		return
@@ -44,7 +43,7 @@ func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Account details")
 	vars := mux.Vars(r)
-	result, err := s.as.Details(context.Background(), vars["address"])
+	result, err := s.as.Details(r.Context(), vars["address"])
 	if err != nil {
 		handleError(err, s.l, rw, r)
 		return
