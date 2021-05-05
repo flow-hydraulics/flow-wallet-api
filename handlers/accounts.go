@@ -21,44 +21,34 @@ func NewAccounts(l *log.Logger, as *account.Service) *Accounts {
 
 func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("List accounts")
-	accounts, err := s.as.List(context.Background())
+	result, err := s.as.List(context.Background())
 	if err != nil {
-		s.l.Printf("Error: %v\n", err)
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("Error"))
+		handleError(err, s.l, rw, r)
 		return
 	}
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(accounts)
+	handleJsonOk(rw)
+	json.NewEncoder(rw).Encode(result)
 }
 
 func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Create account")
-	account, err := s.as.Create(context.Background())
+	result, err := s.as.Create(context.Background())
 	if err != nil {
-		s.l.Printf("Error: %v\n", err)
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("Error"))
+		handleError(err, s.l, rw, r)
 		return
 	}
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(account)
+	handleJsonCreated(rw)
+	json.NewEncoder(rw).Encode(result)
 }
 
 func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Account details")
 	vars := mux.Vars(r)
-	account, err := s.as.Details(context.Background(), vars["address"])
+	result, err := s.as.Details(context.Background(), vars["address"])
 	if err != nil {
-		s.l.Printf("Error: %v\n", err)
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("Error"))
+		handleError(err, s.l, rw, r)
 		return
 	}
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(account)
-
+	handleJsonOk(rw)
+	json.NewEncoder(rw).Encode(result)
 }

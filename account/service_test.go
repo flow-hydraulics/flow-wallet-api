@@ -2,72 +2,21 @@ package account
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
 	"os"
 	"testing"
 
-	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-service/data/gorm"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
-	"github.com/eqlabs/flow-wallet-service/keys/simple"
 	"github.com/eqlabs/flow-wallet-service/tokens"
-	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
-	"google.golang.org/grpc"
 )
 
-type testConfig struct {
-	FlowGateway string `env:"FLOW_GATEWAY,required"`
-}
-
-const testDbDSN = "test.db"
-const testDbType = "sqlite"
-
-func testSetup() (result *Service, err error) {
-	godotenv.Load("../.env.test")
-
-	os.Setenv("DB_DSN", testDbDSN)
-	os.Setenv("DB_TYPE", testDbType)
-
-	var cfg testConfig
-	if err = env.Parse(&cfg); err != nil {
-		return
-	}
-
-	l := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
-
-	// Flow client
-	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
-	if err != nil {
-		return
-	}
-
-	// Database
-	db, err := gorm.NewStore(l)
-	if err != nil {
-		return
-	}
-
-	// Key manager
-	km, err := simple.NewKeyManager(l, db, fc)
-	if err != nil {
-		return
-	}
-
-	result = NewService(l, db, km, fc)
-
-	return
-}
-
-func testTearDown() {
-	os.Remove(testDbDSN)
-}
-
 func TestAccountService(t *testing.T) {
-	service, err := testSetup()
+	l := log.New(ioutil.Discard, "", log.LstdFlags|log.Lshortfile)
+	service, err := SetupTestService(l)
 	if err != nil {
-		t.Errorf("Error while running setup: %s", err)
+		t.Fatalf("Error while running setup: %s", err)
 	}
 
 	t.Run("ValidateAddress", func(t *testing.T) {
@@ -82,8 +31,7 @@ func TestAccountService(t *testing.T) {
 
 	account, err := service.Create(context.Background())
 	if err != nil {
-		t.Errorf("Did not expect an error, got: %s", err)
-		return
+		t.Fatalf("Did not expect an error, got: %s", err)
 	}
 
 	t.Run("new account has proper attributes", func(*testing.T) {
@@ -115,18 +63,16 @@ func TestAccountService(t *testing.T) {
 		)
 
 		if err != nil {
-			t.Errorf("Did not expect an error, got: %s", err)
-			return
+			t.Fatalf("Did not expect an error, got: %s", err)
 		}
 
 		if txId == flow.EmptyID {
-			t.Errorf("Expected txId not to be empty")
+			t.Fatalf("Expected txId not to be empty")
 		}
 
 		_, err = flow_helpers.WaitForSeal(context.Background(), service.fc, txId)
 		if err != nil {
 			t.Errorf("Did not expect an error, got: %s", err)
-			return
 		}
 	})
 
@@ -140,20 +86,18 @@ func TestAccountService(t *testing.T) {
 		)
 
 		if err != nil {
-			t.Errorf("Did not expect an error, got: %s", err)
-			return
+			t.Fatalf("Did not expect an error, got: %s", err)
 		}
 
 		if txId == flow.EmptyID {
-			t.Errorf("Expected txId not to be empty")
+			t.Fatalf("Expected txId not to be empty")
 		}
 
 		_, err = flow_helpers.WaitForSeal(context.Background(), service.fc, txId)
 		if err == nil {
 			t.Errorf("Expected an error")
-			return
 		}
 	})
 
-	testTearDown()
+	TeardDownTestService()
 }

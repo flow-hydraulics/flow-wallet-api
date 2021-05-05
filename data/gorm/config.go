@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 const (
@@ -20,6 +21,7 @@ type Config struct {
 	DatabaseDSN  string `env:"DB_DSN" envDefault:"wallet.db"`
 	DatabaseType string `env:"DB_TYPE" envDefault:"sqlite"`
 	Dialector    gorm.Dialector
+	Options      *gorm.Config
 }
 
 func ParseConfig() (cfg Config) {
@@ -40,6 +42,9 @@ func ParseConfig() (cfg Config) {
 	}
 
 	cfg.Dialector = d
+	cfg.Options = &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	}
 
 	return
 }
