@@ -84,27 +84,27 @@ func main() {
 
 	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()
-	ra.HandleFunc("", accounts.List).Methods("GET")              // list
-	ra.HandleFunc("", accounts.Create).Methods("POST")           // create
-	ra.HandleFunc("/{address}", accounts.Details).Methods("GET") // details
+	ra.HandleFunc("", accounts.List).Methods(http.MethodGet)              // list
+	ra.HandleFunc("", accounts.Create).Methods(http.MethodPost)           // create
+	ra.HandleFunc("/{address}", accounts.Details).Methods(http.MethodGet) // details
 
 	// // Account raw transactions
 	// if !disable_raw_tx {
 	// 	rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
-	// 	rt.HandleFunc("", transactions.List).Methods("GET")                    // list
-	// 	rt.HandleFunc("", transactions.Create).Methods("POST")                 // create
-	// 	rt.HandleFunc("/{transactionId}", transactions.Details).Methods("GET") // details
+	// 	rt.HandleFunc("", transactions.List).Methods(http.MethodGet)                    // list
+	// 	rt.HandleFunc("", transactions.Create).Methods(http.MethodPost)                 // create
+	// 	rt.HandleFunc("/{transactionId}", transactions.Details).Methods(http.MethodGet) // details
 	// }
 
 	// // Fungible tokens
 	// if !disable_ft {
 	// 	// Handle "/accounts/{address}/fungible-tokens"
 	// 	rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
-	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Details).Methods("GET")
-	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Init).Methods("POST")
-	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods("GET")
-	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal).Methods("POST")
-	// 	rft.HandleFunc("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods("GET")
+	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Details).Methods(http.MethodGet)
+	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Init).Methods(http.MethodPost)
+	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods(http.MethodGet)
+	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal).Methods(http.MethodPost)
+	// 	rft.HandleFunc("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods(http.MethodGet)
 	// }
 
 	// TODO: nfts

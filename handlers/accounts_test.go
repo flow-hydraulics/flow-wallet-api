@@ -28,9 +28,9 @@ func TestAccountHandlers(t *testing.T) {
 	handlers := NewAccounts(logger, service)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/", handlers.List).Methods("GET")
-	router.HandleFunc("/", handlers.Create).Methods("POST")
-	router.HandleFunc("/{address}", handlers.Details).Methods("GET")
+	router.HandleFunc("/", handlers.List).Methods(http.MethodGet)
+	router.HandleFunc("/", handlers.Create).Methods(http.MethodPost)
+	router.HandleFunc("/{address}", handlers.Details).Methods(http.MethodGet)
 
 	// NOTE: The order of the test "steps" matters
 	steps := []struct {
@@ -42,42 +42,42 @@ func TestAccountHandlers(t *testing.T) {
 	}{
 		{
 			name:     "HTTP GET accounts.List db empty",
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "/",
 			expected: `\[\]\n`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "HTTP POST accounts.Create",
-			method:   "POST",
+			method:   http.MethodPost,
 			url:      "/",
 			expected: `\{"address":".*","createdAt":".*","updatedAt":".*"\}\n`,
 			status:   http.StatusCreated,
 		},
 		{
 			name:     "HTTP GET accounts.List db not empty",
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "/",
 			expected: `\[\{"address":".*","createdAt":".*","updatedAt":".*"\}\]\n`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "HTTP GET accounts.Details invalid address",
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "/invalid-address",
 			expected: `not a valid address\n`,
 			status:   http.StatusBadRequest,
 		},
 		{
 			name:     "HTTP GET accounts.Details unknown address",
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "/0f7025fa05b578e3",
 			expected: `account not found\n`,
 			status:   http.StatusNotFound,
 		},
 		{
 			name:     "HTTP GET accounts.Details known address",
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "/<address>",
 			expected: `\{"address":".*","createdAt":".*","updatedAt":".*"\}\n`,
 			status:   http.StatusOK,
