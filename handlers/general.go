@@ -8,18 +8,13 @@ import (
 )
 
 func handleError(err error, logger *log.Logger, rw http.ResponseWriter, r *http.Request) {
-	if err != nil {
-		logger.Printf("Error: %v\n", err)
-		e, isReqErr := err.(*errors.RequestError)
-		if isReqErr {
-			rw.WriteHeader(e.StatusCode)
-			rw.Write([]byte(e.Error()))
-			return
-		}
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("Error"))
+	logger.Printf("Error: %v\n", err)
+	reqErr, isReqErr := err.(*errors.RequestError)
+	if isReqErr {
+		http.Error(rw, reqErr.Error(), reqErr.StatusCode)
 		return
 	}
+	http.Error(rw, "Error", http.StatusInternalServerError)
 }
 
 func handleJsonOk(rw http.ResponseWriter) {
