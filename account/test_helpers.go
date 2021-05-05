@@ -19,7 +19,8 @@ type testConfig struct {
 const testDbDSN = "test.db"
 const testDbType = "sqlite"
 
-func SetupTestService(l *log.Logger) (result *Service, err error) {
+// TestServiceSetup is used to spin up an account service for testing.
+func TestServiceSetup(l *log.Logger) (result *Service, err error) {
 	godotenv.Load("../.env.test")
 
 	os.Setenv("DB_DSN", testDbDSN)
@@ -53,6 +54,8 @@ func SetupTestService(l *log.Logger) (result *Service, err error) {
 	return
 }
 
-func TeardDownTestService() {
+// TestServiceTearDown is used to clean up after account service testing.
+// It currently only deletes the test database files.
+func TestServiceTearDown() {
 	os.Remove(testDbDSN)
 }
