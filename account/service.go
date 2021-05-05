@@ -73,12 +73,10 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 	}
 
 	account, err = s.db.Account(address)
-	if err != nil {
-		if err.Error() == "record not found" {
-			err = &errors.RequestError{
-				StatusCode: http.StatusNotFound,
-				Err:        fmt.Errorf("account not found"),
-			}
+	if err != nil && err.Error() == "record not found" {
+		err = &errors.RequestError{
+			StatusCode: http.StatusNotFound,
+			Err:        fmt.Errorf("account not found"),
 		}
 	}
 
