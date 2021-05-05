@@ -60,7 +60,10 @@ Pre-requisites:
 Using a Service Account to access the KMS API (see [official docs](https://cloud.google.com/docs/authentication/getting-started) for more);
 
 1. Create a new Service Account, IAM & Admin -> Service Accounts -> [Create Service Account](https://console.cloud.google.com/iam-admin/serviceaccounts/create)
-2. Grant the required permissions through a custom Role or use the `Cloud KMS Admin` role.
+2. Use the roles `Cloud KMS Admin` & `Cloud KMS Signer/Verifier` or grant the required permissions through a custom role (NOTE: deletion not supported yet):
+    - `cloudkms.cryptoKeyVersions.useToSign`
+    - `cloudkms.cryptoKeyVersions.viewPublicKey`
+    - `cloudkms.cryptoKeys.create`
 3. After creating the Service Account, select Manage Keys from the Actions menu in the Service Account listing.
 4. Create a new key, Add Key -> Create new key, and select JSON as the key type
 5. Save the JSON file
