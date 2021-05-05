@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/eqlabs/flow-wallet-service/data"
+	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -71,6 +73,14 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 	}
 
 	account, err = s.db.Account(address)
+	if err != nil {
+		if err.Error() == "record not found" {
+			err = &errors.RequestError{
+				StatusCode: http.StatusNotFound,
+				Err:        fmt.Errorf("account not found"),
+			}
+		}
+	}
 
 	return
 }
@@ -78,7 +88,10 @@ func (s *Service) Details(ctx context.Context, address string) (account data.Acc
 func (s *Service) ValidateAddress(address string) (err error) {
 	flowAddress := flow.HexToAddress(address)
 	if !flowAddress.IsValid(s.cfg.ChainId) {
-		err = fmt.Errorf("'%s' is not a valid address in '%s' chain", address, s.cfg.ChainId)
+		err = &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("not a valid address"),
+		}
 	}
 	return
 }
