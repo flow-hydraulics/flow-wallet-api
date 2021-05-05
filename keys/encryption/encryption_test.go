@@ -2,6 +2,7 @@ package encryption
 
 import (
 	"bytes"
+	"crypto/aes"
 	"strings"
 	"testing"
 )
@@ -34,9 +35,10 @@ func TestSymmetricCrypter(t *testing.T) {
 			t.Fatal("expected error is missing")
 		}
 
-		expectedErrorMessagePrefix := "crypto/aes: invalid key size"
-		if !strings.HasPrefix(err.Error(), expectedErrorMessagePrefix) {
-			t.Errorf("got unexpected error prefix: %v - want: %v", err, expectedErrorMessagePrefix)
+		want := aes.KeySizeError(len(invalidKey))
+
+		if want != err {
+			t.Errorf("got unexpected error: %v - want: %v", err, want)
 		}
 
 		if len(encValue) != 0 {
