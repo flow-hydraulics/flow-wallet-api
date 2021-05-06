@@ -1,3 +1,4 @@
+// Package data manages data storage.
 package data
 
 import (
@@ -6,10 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// Store interface groups different types of stores together.
 type Store interface {
 	AccountStore
 }
 
+// AccountStore manages data regarding accounts.
 type AccountStore interface {
 	Accounts() ([]Account, error)
 	InsertAccount(a Account) error
@@ -17,7 +20,7 @@ type AccountStore interface {
 	AccountKey(address string, index int) (Key, error)
 }
 
-// Storable account
+// Account struct represents a storable account.
 type Account struct {
 	Address   string         `json:"address" gorm:"primaryKey"`
 	Keys      []Key          `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
@@ -26,7 +29,12 @@ type Account struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// Storable account key
+// Key struct represents a storable account key.
+// Key.Value will either be a byte representation of
+// the actual private key when using local key management
+// or a resource id when using a remote key management system (e.g. Google KMS).
+// Store package is not responsible for encryption/decryption of the Key.Value;
+// that is handled by the "keys" package.
 type Key struct {
 	ID             int            `json:"-" gorm:"primaryKey"`
 	AccountAddress string         `json:"-" gorm:"index"`

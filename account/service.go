@@ -13,7 +13,7 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
-// Datastore is the interface required by account service for data storage and access.
+// Datastore is the interface required by account service for data storage.
 type Datastore interface {
 	Accounts() ([]data.Account, error)
 	InsertAccount(a data.Account) error
