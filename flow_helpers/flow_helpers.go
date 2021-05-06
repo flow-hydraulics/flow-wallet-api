@@ -1,4 +1,4 @@
-// Package provides convience functions for Flow blockchain interaction.
+// Package flow_helpers provides convience functions for Flow blockchain interaction.
 package flow_helpers
 
 import (

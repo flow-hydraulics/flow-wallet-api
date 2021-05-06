@@ -12,7 +12,7 @@ type Store struct {
 	data.AccountStore
 }
 
-// NewStore initiates a new store.
+// NewStore initiates a new gorm data store.
 func NewStore(l *log.Logger) (result *Store, err error) {
 	cfg := ParseConfig()
 

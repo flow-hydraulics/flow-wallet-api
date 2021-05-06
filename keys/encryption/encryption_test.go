@@ -9,14 +9,14 @@ import (
 
 func TestNewCrypter(t *testing.T) {
 	key := []byte("test123test123test123test123test")
-	symmetricCrypter := NewCrypter(key)
+	crypter := NewAESCrypter(key)
 
 	t.Run("key is saved", func(t *testing.T) {
-		if symmetricCrypter.key == nil {
+		if crypter.key == nil {
 			t.Fatal("key was not set")
 		}
 
-		if !bytes.Equal(symmetricCrypter.key, key) {
+		if !bytes.Equal(crypter.key, key) {
 			t.Fatal("keys do not match")
 		}
 	})
@@ -28,7 +28,7 @@ func TestSymmetricCrypter(t *testing.T) {
 
 	t.Run("fails with invalid key size", func(t *testing.T) {
 		invalidKey := []byte("nope")
-		crypter := NewCrypter(invalidKey)
+		crypter := NewAESCrypter(invalidKey)
 
 		encValue, err := crypter.Encrypt([]byte("should-not-encrypt"))
 		if err == nil {
@@ -48,7 +48,7 @@ func TestSymmetricCrypter(t *testing.T) {
 	})
 
 	t.Run("encrypts and decrypts a value", func(t *testing.T) {
-		crypter := NewCrypter(key)
+		crypter := NewAESCrypter(key)
 		encValue, err := crypter.Encrypt(original)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -73,9 +73,9 @@ func TestSymmetricCrypter(t *testing.T) {
 	})
 
 	t.Run("decrypt fails with wrong key", func(t *testing.T) {
-		crypter := NewCrypter(key)
+		crypter := NewAESCrypter(key)
 		secondKey := []byte("failkeyfailkeyfailkeyfailkeyfail")
-		secondCrypter := NewCrypter(secondKey)
+		secondCrypter := NewAESCrypter(secondKey)
 
 		if bytes.Equal(key, secondKey) {
 			t.Fatal("keys are equal")

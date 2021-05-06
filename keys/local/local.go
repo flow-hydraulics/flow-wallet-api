@@ -1,3 +1,4 @@
+// Package local provides functions for local key and signer generation.
 package local
 
 import (

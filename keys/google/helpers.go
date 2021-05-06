@@ -11,7 +11,7 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-// Creates a new asymmetric signing key in Google KMS and returns a cloudkms.Key (the "raw" result isn't needed)
+// AsymKey creates a new asymmetric signing key in Google KMS and returns a cloudkms.Key (the "raw" result isn't needed)
 func AsymKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, err error) {
 	kmsClient, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {

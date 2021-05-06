@@ -1,4 +1,4 @@
-// Package provides HTTP handlers for different services across the application.
+// Package handlers provides HTTP handlers for different services across the application.
 package handlers
 
 import (

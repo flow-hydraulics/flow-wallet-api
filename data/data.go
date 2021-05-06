@@ -14,9 +14,13 @@ type Store interface {
 
 // AccountStore manages data regarding accounts.
 type AccountStore interface {
+	// List all accounts.
 	Accounts() ([]Account, error)
+	// Insert a new account.
 	InsertAccount(a Account) error
+	// Get account details.
 	Account(address string) (Account, error)
+	// Get the account key corresponding to address and key index.
 	AccountKey(address string, index int) (Key, error)
 }
 
