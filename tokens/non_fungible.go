@@ -40,7 +40,7 @@ func SetupNFT(ctx context.Context, fc *client.Client, km keys.Manager, address s
 
 	txStr := replacer.Replace(string(txTemplate))
 
-	referenceBlockID, err := flow_helpers.GetLatestBlockId(ctx, fc)
+	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, fc)
 	if err != nil {
 		return &flow.TransactionResult{}, err
 	}

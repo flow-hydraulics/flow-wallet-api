@@ -33,7 +33,7 @@ func Create(
 	}
 
 	// Get latest blocks id as reference id
-	referenceBlockID, err := flow_helpers.GetLatestBlockId(ctx, fc)
+	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, fc)
 	if err != nil {
 		return
 	}

@@ -1,3 +1,4 @@
+// Package simple provides straightforward implementation for key management.
 package simple
 
 import (
@@ -15,15 +16,16 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
+// Datastore is the interface required by key manager for data storage.
 type Datastore interface {
 	AccountKey(address string, index int) (data.Key, error)
 }
 
 type KeyManager struct {
-	l               *log.Logger
+	log             *log.Logger
 	db              Datastore
 	fc              *client.Client
-	crypter         *encryption.SymmetricCrypter
+	crypter         encryption.Crypter
 	signAlgo        crypto.SignatureAlgorithm
 	hashAlgo        crypto.HashAlgorithm
 	adminAccountKey keys.Key
@@ -31,7 +33,9 @@ type KeyManager struct {
 	googleCfg       google.Config
 }
 
-func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyManager, err error) {
+// NewKeyManager initiates a new key manager.
+// It uses encryption.AESCrypter to encrypt and decrypt the keys.
+func NewKeyManager(log *log.Logger, db Datastore, fc *client.Client) (result *KeyManager, err error) {
 	cfg, googleCfg := ParseConfig()
 
 	adminAccountKey := keys.Key{
@@ -40,25 +44,21 @@ func NewKeyManager(l *log.Logger, db Datastore, fc *client.Client) (result *KeyM
 		Value: cfg.AdminAccountKeyValue,
 	}
 
-	crypter := encryption.NewCrypter([]byte(cfg.EncryptionKey))
+	crypter := encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
 
 	result = &KeyManager{
-		l,
+		log,
 		db,
 		fc,
 		crypter,
-		crypto.ECDSA_P256, // TODO: config
-		crypto.SHA3_256,   // TODO: config
+		crypto.ECDSA_P256, // TODO: from config?
+		crypto.SHA3_256,   // TODO: from config?
 		adminAccountKey,
 		cfg,
 		googleCfg,
 	}
 
 	return
-}
-
-func (s *KeyManager) GenerateDefault() (keys.Wrapped, error) {
-	return s.Generate(s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 
 func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err error) {
@@ -82,6 +82,10 @@ func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err er
 		err = fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyStorage)
 	}
 	return
+}
+
+func (s *KeyManager) GenerateDefault() (keys.Wrapped, error) {
+	return s.Generate(s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 
 func (s *KeyManager) Save(key keys.Key) (result data.Key, err error) {
@@ -124,7 +128,7 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key
-		rawKey, err = s.db.AccountKey(address, 0) // TODO: use s.cfg.DefaultKeyIndex
+		rawKey, err = s.db.AccountKey(address, s.cfg.DefaultKeyIndex)
 		if err != nil {
 			return
 		}

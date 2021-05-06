@@ -1,3 +1,4 @@
+// Package google provides functions for key and signer generation in Google KMS.
 package google
 
 import (

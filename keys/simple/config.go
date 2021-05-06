@@ -6,6 +6,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
+// Config struct for key manager.
 type Config struct {
 	AdminAccountAddress  string `env:"ADMIN_ACC_ADDRESS,required"`
 	AdminAccountKeyIndex int    `env:"ADMIN_ACC_KEY_INDEX" envDefault:"0"`
@@ -17,6 +18,7 @@ type Config struct {
 	EncryptionKey        string `env:"ENCRYPTION_KEY,required"`
 }
 
+// ParseConfig parses environment variables to a valid Config.
 func ParseConfig() (cfg Config, googleCfg google.Config) {
 
 	if err := env.Parse(&cfg); err != nil {

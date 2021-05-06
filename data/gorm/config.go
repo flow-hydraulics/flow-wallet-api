@@ -17,7 +17,7 @@ const (
 	DB_TYPE_SQLITE     = "sqlite"
 )
 
-// Config struct for store.
+// Config struct for gorm data store.
 type Config struct {
 	DatabaseDSN  string `env:"DB_DSN" envDefault:"wallet.db"`
 	DatabaseType string `env:"DB_TYPE" envDefault:"sqlite"`
