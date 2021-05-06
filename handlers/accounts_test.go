@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestAccountHandlers(t *testing.T) {
-	logger := log.New(ioutil.Discard, "", log.LstdFlags|log.Lshortfile)
+	logger := log.New(account.NewTestLogger(t), "", log.LstdFlags|log.Lshortfile)
 
 	service, err := account.TestServiceSetup(logger)
 	if err != nil {
@@ -94,7 +93,7 @@ func TestAccountHandlers(t *testing.T) {
 
 			req, err := http.NewRequest(step.method, url, nil)
 			if err != nil {
-				t.Fatalf("Did not expect an error, got: %s", err)
+				t.Fatal(err)
 			}
 
 			req.Context()

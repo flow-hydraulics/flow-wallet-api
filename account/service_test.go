@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -13,7 +12,8 @@ import (
 )
 
 func TestAccountService(t *testing.T) {
-	l := log.New(ioutil.Discard, "", log.LstdFlags|log.Lshortfile)
+	l := log.New(NewTestLogger(t), "", log.LstdFlags|log.Lshortfile)
+
 	service, err := TestServiceSetup(l)
 	if err != nil {
 		t.Fatalf("Error while running setup: %s", err)
@@ -21,17 +21,17 @@ func TestAccountService(t *testing.T) {
 
 	t.Run("ValidateAddress", func(t *testing.T) {
 		if err := service.ValidateAddress("not-a-valid-address"); err == nil {
-			t.Errorf("Expected an error")
+			t.Error("Expected an error")
 		}
 
 		if err := service.ValidateAddress(""); err == nil {
-			t.Errorf("Expected an error")
+			t.Error("Expected an error")
 		}
 	})
 
 	account, err := service.Create(context.Background())
 	if err != nil {
-		t.Fatalf("Did not expect an error, got: %s", err)
+		t.Fatal(err)
 	}
 
 	t.Run("new account has proper attributes", func(*testing.T) {
@@ -40,21 +40,28 @@ func TestAccountService(t *testing.T) {
 		}
 
 		if len(account.Keys) != 0 {
-			t.Errorf("Account should not expose keys")
+			t.Error("Account should not expose keys")
 		}
 	})
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Fund the account from service account
-		tokens.TransferFlow(
+		txId, err := tokens.TransferFlow(
 			service.km,
 			service.fc,
 			flow.HexToAddress(account.Address),
 			flow.HexToAddress(os.Getenv("ADMIN_ACC_ADDRESS")),
 			"1.0",
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = flow_helpers.WaitForSeal(context.Background(), service.fc, txId)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		txId, err := tokens.TransferFlow(
+		txId, err = tokens.TransferFlow(
 			service.km,
 			service.fc,
 			flow.HexToAddress(os.Getenv("ADMIN_ACC_ADDRESS")),
@@ -63,7 +70,7 @@ func TestAccountService(t *testing.T) {
 		)
 
 		if err != nil {
-			t.Fatalf("Did not expect an error, got: %s", err)
+			t.Fatal(err)
 		}
 
 		if txId == flow.EmptyID {
@@ -72,7 +79,7 @@ func TestAccountService(t *testing.T) {
 
 		_, err = flow_helpers.WaitForSeal(context.Background(), service.fc, txId)
 		if err != nil {
-			t.Errorf("Did not expect an error, got: %s", err)
+			t.Fatal(err)
 		}
 	})
 
@@ -86,16 +93,16 @@ func TestAccountService(t *testing.T) {
 		)
 
 		if err != nil {
-			t.Fatalf("Did not expect an error, got: %s", err)
+			t.Fatal(err)
 		}
 
 		if txId == flow.EmptyID {
-			t.Fatalf("Expected txId not to be empty")
+			t.Fatal("Expected txId not to be empty")
 		}
 
 		_, err = flow_helpers.WaitForSeal(context.Background(), service.fc, txId)
 		if err == nil {
-			t.Errorf("Expected an error")
+			t.Fatal("Expected an error")
 		}
 	})
 
