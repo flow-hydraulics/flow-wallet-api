@@ -124,7 +124,7 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key
-		rawKey, err = s.db.AccountKey(address, 0) // TODO: use s.cfg.DefaultKeyIndex
+		rawKey, err = s.db.AccountKey(address, s.cfg.DefaultKeyIndex)
 		if err != nil {
 			return
 		}
