@@ -1,3 +1,4 @@
+// Package provides convience functions for Flow blockchain interaction.
 package flow_helpers
 
 import (
@@ -8,7 +9,8 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
-func GetLatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, error) {
+// LatestBlockId retuns the flow.Identifier for the latest block in the chain.
+func LatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, error) {
 	block, err := c.GetLatestBlock(ctx, true)
 	if err != nil {
 		return flow.Identifier{}, err
@@ -16,6 +18,8 @@ func GetLatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, e
 	return block.ID, nil
 }
 
+// WaitForSeal blocks until either an error occurs or the transaction
+// identified by "id" gets a "TransactionStatusSealed" status.
 func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (result *flow.TransactionResult, err error) {
 	result, err = c.GetTransactionResult(ctx, id)
 	if err != nil {

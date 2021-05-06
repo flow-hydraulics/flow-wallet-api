@@ -47,7 +47,7 @@ func TransferFlow(
 		return flow.EmptyID, err
 	}
 
-	referenceBlockID, err := flow_helpers.GetLatestBlockId(context.Background(), fc)
+	referenceBlockID, err := flow_helpers.LatestBlockId(context.Background(), fc)
 	if err != nil {
 		return flow.EmptyID, err
 	}
