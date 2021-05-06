@@ -3,6 +3,7 @@ package account
 import (
 	"log"
 	"os"
+	"testing"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-wallet-service/data/gorm"
@@ -18,6 +19,19 @@ type testConfig struct {
 
 const testDbDSN = "test.db"
 const testDbType = "sqlite"
+
+type TestLogger struct {
+	t *testing.T
+}
+
+func NewTestLogger(t *testing.T) *TestLogger {
+	return &TestLogger{t}
+}
+
+func (l *TestLogger) Write(p []byte) (n int, err error) {
+	l.t.Logf("%s", p)
+	return len(p), nil
+}
 
 // TestServiceSetup is used to spin up an account service for testing.
 func TestServiceSetup(l *log.Logger) (result *Service, err error) {
