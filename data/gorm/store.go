@@ -1,3 +1,4 @@
+// Package gorm manages data storage in sqlite, postgressql and mysql.
 package gorm
 
 import (
@@ -11,6 +12,7 @@ type Store struct {
 	data.AccountStore
 }
 
+// NewStore initiates a new store.
 func NewStore(l *log.Logger) (result *Store, err error) {
 	cfg := ParseConfig()
 
@@ -19,8 +21,13 @@ func NewStore(l *log.Logger) (result *Store, err error) {
 		return
 	}
 
+	accountStore, err := NewAccountStore(l, db)
+	if err != nil {
+		return
+	}
+
 	result = &Store{
-		AccountStore: newAccountStore(l, db),
+		AccountStore: accountStore,
 	}
 
 	return

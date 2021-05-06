@@ -7,14 +7,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// AccountStore manages data regarding accounts.
 type AccountStore struct {
 	l  *log.Logger
 	db *gorm.DB
 }
 
-func newAccountStore(l *log.Logger, db *gorm.DB) *AccountStore {
-	db.AutoMigrate(&data.Account{}, &data.Key{})
-	return &AccountStore{l, db}
+func NewAccountStore(l *log.Logger, db *gorm.DB) (*AccountStore, error) {
+	err := db.AutoMigrate(&data.Account{}, &data.Key{})
+	if err != nil {
+		return &AccountStore{}, err
+	}
+	return &AccountStore{l, db}, nil
 }
 
 // List all accounts

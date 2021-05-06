@@ -17,6 +17,7 @@ const (
 	DB_TYPE_SQLITE     = "sqlite"
 )
 
+// Config struct for store.
 type Config struct {
 	DatabaseDSN  string `env:"DB_DSN" envDefault:"wallet.db"`
 	DatabaseType string `env:"DB_TYPE" envDefault:"sqlite"`
@@ -24,6 +25,7 @@ type Config struct {
 	Options      *gorm.Config
 }
 
+// ParseConfig parses environment variables to a valid Config.
 func ParseConfig() (cfg Config) {
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
