@@ -1,3 +1,4 @@
+// Package provides functions for token handling in Flow blockhain.
 package tokens
 
 type Token struct {
