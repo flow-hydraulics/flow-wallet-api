@@ -10,6 +10,7 @@ import (
 
 // Store interface groups different types of stores together.
 type Store interface {
+	Close()
 	AccountStore
 	jobs.JobStore
 }

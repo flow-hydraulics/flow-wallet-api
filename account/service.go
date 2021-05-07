@@ -44,7 +44,7 @@ func NewService(
 }
 
 // List returns all accounts in the datastore.
-func (s *Service) List(ctx context.Context) (result []data.Account, err error) {
+func (s *Service) List() (result []data.Account, err error) {
 	return s.db.Accounts()
 }
 
@@ -75,31 +75,10 @@ func (s *Service) Create(ctx context.Context) (result data.Account, err error) {
 	return s.db.Account(account.Address)
 }
 
-// Details returns a specific account.
-func (s *Service) Details(ctx context.Context, address string) (result data.Account, err error) {
-	// Check if the input is a valid address
-	err = s.ValidateAddress(address)
-	if err != nil {
-		return
-	}
-
-	// Get from datastore
-	result, err = s.db.Account(address)
-	if err != nil && err.Error() == "record not found" {
-		// Convert error to a 404 RequestError
-		err = &errors.RequestError{
-			StatusCode: http.StatusNotFound,
-			Err:        fmt.Errorf("account not found"),
-		}
-	}
-
-	return
-}
-
 // CreateAsync calls service.Create asynchronously.
 // It creates a job and returns it. This allows us to respond with a job id
 // which the client can use to poll for the results later.
-func (s *Service) CreateAsync(ctx context.Context) (*jobs.Job, error) {
+func (s *Service) CreateAsync() (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
 		account, err := s.Create(context.Background())
 		if err != nil {
@@ -121,6 +100,27 @@ func (s *Service) CreateAsync(ctx context.Context) (*jobs.Job, error) {
 	}
 
 	return job, nil
+}
+
+// Details returns a specific account.
+func (s *Service) Details(address string) (result data.Account, err error) {
+	// Check if the input is a valid address
+	err = s.ValidateAddress(address)
+	if err != nil {
+		return
+	}
+
+	// Get from datastore
+	result, err = s.db.Account(address)
+	if err != nil && err.Error() == "record not found" {
+		// Convert error to a 404 RequestError
+		err = &errors.RequestError{
+			StatusCode: http.StatusNotFound,
+			Err:        fmt.Errorf("account not found"),
+		}
+	}
+
+	return
 }
 
 // ValidateAddress checks if the given address is valid in the current Flow network.

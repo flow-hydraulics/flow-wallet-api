@@ -10,6 +10,7 @@ import (
 )
 
 type Store struct {
+	db *gorm.DB
 	data.AccountStore
 	jobs.JobStore
 }
@@ -34,9 +35,18 @@ func NewStore(l *log.Logger) (result *Store, err error) {
 	}
 
 	result = &Store{
+		db:           db,
 		AccountStore: accountStore,
 		JobStore:     jobStore,
 	}
 
 	return
+}
+
+func (s *Store) Close() {
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		panic("unable to close store database")
+	}
+	sqlDB.Close()
 }

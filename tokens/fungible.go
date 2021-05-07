@@ -25,6 +25,7 @@ func TransferFlow(
 	senderAddress flow.Address,
 	amount string) (flow.Identifier, error) {
 
+	// TODO: filepaths are relative to the caller
 	txTemplate, err := ioutil.ReadFile("../cadence/transactions/transfer_flow.cdc")
 	if err != nil {
 		return flow.EmptyID, err
