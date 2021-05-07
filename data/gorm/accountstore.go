@@ -34,7 +34,8 @@ func (s *AccountStore) Account(address string) (account data.Account, err error)
 	return
 }
 
-func (s *AccountStore) AccountKey(address string, index int) (key data.Key, err error) {
-	err = s.db.Where(&data.Key{AccountAddress: address, Index: index}).First(&key).Error
+func (s *AccountStore) AccountKey(address string) (key data.Key, err error) {
+	err = s.db.Where(&data.Key{AccountAddress: address}).Order("updated_at asc").First(&key).Error
+	s.db.Save(&key) // Update the UpdatedAt field
 	return
 }

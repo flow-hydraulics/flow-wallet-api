@@ -7,6 +7,7 @@ import (
 
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-wallet-service/data/gorm"
+	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk/client"
@@ -57,13 +58,16 @@ func TestServiceSetup(l *log.Logger) (result *Service, err error) {
 		return
 	}
 
+	wp := jobs.NewWorkerPool(l, db)
+	wp.AddWorker(1)
+
 	// Key manager
 	km, err := simple.NewKeyManager(l, db, fc)
 	if err != nil {
 		return
 	}
 
-	result = NewService(l, db, km, fc)
+	result = NewService(l, db, km, fc, wp)
 
 	return
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/account"
 	"github.com/eqlabs/flow-wallet-service/data/gorm"
 	"github.com/eqlabs/flow-wallet-service/handlers"
+	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -62,6 +63,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Create a worker pool
+	wp := jobs.NewWorkerPool(l, db)
+	wp.AddWorker(100) // Add a worker with capacity of 100
+
 	// Key manager
 	km, err := simple.NewKeyManager(l, db, fc)
 	if err != nil {
@@ -69,11 +74,13 @@ func main() {
 	}
 
 	// Services
-	accountService := account.NewService(l, db, km, fc)
+	jobsService := jobs.NewService(l, db)
+	accountService := account.NewService(l, db, km, fc, wp)
 
 	// HTTP handling
 
-	accounts := handlers.NewAccounts(l, accountService)
+	jobsHandler := handlers.NewJobs(l, jobsService)
+	accountsHandler := handlers.NewAccounts(l, accountService)
 	// transactions := handlers.NewTransactions(l, fc, db, km)
 	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, km)
 
@@ -82,11 +89,14 @@ func main() {
 	// Catch the api version
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
+	// Jobs
+	rv.HandleFunc("/status/{jobId}", jobsHandler.Details).Methods(http.MethodGet) // details
+
 	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()
-	ra.HandleFunc("", accounts.List).Methods(http.MethodGet)              // list
-	ra.HandleFunc("", accounts.Create).Methods(http.MethodPost)           // create
-	ra.HandleFunc("/{address}", accounts.Details).Methods(http.MethodGet) // details
+	ra.HandleFunc("", accountsHandler.List).Methods(http.MethodGet)              // list
+	ra.HandleFunc("", accountsHandler.Create).Methods(http.MethodPost)           // create
+	ra.HandleFunc("/{address}", accountsHandler.Details).Methods(http.MethodGet) // details
 
 	// // Account raw transactions
 	// if !disable_raw_tx {
@@ -136,6 +146,9 @@ func main() {
 	sig := <-c
 
 	l.Printf("Got signal: %s. Shutting down..\n", sig)
+
+	// Stop the worker pool, waits
+	wp.Stop()
 
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)

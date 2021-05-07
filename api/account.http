@@ -8,3 +8,7 @@ content-type: application/json
 ###
 GET http://localhost:3000/v1/accounts/0f7025fa05b578e3 HTTP/1.1
 content-type: application/json
+
+###
+GET http://localhost:3000/v1/status/aff53a5a-5228-442c-a7b7-54ae5ef88cd0 HTTP/1.1
+content-type: application/json

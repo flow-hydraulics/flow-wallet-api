@@ -34,10 +34,11 @@ func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(result)
 }
 
-// Create creates a new account.
+// Create creates a new account asynchronously.
+// It returns a Job JSON representation.
 func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 	s.log.Println("Create account")
-	result, err := s.service.Create(r.Context())
+	result, err := s.service.CreateAsync(r.Context())
 	if err != nil {
 		handleError(err, s.log, rw)
 		return

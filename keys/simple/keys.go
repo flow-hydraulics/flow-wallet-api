@@ -16,14 +16,9 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
-// Datastore is the interface required by key manager for data storage.
-type Datastore interface {
-	AccountKey(address string, index int) (data.Key, error)
-}
-
 type KeyManager struct {
 	log             *log.Logger
-	db              Datastore
+	db              keys.KeyStore
 	fc              *client.Client
 	crypter         encryption.Crypter
 	signAlgo        crypto.SignatureAlgorithm
@@ -35,7 +30,7 @@ type KeyManager struct {
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(log *log.Logger, db Datastore, fc *client.Client) (result *KeyManager, err error) {
+func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result *KeyManager, err error) {
 	cfg, googleCfg := ParseConfig()
 
 	adminAccountKey := keys.Key{
@@ -128,7 +123,8 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key
-		rawKey, err = s.db.AccountKey(address, s.cfg.DefaultKeyIndex)
+		// Get the "least recently used" key for this address
+		rawKey, err = s.db.AccountKey(address)
 		if err != nil {
 			return
 		}
