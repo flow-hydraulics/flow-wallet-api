@@ -18,12 +18,12 @@ type NftInfo struct {
 }
 
 func SetupNFT(ctx context.Context, fc *client.Client, km keys.Manager, address string, n NftInfo) (*flow.TransactionResult, error) {
-	serviceAuth, err := km.AdminAuthorizer()
+	serviceAuth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
 		return &flow.TransactionResult{}, err
 	}
 
-	accountAuth, err := km.UserAuthorizer(address)
+	accountAuth, err := km.UserAuthorizer(ctx, address)
 	if err != nil {
 		return &flow.TransactionResult{}, err
 	}

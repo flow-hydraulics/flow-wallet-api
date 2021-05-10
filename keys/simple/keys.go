@@ -16,27 +16,21 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
-// Datastore is the interface required by key manager for data storage.
-type Datastore interface {
-	AccountKey(address string, index int) (data.Key, error)
-}
-
 type KeyManager struct {
 	log             *log.Logger
-	db              Datastore
+	db              keys.KeyStore
 	fc              *client.Client
 	crypter         encryption.Crypter
 	signAlgo        crypto.SignatureAlgorithm
 	hashAlgo        crypto.HashAlgorithm
 	adminAccountKey keys.Key
 	cfg             Config
-	googleCfg       google.Config
 }
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(log *log.Logger, db Datastore, fc *client.Client) (result *KeyManager, err error) {
-	cfg, googleCfg := ParseConfig()
+func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result *KeyManager, err error) {
+	cfg := ParseConfig()
 
 	adminAccountKey := keys.Key{
 		Index: cfg.AdminAccountKeyIndex,
@@ -55,13 +49,12 @@ func NewKeyManager(log *log.Logger, db Datastore, fc *client.Client) (result *Ke
 		crypto.SHA3_256,   // TODO: from config?
 		adminAccountKey,
 		cfg,
-		googleCfg,
 	}
 
 	return
 }
 
-func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err error) {
+func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (result keys.Wrapped, err error) {
 	switch s.cfg.DefaultKeyStorage {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		result, err = local.Generate(
@@ -72,9 +65,7 @@ func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err er
 		)
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		result, err = google.Generate(
-			s.googleCfg.ProjectID,
-			s.googleCfg.LocationID,
-			s.googleCfg.KeyRingID,
+			ctx,
 			keyIndex,
 			weight,
 		)
@@ -84,8 +75,8 @@ func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err er
 	return
 }
 
-func (s *KeyManager) GenerateDefault() (keys.Wrapped, error) {
-	return s.Generate(s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
+func (s *KeyManager) GenerateDefault(ctx context.Context) (keys.Wrapped, error) {
+	return s.Generate(ctx, s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 
 func (s *KeyManager) Save(key keys.Key) (result data.Key, err error) {
@@ -110,17 +101,16 @@ func (s *KeyManager) Load(key data.Key) (result keys.Key, err error) {
 	return
 }
 
-func (s *KeyManager) AdminAuthorizer() (keys.Authorizer, error) {
-	return s.MakeAuthorizer(s.cfg.AdminAccountAddress)
+func (s *KeyManager) AdminAuthorizer(ctx context.Context) (keys.Authorizer, error) {
+	return s.MakeAuthorizer(ctx, s.cfg.AdminAccountAddress)
 }
 
-func (s *KeyManager) UserAuthorizer(address string) (keys.Authorizer, error) {
-	return s.MakeAuthorizer(address)
+func (s *KeyManager) UserAuthorizer(ctx context.Context, address string) (keys.Authorizer, error) {
+	return s.MakeAuthorizer(ctx, address)
 }
 
-func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err error) {
+func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (result keys.Authorizer, err error) {
 	var key keys.Key
-	ctx := context.Background()
 
 	result.Address = flow.HexToAddress(address)
 
@@ -128,7 +118,8 @@ func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err
 		key = s.adminAccountKey
 	} else {
 		var rawKey data.Key
-		rawKey, err = s.db.AccountKey(address, s.cfg.DefaultKeyIndex)
+		// Get the "least recently used" key for this address
+		rawKey, err = s.db.AccountKey(address)
 		if err != nil {
 			return
 		}

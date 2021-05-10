@@ -8,6 +8,7 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/data"
 	"github.com/eqlabs/flow-wallet-service/errors"
+	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -26,6 +27,7 @@ type Service struct {
 	db  Datastore
 	km  keys.Manager
 	fc  *client.Client
+	wp  *jobs.WorkerPool
 	cfg Config
 }
 
@@ -35,13 +37,14 @@ func NewService(
 	db Datastore,
 	km keys.Manager,
 	fc *client.Client,
+	wp *jobs.WorkerPool,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{l, db, km, fc, cfg}
+	return &Service{l, db, km, fc, wp, cfg}
 }
 
 // List returns all accounts in the datastore.
-func (s *Service) List(ctx context.Context) (result []data.Account, err error) {
+func (s *Service) List() (result []data.Account, err error) {
 	return s.db.Accounts()
 }
 
@@ -72,8 +75,37 @@ func (s *Service) Create(ctx context.Context) (result data.Account, err error) {
 	return s.db.Account(account.Address)
 }
 
+// CreateAsync calls service.Create asynchronously.
+// It creates a job and returns it. This allows us to respond with a job id
+// which the client can use to poll for the results later.
+func (s *Service) CreateAsync() (*jobs.Job, error) {
+	job, err := s.wp.AddJob(func() (string, error) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		account, err := s.Create(ctx)
+		if err != nil {
+			s.l.Println(err)
+			return "", err
+		}
+		return account.Address, nil
+	})
+
+	if err != nil {
+		_, isJErr := err.(*errors.JobQueueFull)
+		if isJErr {
+			err = &errors.RequestError{
+				StatusCode: http.StatusServiceUnavailable,
+				Err:        fmt.Errorf("max capacity reached, try again later"),
+			}
+		}
+		return nil, err
+	}
+
+	return job, nil
+}
+
 // Details returns a specific account.
-func (s *Service) Details(ctx context.Context, address string) (result data.Account, err error) {
+func (s *Service) Details(address string) (result data.Account, err error) {
 	// Check if the input is a valid address
 	err = s.ValidateAddress(address)
 	if err != nil {

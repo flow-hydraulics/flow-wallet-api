@@ -27,7 +27,7 @@ func Create(
 	err error,
 ) {
 	// Get admin account authorizer
-	adminAuth, err := km.AdminAuthorizer()
+	adminAuth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
 		return
 	}
@@ -39,7 +39,7 @@ func Create(
 	}
 
 	// Generate a new key pair
-	wrapped, err := km.GenerateDefault()
+	wrapped, err := km.GenerateDefault(ctx)
 	if err != nil {
 		return
 	}

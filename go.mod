@@ -17,6 +17,7 @@ require (
 	github.com/onflow/cadence v0.14.2
 	github.com/onflow/flow-go-sdk v0.18.0
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
 	golang.org/x/net v0.0.0-20210505024714-0287a6fb4125 // indirect
 	golang.org/x/oauth2 v0.0.0-20210427180440-81ed05c6b58c // indirect

@@ -2,6 +2,8 @@
 package keys
 
 import (
+	"context"
+
 	"github.com/eqlabs/flow-wallet-service/data"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -15,17 +17,17 @@ const (
 // Manager provides the functions needed for key management.
 type Manager interface {
 	// Generate generates a new Key using provided key index and weight.
-	Generate(keyIndex int, weight int) (Wrapped, error)
+	Generate(ctx context.Context, keyIndex int, weight int) (Wrapped, error)
 	// GenerateDefault generates a new Key using application defaults.
-	GenerateDefault() (Wrapped, error)
+	GenerateDefault(context.Context) (Wrapped, error)
 	// Save is responsible for converting an "in flight" key to a storable key.
 	Save(Key) (data.Key, error)
 	// Load is responsible for converting a storable key to an "in flight" key.
 	Load(data.Key) (Key, error)
 	// AdminAuthorizer returns an Authorizer for the applications admin account.
-	AdminAuthorizer() (Authorizer, error)
+	AdminAuthorizer(context.Context) (Authorizer, error)
 	// UserAuthorizer returns an Authorizer for the given address.
-	UserAuthorizer(address string) (Authorizer, error)
+	UserAuthorizer(ctx context.Context, address string) (Authorizer, error)
 }
 
 // Key is an "in flight" account key meaning its Value should be the actual

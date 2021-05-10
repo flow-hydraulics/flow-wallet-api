@@ -3,6 +3,7 @@ package tokens
 import (
 	"context"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
@@ -19,13 +20,15 @@ var EmulatorFlowToken Token = Token{
 }
 
 func TransferFlow(
+	ctx context.Context,
 	km keys.Manager,
 	fc *client.Client,
 	recipientAddress flow.Address,
 	senderAddress flow.Address,
 	amount string) (flow.Identifier, error) {
 
-	txTemplate, err := ioutil.ReadFile("../cadence/transactions/transfer_flow.cdc")
+	tmplPath := filepath.Join(TemplatePath(), "transactions", "transfer_flow.cdc")
+	txTemplate, err := ioutil.ReadFile(tmplPath)
 	if err != nil {
 		return flow.EmptyID, err
 	}
@@ -37,7 +40,7 @@ func TransferFlow(
 
 	txStr := replacer.Replace(string(txTemplate))
 
-	senderAuthorizer, err := km.UserAuthorizer(senderAddress.Hex())
+	senderAuthorizer, err := km.UserAuthorizer(ctx, senderAddress.Hex())
 	if err != nil {
 		return flow.EmptyID, err
 	}

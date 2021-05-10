@@ -25,7 +25,7 @@ func NewAccounts(log *log.Logger, service *account.Service) *Accounts {
 // List returns all accounts.
 func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 	s.log.Println("List accounts")
-	result, err := s.service.List(r.Context())
+	result, err := s.service.List()
 	if err != nil {
 		handleError(err, s.log, rw)
 		return
@@ -34,10 +34,11 @@ func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(result)
 }
 
-// Create creates a new account.
+// Create creates a new account asynchronously.
+// It returns a Job JSON representation.
 func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 	s.log.Println("Create account")
-	result, err := s.service.Create(r.Context())
+	result, err := s.service.CreateAsync()
 	if err != nil {
 		handleError(err, s.log, rw)
 		return
@@ -52,7 +53,7 @@ func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
 	s.log.Println("Account details")
 	vars := mux.Vars(r)
-	result, err := s.service.Details(r.Context(), vars["address"])
+	result, err := s.service.Details(vars["address"])
 	if err != nil {
 		handleError(err, s.log, rw)
 		return

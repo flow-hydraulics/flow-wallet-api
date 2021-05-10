@@ -4,13 +4,18 @@ package data
 import (
 	"time"
 
+	"github.com/eqlabs/flow-wallet-service/jobs"
 	"gorm.io/gorm"
 )
 
 // Store interface groups different types of stores together.
 type Store interface {
+	Close()
 	AccountStore
+	jobs.JobStore
 }
+
+// TODO: Move account related things to account package?
 
 // AccountStore manages data regarding accounts.
 type AccountStore interface {
@@ -20,8 +25,8 @@ type AccountStore interface {
 	InsertAccount(a Account) error
 	// Get account details.
 	Account(address string) (Account, error)
-	// Get the account key corresponding to address and key index.
-	AccountKey(address string, index int) (Key, error)
+	// Get the "least recently used" account key corresponding to address.
+	AccountKey(address string) (Key, error)
 }
 
 // Account struct represents a storable account.
