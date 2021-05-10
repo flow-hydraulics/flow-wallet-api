@@ -11,15 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	STATUS_INIT                 = "init"
-	STATUS_ACCEPTED             = "accepted"
-	STATUS_NO_AVAILABLE_WORKERS = "no-available-workers"
-	STATUS_QUEUE_FULL           = "queue-full"
-	STATUS_ERROR                = "error"
-	STATUS_COMPLETE             = "complete"
-)
-
 type WorkerPool struct {
 	wg      *sync.WaitGroup
 	workers []*Worker
@@ -35,7 +26,7 @@ type Worker struct {
 type Job struct {
 	ID        uuid.UUID              `json:"jobId" gorm:"primary_key;type:uuid;"`
 	Do        func() (string, error) `json:"-" gorm:"-"`
-	Status    string                 `json:"status"`
+	Status    Status                 `json:"status"`
 	Error     string                 `json:"-"`
 	Result    string                 `json:"result"`
 	CreatedAt time.Time              `json:"createdAt"`
@@ -64,27 +55,27 @@ func (p *WorkerPool) AddWorker(capacity uint) {
 }
 
 func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
-	job := &Job{Do: do, Status: STATUS_INIT}
+	job := &Job{Do: do, Status: Init}
 	p.db.InsertJob(job)
 	worker, err := p.AvailableWorker()
 	if err != nil {
 		p.log.Println(err)
-		job.Status = STATUS_NO_AVAILABLE_WORKERS
+		job.Status = NoAvailableWorkers
 		p.db.UpdateJob(job)
-		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status)}
+		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
 	}
 	if !worker.tryEnqueue(job) {
-		job.Status = STATUS_QUEUE_FULL
+		job.Status = QueueFull
 		p.db.UpdateJob(job)
-		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status)}
+		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
 	}
-	job.Status = STATUS_ACCEPTED
+	job.Status = Accepted
 	p.db.UpdateJob(job)
 	return job, nil
 }
 
 func (p *WorkerPool) AvailableWorker() (*Worker, error) {
-	// TODO: support multiple workers
+	// TODO: support multiple workers, use load balancing
 	if len(p.workers) < 1 {
 		return nil, fmt.Errorf("no available workers")
 	}
@@ -120,12 +111,12 @@ func (w *Worker) tryEnqueue(job *Job) bool {
 func (w *Worker) process(job *Job) {
 	result, err := job.Do()
 	if err != nil {
-		job.Status = STATUS_ERROR
+		job.Status = Error
 		job.Error = err.Error()
 		w.pool.db.UpdateJob(job)
 		return
 	}
-	job.Status = STATUS_COMPLETE
+	job.Status = Complete
 	job.Result = result
 	w.pool.db.UpdateJob(job)
 }

@@ -98,17 +98,17 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if job.Status != jobs.STATUS_ACCEPTED && job.Status != jobs.STATUS_COMPLETE {
+		if job.Status != jobs.Accepted && job.Status != jobs.Complete {
 			t.Errorf("expected job status to be %s or %s but got %s",
-				jobs.STATUS_ACCEPTED, jobs.STATUS_COMPLETE, job.Status)
+				jobs.Accepted, jobs.Complete, job.Status)
 		}
 
-		for job.Status == jobs.STATUS_ACCEPTED {
+		for job.Status == jobs.Accepted {
 			time.Sleep(10 * time.Millisecond)
 		}
 
-		if job.Status != jobs.STATUS_COMPLETE {
-			t.Errorf("expected job status to be %s got %s", jobs.STATUS_COMPLETE, job.Status)
+		if job.Status != jobs.Complete {
+			t.Errorf("expected job status to be %s got %s", jobs.Complete, job.Status)
 		}
 
 		account, err := service.Details(job.Result)
