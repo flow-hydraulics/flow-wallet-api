@@ -25,13 +25,12 @@ type KeyManager struct {
 	hashAlgo        crypto.HashAlgorithm
 	adminAccountKey keys.Key
 	cfg             Config
-	googleCfg       google.Config
 }
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
 func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result *KeyManager, err error) {
-	cfg, googleCfg := ParseConfig()
+	cfg := ParseConfig()
 
 	adminAccountKey := keys.Key{
 		Index: cfg.AdminAccountKeyIndex,
@@ -50,7 +49,6 @@ func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result
 		crypto.SHA3_256,   // TODO: from config?
 		adminAccountKey,
 		cfg,
-		googleCfg,
 	}
 
 	return
@@ -68,9 +66,6 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (result
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		result, err = google.Generate(
 			ctx,
-			s.googleCfg.ProjectID,
-			s.googleCfg.LocationID,
-			s.googleCfg.KeyRingID,
 			keyIndex,
 			weight,
 		)

@@ -2,7 +2,6 @@ package simple
 
 import (
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-service/keys/google"
 	"github.com/onflow/flow-go-sdk"
 )
 
@@ -19,18 +18,13 @@ type Config struct {
 }
 
 // ParseConfig parses environment variables to a valid Config.
-func ParseConfig() (cfg Config, googleCfg google.Config) {
-
+func ParseConfig() (cfg Config) {
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
 	}
 
 	if cfg.DefaultKeyWeight < 0 {
 		cfg.DefaultKeyWeight = flow.AccountKeyWeightThreshold
-	}
-
-	if err := env.Parse(&googleCfg); err != nil {
-		panic(err)
 	}
 
 	return

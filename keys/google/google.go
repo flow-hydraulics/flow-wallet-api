@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/google/uuid"
 	"github.com/onflow/flow-go-sdk"
@@ -20,15 +21,19 @@ type Config struct {
 
 func Generate(
 	ctx context.Context,
-	projectId, locationId, KeyRingId string,
 	keyIndex, weight int,
 ) (result keys.Wrapped, err error) {
+	var cfg Config
+	if err = env.Parse(&cfg); err != nil {
+		return
+	}
+
 	keyUUID := uuid.New()
 
 	// Create the new key in Google KMS
 	createdKey, err := AsymKey(
 		ctx,
-		fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", projectId, locationId, KeyRingId),
+		fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", cfg.ProjectID, cfg.LocationID, cfg.KeyRingID),
 		fmt.Sprintf("flow-wallet-account-key-%s", keyUUID.String()),
 	)
 	if err != nil {
