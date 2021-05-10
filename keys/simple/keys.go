@@ -56,7 +56,7 @@ func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result
 	return
 }
 
-func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err error) {
+func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (result keys.Wrapped, err error) {
 	switch s.cfg.DefaultKeyStorage {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		result, err = local.Generate(
@@ -67,6 +67,7 @@ func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err er
 		)
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		result, err = google.Generate(
+			ctx,
 			s.googleCfg.ProjectID,
 			s.googleCfg.LocationID,
 			s.googleCfg.KeyRingID,
@@ -79,8 +80,8 @@ func (s *KeyManager) Generate(keyIndex, weight int) (result keys.Wrapped, err er
 	return
 }
 
-func (s *KeyManager) GenerateDefault() (keys.Wrapped, error) {
-	return s.Generate(s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
+func (s *KeyManager) GenerateDefault(ctx context.Context) (keys.Wrapped, error) {
+	return s.Generate(ctx, s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 
 func (s *KeyManager) Save(key keys.Key) (result data.Key, err error) {
@@ -105,17 +106,16 @@ func (s *KeyManager) Load(key data.Key) (result keys.Key, err error) {
 	return
 }
 
-func (s *KeyManager) AdminAuthorizer() (keys.Authorizer, error) {
-	return s.MakeAuthorizer(s.cfg.AdminAccountAddress)
+func (s *KeyManager) AdminAuthorizer(ctx context.Context) (keys.Authorizer, error) {
+	return s.MakeAuthorizer(ctx, s.cfg.AdminAccountAddress)
 }
 
-func (s *KeyManager) UserAuthorizer(address string) (keys.Authorizer, error) {
-	return s.MakeAuthorizer(address)
+func (s *KeyManager) UserAuthorizer(ctx context.Context, address string) (keys.Authorizer, error) {
+	return s.MakeAuthorizer(ctx, address)
 }
 
-func (s *KeyManager) MakeAuthorizer(address string) (result keys.Authorizer, err error) {
+func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (result keys.Authorizer, err error) {
 	var key keys.Key
-	ctx := context.Background()
 
 	result.Address = flow.HexToAddress(address)
 

@@ -151,6 +151,9 @@ func TestAccountServices(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		job, err := service.CreateAsync()
 		if err != nil {
 			t.Fatal(err)
@@ -163,6 +166,7 @@ func TestAccountServices(t *testing.T) {
 
 		// Fund the account from service account
 		txId, err := tokens.TransferFlow(
+			ctx,
 			km,
 			fc,
 			flow.HexToAddress(job.Result),
@@ -178,6 +182,7 @@ func TestAccountServices(t *testing.T) {
 		}
 
 		txId, err = tokens.TransferFlow(
+			ctx,
 			km,
 			fc,
 			flow.HexToAddress(os.Getenv("ADMIN_ACC_ADDRESS")),
@@ -200,6 +205,9 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("account can not make a transaction without funds", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		job, err := service.CreateAsync()
 		if err != nil {
 			t.Fatal(err)
@@ -211,6 +219,7 @@ func TestAccountServices(t *testing.T) {
 		}
 
 		txId, err := tokens.TransferFlow(
+			ctx,
 			km,
 			fc,
 			flow.HexToAddress(os.Getenv("ADMIN_ACC_ADDRESS")),

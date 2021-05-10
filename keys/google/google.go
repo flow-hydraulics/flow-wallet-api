@@ -19,11 +19,10 @@ type Config struct {
 }
 
 func Generate(
+	ctx context.Context,
 	projectId, locationId, KeyRingId string,
 	keyIndex, weight int,
 ) (result keys.Wrapped, err error) {
-	ctx := context.Background()
-
 	keyUUID := uuid.New()
 
 	// Create the new key in Google KMS

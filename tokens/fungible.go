@@ -20,6 +20,7 @@ var EmulatorFlowToken Token = Token{
 }
 
 func TransferFlow(
+	ctx context.Context,
 	km keys.Manager,
 	fc *client.Client,
 	recipientAddress flow.Address,
@@ -39,7 +40,7 @@ func TransferFlow(
 
 	txStr := replacer.Replace(string(txTemplate))
 
-	senderAuthorizer, err := km.UserAuthorizer(senderAddress.Hex())
+	senderAuthorizer, err := km.UserAuthorizer(ctx, senderAddress.Hex())
 	if err != nil {
 		return flow.EmptyID, err
 	}

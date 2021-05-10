@@ -80,7 +80,9 @@ func (s *Service) Create(ctx context.Context) (result data.Account, err error) {
 // which the client can use to poll for the results later.
 func (s *Service) CreateAsync() (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
-		account, err := s.Create(context.Background())
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		account, err := s.Create(ctx)
 		if err != nil {
 			s.l.Println(err)
 			return "", err
