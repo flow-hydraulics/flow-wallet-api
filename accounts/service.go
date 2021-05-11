@@ -134,7 +134,7 @@ func (s *Service) CreateAsync() (*jobs.Job, error) {
 // Details returns a specific account.
 func (s *Service) Details(address string) (result Account, err error) {
 	// Check if the input is a valid address
-	err = s.ValidateAddress(address)
+	err = ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return
 	}
@@ -153,9 +153,9 @@ func (s *Service) Details(address string) (result Account, err error) {
 }
 
 // ValidateAddress checks if the given address is valid in the current Flow network.
-func (s *Service) ValidateAddress(address string) (err error) {
+func ValidateAddress(address string, chainId flow.ChainID) (err error) {
 	flowAddress := flow.HexToAddress(address)
-	if !flowAddress.IsValid(s.cfg.ChainId) {
+	if !flowAddress.IsValid(chainId) {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("not a valid address"),

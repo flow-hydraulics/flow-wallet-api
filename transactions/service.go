@@ -2,15 +2,18 @@ package transactions
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/eqlabs/flow-wallet-service/accounts"
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
@@ -21,6 +24,7 @@ type Service struct {
 	km  keys.Manager
 	fc  *client.Client
 	wp  *jobs.WorkerPool
+	cfg Config
 }
 
 // NewService initiates a new transaction service.
@@ -31,7 +35,8 @@ func NewService(
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 ) *Service {
-	return &Service{l, db, km, fc, wp}
+	cfg := ParseConfig()
+	return &Service{l, db, km, fc, wp, cfg}
 }
 
 func (s *Service) create(ctx context.Context, address string, code string, args []TransactionArg) (*Transaction, error) {
@@ -83,6 +88,12 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Transactio
 	var createErr error
 	var done bool = false
 
+	// Check if the input is a valid address
+	err := accounts.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
 	_, jobErr = s.wp.AddJob(func() (string, error) {
 		result, createErr = s.create(context.Background(), address, code, args)
 		done = true
@@ -112,6 +123,12 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Transactio
 }
 
 func (s *Service) CreateAsync(code string, args []TransactionArg, address string) (*jobs.Job, error) {
+	// Check if the input is a valid address
+	err := accounts.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
 	job, err := s.wp.AddJob(func() (string, error) {
 		tx, err := s.create(context.Background(), address, code, args)
 		if err != nil {
@@ -137,12 +154,27 @@ func (s *Service) CreateAsync(code string, args []TransactionArg, address string
 
 // List returns all transactions in the datastore for a given account.
 func (s *Service) List(address string) ([]Transaction, error) {
+	// Check if the input is a valid address
+	err := accounts.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return []Transaction{}, err
+	}
 	return s.db.Transactions(address)
 }
 
 // Details returns a specific transaction.
 func (s *Service) Details(address, transactionId string) (result Transaction, err error) {
-	// TODO: validate address and transactionId
+	// Check if the input is a valid address
+	err = accounts.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return
+	}
+
+	// Check if the input is a valid transaction id
+	err = ValidateTransactionId(transactionId)
+	if err != nil {
+		return
+	}
 
 	// Get from datastore
 	result, err = s.db.Transaction(address, transactionId)
@@ -156,4 +188,19 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	}
 
 	return
+}
+
+func ValidateTransactionId(id string) error {
+	invalidErr := &errors.RequestError{
+		StatusCode: http.StatusBadRequest,
+		Err:        fmt.Errorf("not a valid transaction id"),
+	}
+	b, err := hex.DecodeString(id)
+	if err != nil {
+		return invalidErr
+	}
+	if id != flow.BytesToID(b).Hex() {
+		return invalidErr
+	}
+	return nil
 }

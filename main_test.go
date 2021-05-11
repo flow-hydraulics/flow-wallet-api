@@ -103,7 +103,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := service.ValidateAddress(account.Address); err != nil {
+		if err := accounts.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 	})
@@ -132,7 +132,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := service.ValidateAddress(account.Address); err != nil {
+		if err := accounts.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 
@@ -514,7 +514,7 @@ func TestTransactionHandlers(t *testing.T) {
 		{
 			name:     "HTTP GET details unknown id",
 			method:   http.MethodGet,
-			url:      "/f8d6e0586b0a20c7/transactions/unknown-id",
+			url:      "/f8d6e0586b0a20c7/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921",
 			expected: `transaction not found\n`,
 			status:   http.StatusNotFound,
 		},
