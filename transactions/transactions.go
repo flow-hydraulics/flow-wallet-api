@@ -3,14 +3,10 @@ package transactions
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/onflow/cadence"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"gorm.io/gorm"
@@ -29,10 +25,8 @@ type Transaction struct {
 	result         *flow.TransactionResult `json:"-" gorm:"-"`
 }
 
-type TransactionArg struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
+// https://docs.onflow.org/cadence/json-cadence-spec/
+type TransactionArg interface{}
 
 var EmptyTransaction Transaction = Transaction{}
 
@@ -58,16 +52,6 @@ func New(
 	proposer, payer keys.Authorizer,
 	others []keys.Authorizer) (*Transaction, error) {
 
-	arguments := make([]cadence.Value, len(args))
-
-	for i, arg := range args {
-		val, err := CadenceValue(arg)
-		if err != nil {
-			return &EmptyTransaction, err
-		}
-		arguments[i] = val
-	}
-
 	// Create Flow transaction
 	// TODO: Gas limit?
 	tx := flow.NewTransaction().
@@ -77,8 +61,12 @@ func New(
 		SetPayer(payer.Address)
 
 	// Add arguments
-	for _, arg := range arguments {
-		tx.AddRawArgument(jsoncdc.MustEncode(arg))
+	for _, arg := range args {
+		jsonbytes, err := json.Marshal(arg)
+		if err != nil {
+			return &EmptyTransaction, err
+		}
+		tx.AddRawArgument(jsonbytes)
 	}
 
 	// Add authorizers
@@ -108,32 +96,4 @@ func New(
 		Arguments:      args,
 		tx:             tx,
 	}, nil
-}
-
-func CadenceValue(arg TransactionArg) (cadence.Value, error) {
-	switch strings.ToLower(arg.Type) {
-	default:
-		return cadence.Void{}, fmt.Errorf("unknown argument type %s", arg.Type)
-	case "string":
-		return cadence.NewString(arg.Value), nil
-	case "address":
-		return cadence.NewAddress(flow.HexToAddress(arg.Value)), nil
-	case "ufix64":
-		return cadence.NewUFix64(arg.Value)
-	case "array":
-		var arr []TransactionArg
-		err := json.Unmarshal([]byte(arg.Value), &arr)
-		if err != nil {
-			return cadence.Void{}, err
-		}
-		values := make([]cadence.Value, len(arr))
-		for i, arg := range arr {
-			val, err := CadenceValue(arg)
-			if err != nil {
-				return cadence.Void{}, err
-			}
-			values[i] = val
-		}
-		return cadence.NewArray(values), nil
-	}
 }

@@ -430,24 +430,24 @@ func TestTransactionHandlers(t *testing.T) {
 	router.HandleFunc("/{address}/transactions", handlers.Create).Methods(http.MethodPost)
 	router.HandleFunc("/{address}/transactions/{transactionId}", handlers.Details).Methods(http.MethodGet)
 
-	type TestTxArg struct {
+	type testArg struct {
 		Type  string `json:"type"`
 		Value string `json:"value"`
 	}
 
-	type TestTx struct {
-		Code      string      `json:"code"`
-		Arguments []TestTxArg `json:"arguments"`
+	type testTx struct {
+		Code      string    `json:"code"`
+		Arguments []testArg `json:"arguments"`
 	}
 
-	greeting, err := json.Marshal(&TestTx{Code: `
+	greeting, err := json.Marshal(&testTx{Code: `
 	transaction(greeting: String) {
 		execute {
 			log(greeting.concat(", World!"))
 		}
 	}
 	`,
-		Arguments: []TestTxArg{{Type: "string", Value: "Hello"}}})
+		Arguments: []testArg{{Type: "String", Value: "Hello"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
