@@ -20,8 +20,7 @@ func handleError(err error, logger *log.Logger, rw http.ResponseWriter) {
 		return
 	}
 
-	// Otherwise do not send data regarding the error
-	http.Error(rw, "Error", http.StatusBadRequest)
+	http.Error(rw, err.Error(), http.StatusBadRequest)
 }
 
 // handleJsonResponse is a helper function for unified JSON response handling.

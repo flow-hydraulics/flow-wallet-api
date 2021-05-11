@@ -23,15 +23,15 @@ type Transaction struct {
 	CreatedAt      time.Time               `json:"createdAt"`
 	UpdatedAt      time.Time               `json:"updatedAt"`
 	DeletedAt      gorm.DeletedAt          `json:"-" gorm:"index"`
-	Code           string                  `json:"-" gorm:"-"`
-	Arguments      []TransactionArg        `json:"-" gorm:"-"`
+	Code           string                  `json:"code,omitempty" gorm:"-"`
+	Arguments      []TransactionArg        `json:"arguments,omitempty" gorm:"-"`
 	tx             *flow.Transaction       `json:"-" gorm:"-"`
 	result         *flow.TransactionResult `json:"-" gorm:"-"`
 }
 
 type TransactionArg struct {
-	Type  string
-	Value string
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 var EmptyTransaction Transaction = Transaction{}
@@ -82,7 +82,6 @@ func New(
 	}
 
 	// Add authorizers
-	tx.AddAuthorizer(payer.Address)
 	for _, other := range others {
 		tx.AddAuthorizer(other.Address)
 	}

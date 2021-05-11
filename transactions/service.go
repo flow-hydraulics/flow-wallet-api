@@ -45,21 +45,33 @@ func (s *Service) create(ctx context.Context, address string, code string, args 
 	}
 
 	transaction, err := New(referenceBlockID, code, args, authorizer, authorizer, []keys.Authorizer{})
+	if err != nil {
+		return &EmptyTransaction, err
+	}
 
 	// Send the transaction
-	transaction.Send(ctx, s.fc)
+	err = transaction.Send(ctx, s.fc)
+	if err != nil {
+		return transaction, err
+	}
 
 	// Set TransactionId
 	transaction.TransactionId = transaction.tx.ID().Hex()
 
 	// Insert to datastore
-	s.db.InsertTransaction(transaction)
+	err = s.db.InsertTransaction(transaction)
+	if err != nil {
+		return transaction, err
+	}
 
 	// Wait for the transaction to be sealed
-	transaction.Wait(ctx, s.fc)
+	err = transaction.Wait(ctx, s.fc)
+	if err != nil {
+		return transaction, err
+	}
 
 	// Update in datastore
-	s.db.UpdateTransaction(transaction)
+	err = s.db.UpdateTransaction(transaction)
 
 	return transaction, err
 }
@@ -109,7 +121,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
 			StatusCode: http.StatusNotFound,
-			Err:        fmt.Errorf("job not found"),
+			Err:        fmt.Errorf("transaction not found"),
 		}
 		return
 	}

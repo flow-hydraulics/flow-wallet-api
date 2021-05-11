@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
 	"github.com/eqlabs/flow-wallet-service/tokens"
+	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
@@ -38,6 +40,15 @@ var logger *log.Logger
 
 type testConfig struct {
 	FlowGateway string `env:"FLOW_GATEWAY,required"`
+}
+
+type TestLogger struct {
+	t *testing.T
+}
+
+func (tl *TestLogger) Write(p []byte) (n int, err error) {
+	tl.t.Log(fmt.Sprintf("%s", p))
+	return len(p), nil
 }
 
 func TestMain(m *testing.M) {
@@ -262,7 +273,6 @@ func TestAccountHandlers(t *testing.T) {
 	defer gorm.Close(db)
 
 	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
 	km := simple.NewKeyManager(logger, keyStore, fc)
@@ -271,17 +281,16 @@ func TestAccountHandlers(t *testing.T) {
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	jobService := jobs.NewService(logger, jobStore)
-	accountService := accounts.NewService(logger, accountStore, km, fc, wp)
-
-	var tempAccAddress string
-
-	handlers := handlers.NewAccounts(logger, accountService)
+	store := accounts.NewGormStore(db)
+	service := accounts.NewService(logger, store, km, fc, wp)
+	handlers := handlers.NewAccounts(logger, service)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", handlers.List).Methods(http.MethodGet)
 	router.HandleFunc("/", handlers.Create).Methods(http.MethodPost)
 	router.HandleFunc("/{address}", handlers.Details).Methods(http.MethodGet)
+
+	var tempAccAddress string
 
 	// NOTE: The order of the test "steps" matters
 	steps := []struct {
@@ -363,6 +372,7 @@ func TestAccountHandlers(t *testing.T) {
 			// wait for the account to become available
 			// and store the new account in "tempAcc".
 			if step.status == http.StatusCreated {
+				jobService := jobs.NewService(logger, jobStore)
 				var rJob jobs.Job
 				json.Unmarshal(rr.Body.Bytes(), &rJob)
 				id := rJob.ID.String()
@@ -377,6 +387,185 @@ func TestAccountHandlers(t *testing.T) {
 			re := regexp.MustCompile(step.expected)
 			match := re.FindString(rr.Body.String())
 			if match == "" || match != rr.Body.String() {
+				t.Errorf("handler returned unexpected body: got %q want %v", rr.Body.String(), re)
+			}
+		})
+	}
+}
+
+func TestTransactionHandlers(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	// logger = log.New(&TestLogger{t}, "", log.Lshortfile)
+
+	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fc.Close()
+
+	db, err := gorm.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(testDbDSN)
+	defer gorm.Close(db)
+
+	jobStore := jobs.NewGormStore(db)
+	keyStore := keys.NewGormStore(db)
+
+	km := simple.NewKeyManager(logger, keyStore, fc)
+
+	wp := jobs.NewWorkerPool(logger, jobStore)
+	defer wp.Stop()
+	wp.AddWorker(1)
+
+	store := transactions.NewGormStore(db)
+	service := transactions.NewService(logger, store, km, fc, wp)
+	handlers := handlers.NewTransactions(logger, service)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/{address}/transactions", handlers.List).Methods(http.MethodGet)
+	router.HandleFunc("/{address}/transactions", handlers.Create).Methods(http.MethodPost)
+	router.HandleFunc("/{address}/transactions/{transactionId}", handlers.Details).Methods(http.MethodGet)
+
+	type TestTxArg struct {
+		Type  string `json:"type"`
+		Value string `json:"value"`
+	}
+
+	type TestTx struct {
+		Code      string      `json:"code"`
+		Arguments []TestTxArg `json:"arguments"`
+	}
+
+	greeting, err := json.Marshal(&TestTx{Code: `
+	transaction(greeting: String) {
+		execute {
+			log(greeting.concat(", World!"))
+		}
+	}
+	`,
+		Arguments: []TestTxArg{{Type: "string", Value: "Hello"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var tempTxId string
+
+	// NOTE: The order of the test "steps" matters
+	steps := []struct {
+		name     string
+		method   string
+		body     io.Reader
+		url      string
+		expected string
+		status   int
+	}{
+		{
+			name:     "HTTP GET list db empty",
+			method:   http.MethodGet,
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: `\[\]\n`,
+			status:   http.StatusOK,
+		},
+		{
+			name:     "HTTP POST list empty body",
+			method:   http.MethodPost,
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: "empty body\n",
+			status:   http.StatusBadRequest,
+		},
+		{
+			name:     "HTTP POST list invalid body",
+			method:   http.MethodPost,
+			body:     strings.NewReader("notvalidobject"),
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: "invalid body\n",
+			status:   http.StatusBadRequest,
+		},
+		{
+			name:     "HTTP POST list invalid code",
+			method:   http.MethodPost,
+			body:     strings.NewReader(`{"code":"test","arguments":[{"type":"string","value":"test"}]}`),
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: `.*Parsing failed.*`,
+			status:   http.StatusBadRequest,
+		},
+		{
+			name:     "HTTP POST list ok",
+			method:   http.MethodPost,
+			body:     strings.NewReader(string(greeting)),
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: `.*"transactionId".*`,
+			status:   http.StatusCreated,
+		},
+		{
+			name:     "HTTP GET list db not empty",
+			method:   http.MethodGet,
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: `\[.*"transactionId".*\]\n`,
+			status:   http.StatusOK,
+		},
+		{
+			name:     "HTTP GET details invalid id",
+			method:   http.MethodGet,
+			url:      "/f8d6e0586b0a20c7/transactions/invalid-id",
+			expected: `not a valid transaction id\n`,
+			status:   http.StatusBadRequest,
+		},
+		{
+			name:     "HTTP GET details unknown id",
+			method:   http.MethodGet,
+			url:      "/f8d6e0586b0a20c7/transactions/unknown-id",
+			expected: `transaction not found\n`,
+			status:   http.StatusNotFound,
+		},
+		{
+			name:     "HTTP GET details known id",
+			method:   http.MethodGet,
+			url:      "/f8d6e0586b0a20c7/transactions/<id>",
+			expected: `.*"transactionId".*`,
+			status:   http.StatusOK,
+		},
+	}
+
+	for _, step := range steps {
+		t.Run(step.name, func(t *testing.T) {
+			replacer := strings.NewReplacer(
+				"<id>", tempTxId,
+			)
+
+			url := replacer.Replace(string(step.url))
+
+			req, err := http.NewRequest(step.method, url, step.body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req.Context()
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			// Check the status code is what we expect.
+			if status := rr.Code; status != step.status {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, step.status)
+			}
+
+			// If this step was creating a new transaction store the new txId in "tempTxId".
+			if step.status == http.StatusCreated {
+				var transaction transactions.Transaction
+				json.Unmarshal(rr.Body.Bytes(), &transaction)
+				tempTxId = transaction.TransactionId
+			}
+
+			// Check the response body is what we expect.
+			re := regexp.MustCompile(step.expected)
+			match := re.FindString(rr.Body.String())
+			if match == "" {
 				t.Errorf("handler returned unexpected body: got %q want %v", rr.Body.String(), re)
 			}
 		})
