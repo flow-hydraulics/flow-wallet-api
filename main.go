@@ -76,6 +76,7 @@ func main() {
 	// Services
 	jobsService := jobs.NewService(l, db)
 	accountService := account.NewService(l, db, km, fc, wp)
+	// transactionService := transactions.NewService(l, db, km, fc, wp)
 
 	// HTTP handling
 

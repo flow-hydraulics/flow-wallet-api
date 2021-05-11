@@ -1,37 +1,63 @@
 package handlers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-service/data"
-	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/onflow/flow-go-sdk/client"
+	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/gorilla/mux"
 )
 
 type Transactions struct {
-	l  *log.Logger
-	c  *client.Client
-	db data.Store
-	km keys.Manager
+	log     *log.Logger
+	service *transactions.Service
 }
 
-func NewTransactions(
-	l *log.Logger,
-	c *client.Client,
-	db data.Store,
-	km keys.Manager) *Transactions {
-	return &Transactions{l, c, db, km}
+// NewTransactions initiates a new transactions server.
+func NewTransactions(log *log.Logger, service *transactions.Service) *Transactions {
+	return &Transactions{log, service}
 }
 
 func (s *Transactions) List(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("List transactions")
+	s.log.Println("List transactions")
+	vars := mux.Vars(r)
+	result, err := s.service.List(vars["address"])
+	if err != nil {
+		handleError(err, s.log, rw)
+		return
+	}
+	handleJsonResponse(rw, http.StatusOK)
+	json.NewEncoder(rw).Encode(result)
 }
 
 func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Create transaction")
+	s.log.Println("Create transaction")
+	vars := mux.Vars(r)
+	var t transactions.Transaction
+	// Try to decode the request body into the struct.
+	err := json.NewDecoder(r.Body).Decode(&t)
+	if err != nil {
+		handleError(err, s.log, rw)
+		return
+	}
+	result, err := s.service.CreateSync(r.Context(), t.Code, t.Arguments, vars["address"])
+	if err != nil {
+		handleError(err, s.log, rw)
+		return
+	}
+	handleJsonResponse(rw, http.StatusOK)
+	json.NewEncoder(rw).Encode(result)
 }
 
 func (s *Transactions) Details(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Transaction details")
+	s.log.Println("Transaction details")
+	vars := mux.Vars(r)
+	result, err := s.service.Details(vars["address"], vars["transactionId"])
+	if err != nil {
+		handleError(err, s.log, rw)
+		return
+	}
+	handleJsonResponse(rw, http.StatusOK)
+	json.NewEncoder(rw).Encode(result)
 }
