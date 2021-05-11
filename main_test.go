@@ -98,17 +98,13 @@ func TestAccountServices(t *testing.T) {
 	service := accounts.NewService(logger, accountStore, km, fc, wp)
 
 	t.Run("sync create", func(t *testing.T) {
-		account, err := service.Create(context.Background())
+		account, err := service.CreateSync(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if err := service.ValidateAddress(account.Address); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
-		}
-
-		if len(account.Keys) != 0 {
-			t.Error("Account should not expose keys")
 		}
 	})
 

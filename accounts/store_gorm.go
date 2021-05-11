@@ -24,6 +24,6 @@ func (s *GormStore) Account(address string) (account Account, err error) {
 	return
 }
 
-func (s *GormStore) InsertAccount(account Account) error {
-	return s.db.Create(&account).Error
+func (s *GormStore) InsertAccount(account *Account) error {
+	return s.db.Create(account).Error
 }

@@ -7,5 +7,5 @@ type Store interface {
 	// Get account details.
 	Account(address string) (Account, error)
 	// Insert a new account.
-	InsertAccount(a Account) error
+	InsertAccount(a *Account) error
 }

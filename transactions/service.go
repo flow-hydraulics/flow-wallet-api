@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
@@ -77,14 +78,42 @@ func (s *Service) create(ctx context.Context, address string, code string, args 
 }
 
 func (s *Service) CreateSync(ctx context.Context, code string, args []TransactionArg, address string) (*Transaction, error) {
-	return s.create(ctx, address, code, args)
+	var result *Transaction
+	var jobErr error
+	var createErr error
+	var done bool = false
+
+	_, jobErr = s.wp.AddJob(func() (string, error) {
+		result, createErr = s.create(context.Background(), address, code, args)
+		done = true
+		if createErr != nil {
+			return "", createErr
+		}
+		return result.TransactionId, nil
+	})
+
+	if jobErr != nil {
+		_, isJErr := jobErr.(*errors.JobQueueFull)
+		if isJErr {
+			jobErr = &errors.RequestError{
+				StatusCode: http.StatusServiceUnavailable,
+				Err:        fmt.Errorf("max capacity reached, try again later"),
+			}
+		}
+		return nil, jobErr
+	}
+
+	// Wait for the job to have finished
+	for !done {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	return result, createErr
 }
 
 func (s *Service) CreateAsync(code string, args []TransactionArg, address string) (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		tx, err := s.create(ctx, address, code, args)
+		tx, err := s.create(context.Background(), address, code, args)
 		if err != nil {
 			s.log.Println(err)
 			return "", err
