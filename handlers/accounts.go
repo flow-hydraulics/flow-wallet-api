@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-service/account"
+	"github.com/eqlabs/flow-wallet-service/accounts"
 	"github.com/gorilla/mux"
 )
 
@@ -14,12 +14,12 @@ import (
 // It uses an account service to interface with data.
 type Accounts struct {
 	log     *log.Logger
-	service *account.Service
+	service *accounts.Service
 }
 
 // NewAccounts initiates a new accounts server.
-func NewAccounts(log *log.Logger, service *account.Service) *Accounts {
-	return &Accounts{log, service}
+func NewAccounts(l *log.Logger, service *accounts.Service) *Accounts {
+	return &Accounts{l, service}
 }
 
 // List returns all accounts.

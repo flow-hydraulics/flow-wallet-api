@@ -16,7 +16,7 @@ import (
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
 	log *log.Logger
-	db  TransactionStore
+	db  Store
 	km  keys.Manager
 	fc  *client.Client
 	wp  *jobs.WorkerPool
@@ -25,7 +25,7 @@ type Service struct {
 // NewService initiates a new transaction service.
 func NewService(
 	l *log.Logger,
-	db TransactionStore,
+	db Store,
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
@@ -68,7 +68,7 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Transactio
 	return s.create(ctx, address, code, args)
 }
 
-func (s *Service) CreateAsync(ctx context.Context, code string, args []TransactionArg, address string) (*jobs.Job, error) {
+func (s *Service) CreateAsync(code string, args []TransactionArg, address string) (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

@@ -18,8 +18,8 @@ type Jobs struct {
 }
 
 // NewJobs initiates a new jobs server.
-func NewJobs(log *log.Logger, service *jobs.Service) *Jobs {
-	return &Jobs{log, service}
+func NewJobs(l *log.Logger, service *jobs.Service) *Jobs {
+	return &Jobs{l, service}
 }
 
 // Details returns details regarding a job.
@@ -28,7 +28,7 @@ func NewJobs(log *log.Logger, service *jobs.Service) *Jobs {
 func (s *Jobs) Details(rw http.ResponseWriter, r *http.Request) {
 	s.log.Println("Job details")
 	vars := mux.Vars(r)
-	result, err := s.service.Details(r.Context(), vars["jobId"])
+	result, err := s.service.Details(vars["jobId"])
 	if err != nil {
 		handleError(err, s.log, rw)
 		return

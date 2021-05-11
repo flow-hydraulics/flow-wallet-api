@@ -1,4 +1,4 @@
-package account
+package accounts
 
 import (
 	"github.com/caarlos0/env/v6"

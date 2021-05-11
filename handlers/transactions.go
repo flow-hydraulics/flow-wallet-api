@@ -15,8 +15,8 @@ type Transactions struct {
 }
 
 // NewTransactions initiates a new transactions server.
-func NewTransactions(log *log.Logger, service *transactions.Service) *Transactions {
-	return &Transactions{log, service}
+func NewTransactions(l *log.Logger, service *transactions.Service) *Transactions {
+	return &Transactions{l, service}
 }
 
 func (s *Transactions) List(rw http.ResponseWriter, r *http.Request) {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/eqlabs/flow-wallet-service/data"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/encryption"
 	"github.com/eqlabs/flow-wallet-service/keys/google"
@@ -18,7 +17,7 @@ import (
 
 type KeyManager struct {
 	log             *log.Logger
-	db              keys.KeyStore
+	db              keys.Store
 	fc              *client.Client
 	crypter         encryption.Crypter
 	signAlgo        crypto.SignatureAlgorithm
@@ -29,7 +28,7 @@ type KeyManager struct {
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result *KeyManager, err error) {
+func NewKeyManager(l *log.Logger, db keys.Store, fc *client.Client) *KeyManager {
 	cfg := ParseConfig()
 
 	adminAccountKey := keys.Key{
@@ -40,8 +39,8 @@ func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result
 
 	crypter := encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
 
-	result = &KeyManager{
-		log,
+	return &KeyManager{
+		l,
 		db,
 		fc,
 		crypter,
@@ -50,8 +49,6 @@ func NewKeyManager(log *log.Logger, db keys.KeyStore, fc *client.Client) (result
 		adminAccountKey,
 		cfg,
 	}
-
-	return
 }
 
 func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (result keys.Wrapped, err error) {
@@ -79,7 +76,7 @@ func (s *KeyManager) GenerateDefault(ctx context.Context) (keys.Wrapped, error) 
 	return s.Generate(ctx, s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 
-func (s *KeyManager) Save(key keys.Key) (result data.Key, err error) {
+func (s *KeyManager) Save(key keys.Key) (result keys.StorableKey, err error) {
 	encValue, err := s.crypter.Encrypt([]byte(key.Value))
 	if err != nil {
 		return
@@ -90,7 +87,7 @@ func (s *KeyManager) Save(key keys.Key) (result data.Key, err error) {
 	return
 }
 
-func (s *KeyManager) Load(key data.Key) (result keys.Key, err error) {
+func (s *KeyManager) Load(key keys.StorableKey) (result keys.Key, err error) {
 	decValue, err := s.crypter.Decrypt([]byte(key.Value))
 	if err != nil {
 		return
@@ -117,7 +114,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (result
 	if address == s.cfg.AdminAccountAddress {
 		key = s.adminAccountKey
 	} else {
-		var rawKey data.Key
+		var rawKey keys.StorableKey
 		// Get the "least recently used" key for this address
 		rawKey, err = s.db.AccountKey(address)
 		if err != nil {

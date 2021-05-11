@@ -14,11 +14,12 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-service/account"
-	"github.com/eqlabs/flow-wallet-service/data/gorm"
+	"github.com/eqlabs/flow-wallet-service/accounts"
+	"github.com/eqlabs/flow-wallet-service/datastore/gorm"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/handlers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
+	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/gorilla/mux"
@@ -66,23 +67,24 @@ func TestAccountServices(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.NewStore(logger)
+	db, err := gorm.New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(testDbDSN)
-	defer db.Close()
+	defer gorm.Close(db)
 
-	km, err := simple.NewKeyManager(logger, db, fc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	jobStore := jobs.NewGormStore(db)
+	accountStore := accounts.NewGormStore(db)
+	keyStore := keys.NewGormStore(db)
 
-	wp := jobs.NewWorkerPool(logger, db)
+	km := simple.NewKeyManager(logger, keyStore, fc)
+
+	wp := jobs.NewWorkerPool(logger, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	service := account.NewService(logger, db, km, fc, wp)
+	service := accounts.NewService(logger, accountStore, km, fc, wp)
 
 	t.Run("sync create", func(t *testing.T) {
 		account, err := service.Create(context.Background())
@@ -252,28 +254,29 @@ func TestAccountHandlers(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.NewStore(logger)
+	db, err := gorm.New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(testDbDSN)
-	defer db.Close()
+	defer gorm.Close(db)
 
-	km, err := simple.NewKeyManager(logger, db, fc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	jobStore := jobs.NewGormStore(db)
+	accountStore := accounts.NewGormStore(db)
+	keyStore := keys.NewGormStore(db)
 
-	wp := jobs.NewWorkerPool(logger, db)
+	km := simple.NewKeyManager(logger, keyStore, fc)
+
+	wp := jobs.NewWorkerPool(logger, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	service := account.NewService(logger, db, km, fc, wp)
-	jobService := jobs.NewService(logger, db)
+	jobService := jobs.NewService(logger, jobStore)
+	accountService := accounts.NewService(logger, accountStore, km, fc, wp)
 
 	var tempAccAddress string
 
-	handlers := handlers.NewAccounts(logger, service)
+	handlers := handlers.NewAccounts(logger, accountService)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", handlers.List).Methods(http.MethodGet)
@@ -362,11 +365,10 @@ func TestAccountHandlers(t *testing.T) {
 			if step.status == http.StatusCreated {
 				var rJob jobs.Job
 				json.Unmarshal(rr.Body.Bytes(), &rJob)
-				ctx := context.Background()
 				id := rJob.ID.String()
-				job, _ := jobService.Details(ctx, id)
+				job, _ := jobService.Details(id)
 				for job.Status == jobs.Accepted {
-					job, _ = jobService.Details(ctx, id)
+					job, _ = jobService.Details(id)
 				}
 				tempAccAddress = job.Result
 			}

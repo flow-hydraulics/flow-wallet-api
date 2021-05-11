@@ -15,7 +15,7 @@ type WorkerPool struct {
 	wg      *sync.WaitGroup
 	workers []*Worker
 	log     *log.Logger
-	db      JobStore
+	db      Store
 }
 
 type Worker struct {
@@ -39,8 +39,8 @@ func (j *Job) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-func NewWorkerPool(log *log.Logger, db JobStore) *WorkerPool {
-	return &WorkerPool{&sync.WaitGroup{}, []*Worker{}, log, db}
+func NewWorkerPool(l *log.Logger, db Store) *WorkerPool {
+	return &WorkerPool{&sync.WaitGroup{}, []*Worker{}, l, db}
 }
 
 func (p *WorkerPool) AddWorker(capacity uint) {

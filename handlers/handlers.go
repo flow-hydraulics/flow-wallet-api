@@ -9,8 +9,8 @@ import (
 )
 
 // handleError is a helper function for unified HTTP error handling.
-func handleError(err error, log *log.Logger, rw http.ResponseWriter) {
-	log.Printf("Error: %v\n", err)
+func handleError(err error, logger *log.Logger, rw http.ResponseWriter) {
+	logger.Printf("Error: %v\n", err)
 
 	// Check if the error was an errors.RequestError
 	reqErr, isReqErr := err.(*errors.RequestError)
