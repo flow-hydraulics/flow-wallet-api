@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,20 +11,17 @@ import (
 
 // Service defines the API for job HTTP handlers.
 type Service struct {
-	l  *log.Logger
-	db JobStore
+	log *log.Logger
+	db  Store
 }
 
 // NewService initiates a new job service.
-func NewService(
-	l *log.Logger,
-	db JobStore,
-) *Service {
+func NewService(l *log.Logger, db Store) *Service {
 	return &Service{l, db}
 }
 
 // Details returns a specific job.
-func (s *Service) Details(ctx context.Context, jobId string) (result Job, err error) {
+func (s *Service) Details(jobId string) (result Job, err error) {
 	id, err := uuid.Parse(jobId)
 	if err != nil {
 		// Convert error to a 400 RequestError

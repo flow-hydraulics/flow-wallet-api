@@ -3,43 +3,32 @@ package handlers
 import (
 	"log"
 	"net/http"
-
-	"github.com/eqlabs/flow-wallet-service/data"
-	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/onflow/flow-go-sdk/client"
 )
 
 type FungibleTokens struct {
-	l  *log.Logger
-	c  *client.Client
-	db data.Store
-	km keys.Manager
+	log *log.Logger
 }
 
-func NewFungibleTokens(
-	l *log.Logger,
-	c *client.Client,
-	db data.Store,
-	km keys.Manager) *FungibleTokens {
-	return &FungibleTokens{l, c, db, km}
+func NewFungibleTokens(l *log.Logger) *FungibleTokens {
+	return &FungibleTokens{l}
 }
 
 func (s *FungibleTokens) Details(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Fungible token details")
+	s.log.Println("Fungible token details")
 }
 
 func (s *FungibleTokens) Init(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Init fungible token")
+	s.log.Println("Init fungible token")
 }
 
 func (s *FungibleTokens) ListWithdrawals(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("List withdrawals for fungible token")
+	s.log.Println("List withdrawals for fungible token")
 }
 
 func (s *FungibleTokens) CreateWithdrawal(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Create withdrawal for fungible token")
+	s.log.Println("Create withdrawal for fungible token")
 }
 
 func (s *FungibleTokens) WithdrawalDetails(rw http.ResponseWriter, r *http.Request) {
-	s.l.Println("Withdrawal details for fungible token")
+	s.log.Println("Withdrawal details for fungible token")
 }

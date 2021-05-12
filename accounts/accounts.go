@@ -1,28 +1,38 @@
 // Package account provides functions for account management on Flow blockhain.
-package account
+package accounts
 
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/eqlabs/flow-wallet-service/data"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/templates"
+	"gorm.io/gorm"
 )
 
-// Create creates a new account on the Flow blockchain.
+// Account struct represents a storable account.
+type Account struct {
+	Address   string             `json:"address" gorm:"primaryKey"`
+	Keys      []keys.StorableKey `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	CreatedAt time.Time          `json:"createdAt" `
+	UpdatedAt time.Time          `json:"updatedAt"`
+	DeletedAt gorm.DeletedAt     `json:"-" gorm:"index"`
+}
+
+// New creates a new account on the Flow blockchain.
 // It uses the provided admin account to pay for the creation.
 // It generates a new privatekey and returns it (local key)
 // or a reference to it (Google KMS resource id).
-func Create(
+func New(
 	ctx context.Context,
 	fc *client.Client,
 	km keys.Manager,
 ) (
-	newAccount data.Account,
+	newAccount Account,
 	newKey keys.Key,
 	err error,
 ) {

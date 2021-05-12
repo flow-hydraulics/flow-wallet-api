@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-service/account"
-	"github.com/eqlabs/flow-wallet-service/data/gorm"
+	"github.com/eqlabs/flow-wallet-service/accounts"
+	"github.com/eqlabs/flow-wallet-service/datastore/gorm"
 	"github.com/eqlabs/flow-wallet-service/handlers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
+	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
+	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk/client"
@@ -56,32 +58,37 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer fc.Close()
 
 	// Database
-	db, err := gorm.NewStore(l)
+	db, err := gorm.New()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer gorm.Close(db)
+
+	jobStore := jobs.NewGormStore(db)
+	accountStore := accounts.NewGormStore(db)
+	keyStore := keys.NewGormStore(db)
+	transactionStore := transactions.NewGormStore(db)
 
 	// Create a worker pool
-	wp := jobs.NewWorkerPool(l, db)
+	wp := jobs.NewWorkerPool(l, jobStore)
 	wp.AddWorker(100) // Add a worker with capacity of 100
 
 	// Key manager
-	km, err := simple.NewKeyManager(l, db, fc)
-	if err != nil {
-		log.Fatal(err)
-	}
+	km := simple.NewKeyManager(l, keyStore, fc)
 
 	// Services
-	jobsService := jobs.NewService(l, db)
-	accountService := account.NewService(l, db, km, fc, wp)
+	jobsService := jobs.NewService(l, jobStore)
+	accountService := accounts.NewService(l, accountStore, km, fc, wp)
+	transactionService := transactions.NewService(l, transactionStore, km, fc, wp)
 
 	// HTTP handling
 
 	jobsHandler := handlers.NewJobs(l, jobsService)
 	accountsHandler := handlers.NewAccounts(l, accountService)
-	// transactions := handlers.NewTransactions(l, fc, db, km)
+	transactions := handlers.NewTransactions(l, transactionService)
 	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, km)
 
 	r := mux.NewRouter()
@@ -98,13 +105,15 @@ func main() {
 	ra.HandleFunc("", accountsHandler.Create).Methods(http.MethodPost)           // create
 	ra.HandleFunc("/{address}", accountsHandler.Details).Methods(http.MethodGet) // details
 
-	// // Account raw transactions
-	// if !disable_raw_tx {
-	// 	rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
-	// 	rt.HandleFunc("", transactions.List).Methods(http.MethodGet)                    // list
-	// 	rt.HandleFunc("", transactions.Create).Methods(http.MethodPost)                 // create
-	// 	rt.HandleFunc("/{transactionId}", transactions.Details).Methods(http.MethodGet) // details
-	// }
+	// Account raw transactions
+	if !disable_raw_tx {
+		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
+		rt.HandleFunc("", transactions.List).Methods(http.MethodGet)                    // list
+		rt.HandleFunc("", transactions.Create).Methods(http.MethodPost)                 // create
+		rt.HandleFunc("/{transactionId}", transactions.Details).Methods(http.MethodGet) // details
+	} else {
+		l.Println("raw transactions disabled")
+	}
 
 	// // Fungible tokens
 	// if !disable_ft {

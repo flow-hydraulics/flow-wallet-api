@@ -1,12 +1,12 @@
-package account
+package accounts
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
-	"github.com/eqlabs/flow-wallet-service/data"
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
@@ -14,17 +14,10 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 )
 
-// Datastore is the interface required by account service for data storage.
-type Datastore interface {
-	Accounts() ([]data.Account, error)
-	InsertAccount(a data.Account) error
-	Account(address string) (data.Account, error)
-}
-
 // Service defines the API for account management.
 type Service struct {
-	l   *log.Logger
-	db  Datastore
+	log *log.Logger
+	db  Store
 	km  keys.Manager
 	fc  *client.Client
 	wp  *jobs.WorkerPool
@@ -34,7 +27,7 @@ type Service struct {
 // NewService initiates a new account service.
 func NewService(
 	l *log.Logger,
-	db Datastore,
+	db Store,
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
@@ -44,47 +37,81 @@ func NewService(
 }
 
 // List returns all accounts in the datastore.
-func (s *Service) List() (result []data.Account, err error) {
+func (s *Service) List() (result []Account, err error) {
 	return s.db.Accounts()
 }
 
-// Create calls account.Create to generate a new account.
+// Create calls account.New to generate a new account.
 // It receives a new account with a corresponding private key or resource ID
 // and stores both in datastore.
-// It fetches and returns the new account from datastore.
-func (s *Service) Create(ctx context.Context) (result data.Account, err error) {
-	account, key, err := Create(ctx, s.fc, s.km)
+func (s *Service) create(ctx context.Context) (*Account, error) {
+	account, key, err := New(ctx, s.fc, s.km)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// Convert the key to storable form (encrypt it)
 	accountKey, err := s.km.Save(key)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// Store account and key
-	account.Keys = []data.Key{accountKey}
-	err = s.db.InsertAccount(account)
+	account.Keys = []keys.StorableKey{accountKey}
+	err = s.db.InsertAccount(&account)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	// Need to get from database to populate `CreatedAt` and `UpdatedAt` fields
-	return s.db.Account(account.Address)
+	return &account, nil
 }
 
-// CreateAsync calls service.Create asynchronously.
+// CreateSync calls service.create asynchronously.
+// It creates a job but waits for its completion. This allows synchronous
+// request/response while still using job queueing to allow only one admin key.
+// It returns the new account.
+func (s *Service) CreateSync(ctx context.Context) (*Account, error) {
+	var result *Account
+	var jobErr error
+	var createErr error
+	var done bool = false
+
+	_, jobErr = s.wp.AddJob(func() (string, error) {
+		result, createErr = s.create(context.Background())
+		done = true
+		if createErr != nil {
+			return "", createErr
+		}
+		return result.Address, nil
+	})
+
+	if jobErr != nil {
+		_, isJErr := jobErr.(*errors.JobQueueFull)
+		if isJErr {
+			jobErr = &errors.RequestError{
+				StatusCode: http.StatusServiceUnavailable,
+				Err:        fmt.Errorf("max capacity reached, try again later"),
+			}
+		}
+		return nil, jobErr
+	}
+
+	// Wait for the job to have finished
+	for !done {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	return result, createErr
+}
+
+// CreateAsync calls service.create asynchronously.
 // It creates a job and returns it. This allows us to respond with a job id
 // which the client can use to poll for the results later.
 func (s *Service) CreateAsync() (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		account, err := s.Create(ctx)
+		account, err := s.create(context.Background())
 		if err != nil {
-			s.l.Println(err)
+			s.log.Println(err)
 			return "", err
 		}
 		return account.Address, nil
@@ -105,9 +132,9 @@ func (s *Service) CreateAsync() (*jobs.Job, error) {
 }
 
 // Details returns a specific account.
-func (s *Service) Details(address string) (result data.Account, err error) {
+func (s *Service) Details(address string) (result Account, err error) {
 	// Check if the input is a valid address
-	err = s.ValidateAddress(address)
+	err = ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return
 	}
@@ -126,9 +153,9 @@ func (s *Service) Details(address string) (result data.Account, err error) {
 }
 
 // ValidateAddress checks if the given address is valid in the current Flow network.
-func (s *Service) ValidateAddress(address string) (err error) {
+func ValidateAddress(address string, chainId flow.ChainID) (err error) {
 	flowAddress := flow.HexToAddress(address)
-	if !flowAddress.IsValid(s.cfg.ChainId) {
+	if !flowAddress.IsValid(chainId) {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("not a valid address"),

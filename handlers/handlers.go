@@ -8,9 +8,11 @@ import (
 	"github.com/eqlabs/flow-wallet-service/errors"
 )
 
+const SYNC_HEADER = "Use-Sync"
+
 // handleError is a helper function for unified HTTP error handling.
-func handleError(err error, log *log.Logger, rw http.ResponseWriter) {
-	log.Printf("Error: %v\n", err)
+func handleError(err error, logger *log.Logger, rw http.ResponseWriter) {
+	logger.Printf("Error: %v\n", err)
 
 	// Check if the error was an errors.RequestError
 	reqErr, isReqErr := err.(*errors.RequestError)
@@ -20,8 +22,7 @@ func handleError(err error, log *log.Logger, rw http.ResponseWriter) {
 		return
 	}
 
-	// Otherwise do not send data regarding the error
-	http.Error(rw, "Error", http.StatusInternalServerError)
+	http.Error(rw, err.Error(), http.StatusBadRequest)
 }
 
 // handleJsonResponse is a helper function for unified JSON response handling.
