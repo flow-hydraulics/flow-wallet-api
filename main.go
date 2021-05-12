@@ -111,6 +111,8 @@ func main() {
 		rt.HandleFunc("", transactions.List).Methods(http.MethodGet)                    // list
 		rt.HandleFunc("", transactions.Create).Methods(http.MethodPost)                 // create
 		rt.HandleFunc("/{transactionId}", transactions.Details).Methods(http.MethodGet) // details
+	} else {
+		l.Println("raw transactions disabled")
 	}
 
 	// // Fungible tokens
