@@ -426,27 +426,15 @@ func TestTransactionHandlers(t *testing.T) {
 	router.HandleFunc("/{address}/transactions", handlers.Create).Methods(http.MethodPost)
 	router.HandleFunc("/{address}/transactions/{transactionId}", handlers.Details).Methods(http.MethodGet)
 
-	type testArg struct {
-		Type  string `json:"type"`
-		Value string `json:"value"`
-	}
+	invalid := []byte(`{
+		"code":"this is not valid cadence code",
+		"arguments":[{"type":"String","value":"Hello"}]
+	}`)
 
-	type testTx struct {
-		Code      string    `json:"code"`
-		Arguments []testArg `json:"arguments"`
-	}
-
-	greeting, err := json.Marshal(&testTx{Code: `
-	transaction(greeting: String) {
-		execute {
-			log(greeting.concat(", World!"))
-		}
-	}
-	`,
-		Arguments: []testArg{{Type: "String", Value: "Hello"}}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	valid := []byte(`{
+		"code":"transaction(greeting: String) { execute { log(greeting.concat(\", World!\")) }}",
+		"arguments":[{"type":"String","value":"Hello"}]
+	}`)
 
 	var tempTxId string
 
@@ -458,6 +446,7 @@ func TestTransactionHandlers(t *testing.T) {
 		url      string
 		expected string
 		status   int
+		sync     bool
 	}{
 		{
 			name:     "HTTP GET list db empty",
@@ -467,63 +456,98 @@ func TestTransactionHandlers(t *testing.T) {
 			status:   http.StatusOK,
 		},
 		{
-			name:     "HTTP POST list empty body",
+			name:     "HTTP GET list db empty invalid address",
+			method:   http.MethodGet,
+			url:      "/invalid-address/transactions",
+			expected: "not a valid address\n",
+			status:   http.StatusBadRequest,
+		},
+		{
+			name:     "HTTP POST list ok async",
+			method:   http.MethodPost,
+			body:     strings.NewReader(string(valid)),
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: `.*"jobId":".+".*`,
+			status:   http.StatusCreated,
+		},
+		{
+			name:     "HTTP POST list empty body sync",
 			method:   http.MethodPost,
 			url:      "/f8d6e0586b0a20c7/transactions",
 			expected: "empty body\n",
 			status:   http.StatusBadRequest,
+			sync:     true,
 		},
 		{
-			name:     "HTTP POST list invalid body",
+			name:     "HTTP POST list invalid body sync",
 			method:   http.MethodPost,
 			body:     strings.NewReader("notvalidobject"),
 			url:      "/f8d6e0586b0a20c7/transactions",
 			expected: "invalid body\n",
 			status:   http.StatusBadRequest,
+			sync:     true,
 		},
 		{
-			name:     "HTTP POST list invalid code",
+			name:     "HTTP POST list invalid code sync",
 			method:   http.MethodPost,
-			body:     strings.NewReader(`{"code":"test","arguments":[{"type":"string","value":"test"}]}`),
+			body:     strings.NewReader(string(invalid)),
 			url:      "/f8d6e0586b0a20c7/transactions",
 			expected: `.*Parsing failed.*`,
 			status:   http.StatusBadRequest,
+			sync:     true,
 		},
 		{
-			name:     "HTTP POST list ok",
+			name:     "HTTP POST list ok sync",
 			method:   http.MethodPost,
-			body:     strings.NewReader(string(greeting)),
+			body:     strings.NewReader(string(valid)),
 			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: `.*"transactionId".*`,
+			expected: `.*"transactionId":".+".*`,
 			status:   http.StatusCreated,
+			sync:     true,
+		},
+		{
+			name:     "HTTP POST list invalid address sync",
+			method:   http.MethodPost,
+			body:     strings.NewReader(string(valid)),
+			url:      "/invalid-address/transactions",
+			expected: "not a valid address\n",
+			status:   http.StatusBadRequest,
+			sync:     true,
 		},
 		{
 			name:     "HTTP GET list db not empty",
 			method:   http.MethodGet,
 			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: `\[.*"transactionId".*\]\n`,
+			expected: `\[.*"transactionId":".+".*\]\n`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "HTTP GET details invalid id",
 			method:   http.MethodGet,
 			url:      "/f8d6e0586b0a20c7/transactions/invalid-id",
-			expected: `not a valid transaction id\n`,
+			expected: "not a valid transaction id\n",
 			status:   http.StatusBadRequest,
 		},
 		{
 			name:     "HTTP GET details unknown id",
 			method:   http.MethodGet,
 			url:      "/f8d6e0586b0a20c7/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921",
-			expected: `transaction not found\n`,
+			expected: "transaction not found\n",
 			status:   http.StatusNotFound,
 		},
 		{
 			name:     "HTTP GET details known id",
 			method:   http.MethodGet,
 			url:      "/f8d6e0586b0a20c7/transactions/<id>",
-			expected: `.*"transactionId".*`,
+			expected: `.*"transactionId":".+".*`,
 			status:   http.StatusOK,
+		},
+		{
+			name:     "HTTP GET details invalid address",
+			method:   http.MethodGet,
+			url:      "/invalid-address/transactions/invalid-id",
+			expected: "not a valid address\n",
+			status:   http.StatusBadRequest,
 		},
 	}
 
@@ -540,7 +564,9 @@ func TestTransactionHandlers(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			req.Context()
+			if step.sync {
+				req.Header.Set("Use-Sync", "go ahead")
+			}
 
 			rr := httptest.NewRecorder()
 			router.ServeHTTP(rr, req)
@@ -552,7 +578,7 @@ func TestTransactionHandlers(t *testing.T) {
 			}
 
 			// If this step was creating a new transaction store the new txId in "tempTxId".
-			if step.status == http.StatusCreated {
+			if step.sync && step.status == http.StatusCreated {
 				var transaction transactions.Transaction
 				json.Unmarshal(rr.Body.Bytes(), &transaction)
 				tempTxId = transaction.TransactionId

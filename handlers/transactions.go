@@ -16,6 +16,11 @@ type Transactions struct {
 	service *transactions.Service
 }
 
+type CreateTransactionBody struct {
+	Code      string                        `json:"code"`
+	Arguments []transactions.TransactionArg `json:"arguments"`
+}
+
 // NewTransactions initiates a new transactions server.
 func NewTransactions(l *log.Logger, service *transactions.Service) *Transactions {
 	return &Transactions{l, service}
@@ -26,21 +31,23 @@ func (s *Transactions) List(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	result, err := s.service.List(vars["address"])
+	res, err := s.service.List(vars["address"])
 	if err != nil {
 		handleError(err, s.log, rw)
 		return
 	}
 
 	handleJsonResponse(rw, http.StatusOK)
-	json.NewEncoder(rw).Encode(result)
+	json.NewEncoder(rw).Encode(res)
 }
 
 func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
 	s.log.Println("Create transaction")
 
+	var err error
+
 	if r.Body == nil {
-		err := &errors.RequestError{
+		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("empty body"),
 		}
@@ -50,12 +57,12 @@ func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var t transactions.Transaction
+	var b CreateTransactionBody
 
 	// Try to decode the request body into the struct.
-	err := json.NewDecoder(r.Body).Decode(&t)
+	err = json.NewDecoder(r.Body).Decode(&b)
 	if err != nil {
-		err := &errors.RequestError{
+		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("invalid body"),
 		}
@@ -63,14 +70,21 @@ func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.service.CreateSync(r.Context(), t.Code, t.Arguments, vars["address"])
+	// Decide whether to serve sync or async, default async
+	var res interface{}
+	if us := r.Header.Get("Use-Sync"); us != "" {
+		res, err = s.service.CreateSync(r.Context(), b.Code, b.Arguments, vars["address"])
+	} else {
+		res, err = s.service.CreateAsync(b.Code, b.Arguments, vars["address"])
+	}
+
 	if err != nil {
 		handleError(err, s.log, rw)
 		return
 	}
 
 	handleJsonResponse(rw, http.StatusCreated)
-	json.NewEncoder(rw).Encode(result)
+	json.NewEncoder(rw).Encode(res)
 }
 
 func (s *Transactions) Details(rw http.ResponseWriter, r *http.Request) {
@@ -78,12 +92,12 @@ func (s *Transactions) Details(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	result, err := s.service.Details(vars["address"], vars["transactionId"])
+	res, err := s.service.Details(vars["address"], vars["transactionId"])
 	if err != nil {
 		handleError(err, s.log, rw)
 		return
 	}
 
 	handleJsonResponse(rw, http.StatusOK)
-	json.NewEncoder(rw).Encode(result)
+	json.NewEncoder(rw).Encode(res)
 }

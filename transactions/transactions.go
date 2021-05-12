@@ -19,8 +19,8 @@ type Transaction struct {
 	CreatedAt      time.Time               `json:"createdAt"`
 	UpdatedAt      time.Time               `json:"updatedAt"`
 	DeletedAt      gorm.DeletedAt          `json:"-" gorm:"index"`
-	Code           string                  `json:"code,omitempty" gorm:"-"`
-	Arguments      []TransactionArg        `json:"arguments,omitempty" gorm:"-"`
+	Code           string                  `json:"-" gorm:"-"`
+	Arguments      []TransactionArg        `json:"-" gorm:"-"`
 	tx             *flow.Transaction       `json:"-" gorm:"-"`
 	result         *flow.TransactionResult `json:"-" gorm:"-"`
 }
