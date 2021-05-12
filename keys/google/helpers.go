@@ -44,14 +44,13 @@ func AsymKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, e
 	// Append cryptoKeyVersions so that we can utilize the KeyFromResourceID method
 	createdKey, err = cloudkms.KeyFromResourceID(fmt.Sprintf("%s/cryptoKeyVersions/1", googleKey.Name))
 	if err != nil {
-		fmt.Println("Could not create cloudkms.Key from ResourceId:", googleKey.Name)
 		return
 	}
 
 	// Validate key name
 	if !strings.HasPrefix(createdKey.ResourceID(), googleKey.Name) {
-		fmt.Println("WARNING: created Google KMS key name does not match the expected", createdKey.ResourceID(), " vs ", googleKey.Name)
-		// TODO: Handle scenario
+		err = fmt.Errorf("WARNING: created Google KMS key name does not match the expected: '%s' vs '%s'", createdKey.ResourceID(), googleKey.Name)
+		return
 	}
 
 	return

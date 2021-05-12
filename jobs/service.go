@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
@@ -11,13 +10,12 @@ import (
 
 // Service defines the API for job HTTP handlers.
 type Service struct {
-	log *log.Logger
-	db  Store
+	db Store
 }
 
 // NewService initiates a new job service.
-func NewService(l *log.Logger, db Store) *Service {
-	return &Service{l, db}
+func NewService(db Store) *Service {
+	return &Service{db}
 }
 
 // Details returns a specific job.

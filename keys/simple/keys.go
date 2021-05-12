@@ -4,7 +4,6 @@ package simple
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/encryption"
@@ -16,7 +15,6 @@ import (
 )
 
 type KeyManager struct {
-	log             *log.Logger
 	db              keys.Store
 	fc              *client.Client
 	crypter         encryption.Crypter
@@ -28,7 +26,7 @@ type KeyManager struct {
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(l *log.Logger, db keys.Store, fc *client.Client) *KeyManager {
+func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 	cfg := ParseConfig()
 
 	adminAccountKey := keys.Key{
@@ -40,7 +38,6 @@ func NewKeyManager(l *log.Logger, db keys.Store, fc *client.Client) *KeyManager 
 	crypter := encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
 
 	return &KeyManager{
-		l,
 		db,
 		fc,
 		crypter,
