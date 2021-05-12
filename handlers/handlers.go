@@ -8,6 +8,8 @@ import (
 	"github.com/eqlabs/flow-wallet-service/errors"
 )
 
+const SYNC_HEADER = "Use-Sync"
+
 // handleError is a helper function for unified HTTP error handling.
 func handleError(err error, logger *log.Logger, rw http.ResponseWriter) {
 	logger.Printf("Error: %v\n", err)

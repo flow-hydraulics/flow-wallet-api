@@ -279,12 +279,12 @@ func TestAccountHandlers(t *testing.T) {
 
 	store := accounts.NewGormStore(db)
 	service := accounts.NewService(logger, store, km, fc, wp)
-	handlers := handlers.NewAccounts(logger, service)
+	h := handlers.NewAccounts(logger, service)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/", handlers.List).Methods(http.MethodGet)
-	router.HandleFunc("/", handlers.Create).Methods(http.MethodPost)
-	router.HandleFunc("/{address}", handlers.Details).Methods(http.MethodGet)
+	router.HandleFunc("/", h.List).Methods(http.MethodGet)
+	router.HandleFunc("/", h.Create).Methods(http.MethodPost)
+	router.HandleFunc("/{address}", h.Details).Methods(http.MethodGet)
 
 	var tempAccAddress string
 
@@ -419,12 +419,12 @@ func TestTransactionHandlers(t *testing.T) {
 
 	store := transactions.NewGormStore(db)
 	service := transactions.NewService(logger, store, km, fc, wp)
-	handlers := handlers.NewTransactions(logger, service)
+	h := handlers.NewTransactions(logger, service)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/{address}/transactions", handlers.List).Methods(http.MethodGet)
-	router.HandleFunc("/{address}/transactions", handlers.Create).Methods(http.MethodPost)
-	router.HandleFunc("/{address}/transactions/{transactionId}", handlers.Details).Methods(http.MethodGet)
+	router.HandleFunc("/{address}/transactions", h.List).Methods(http.MethodGet)
+	router.HandleFunc("/{address}/transactions", h.Create).Methods(http.MethodPost)
+	router.HandleFunc("/{address}/transactions/{transactionId}", h.Details).Methods(http.MethodGet)
 
 	invalid := []byte(`{
 		"code":"this is not valid cadence code",
@@ -565,7 +565,7 @@ func TestTransactionHandlers(t *testing.T) {
 			}
 
 			if step.sync {
-				req.Header.Set("Use-Sync", "go ahead")
+				req.Header.Set(handlers.SYNC_HEADER, "go ahead")
 			}
 
 			rr := httptest.NewRecorder()

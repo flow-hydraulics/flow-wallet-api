@@ -72,7 +72,7 @@ func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
 
 	// Decide whether to serve sync or async, default async
 	var res interface{}
-	if us := r.Header.Get("Use-Sync"); us != "" {
+	if us := r.Header.Get(SYNC_HEADER); us != "" {
 		res, err = s.service.CreateSync(r.Context(), b.Code, b.Arguments, vars["address"])
 	} else {
 		res, err = s.service.CreateAsync(b.Code, b.Arguments, vars["address"])
