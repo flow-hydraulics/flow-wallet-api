@@ -15,5 +15,6 @@ flow.json
 .env*
 !.env.example
 *.db
+*.db-journal
 __debug_bin
 .vscode
