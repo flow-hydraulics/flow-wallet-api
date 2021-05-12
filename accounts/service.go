@@ -3,7 +3,6 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 
 // Service defines the API for account management.
 type Service struct {
-	log *log.Logger
 	db  Store
 	km  keys.Manager
 	fc  *client.Client
@@ -26,14 +24,13 @@ type Service struct {
 
 // NewService initiates a new account service.
 func NewService(
-	l *log.Logger,
 	db Store,
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{l, db, km, fc, wp, cfg}
+	return &Service{db, km, fc, wp, cfg}
 }
 
 // List returns all accounts in the datastore.
@@ -111,7 +108,6 @@ func (s *Service) CreateAsync() (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
 		account, err := s.create(context.Background())
 		if err != nil {
-			s.log.Println(err)
 			return "", err
 		}
 		return account.Address, nil

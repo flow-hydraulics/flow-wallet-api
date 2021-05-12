@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 type WorkerPool struct {
 	wg      *sync.WaitGroup
 	workers []*Worker
-	log     *log.Logger
 	db      Store
 }
 
@@ -39,8 +37,8 @@ func (j *Job) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-func NewWorkerPool(l *log.Logger, db Store) *WorkerPool {
-	return &WorkerPool{&sync.WaitGroup{}, []*Worker{}, l, db}
+func NewWorkerPool(db Store) *WorkerPool {
+	return &WorkerPool{&sync.WaitGroup{}, []*Worker{}, db}
 }
 
 func (p *WorkerPool) AddWorker(capacity uint) {
@@ -59,7 +57,6 @@ func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
 	p.db.InsertJob(job)
 	worker, err := p.AvailableWorker()
 	if err != nil {
-		p.log.Println(err)
 		job.Status = NoAvailableWorkers
 		p.db.UpdateJob(job)
 		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}

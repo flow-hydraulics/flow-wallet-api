@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -24,21 +23,19 @@ func NewAccounts(l *log.Logger, service *accounts.Service) *Accounts {
 
 // List returns all accounts.
 func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
-	s.log.Println("List accounts")
 	res, err := s.service.List()
+
 	if err != nil {
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
-	handleJsonResponse(rw, http.StatusOK)
-	json.NewEncoder(rw).Encode(res)
+
+	handleJsonResponse(rw, http.StatusOK, res)
 }
 
 // Create creates a new account asynchronously.
 // It returns a Job JSON representation.
 func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
-	s.log.Println("Create account")
-
 	var err error
 
 	// Decide whether to serve sync or async, default async
@@ -50,25 +47,25 @@ func (s *Accounts) Create(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
 
-	handleJsonResponse(rw, http.StatusCreated)
-	json.NewEncoder(rw).Encode(res)
+	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
 // Details returns details regarding an account.
 // It reads the address for the wanted account from URL.
 // Account service is responsible for validating the address.
 func (s *Accounts) Details(rw http.ResponseWriter, r *http.Request) {
-	s.log.Println("Account details")
 	vars := mux.Vars(r)
+
 	res, err := s.service.Details(vars["address"])
+
 	if err != nil {
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
-	handleJsonResponse(rw, http.StatusOK)
-	json.NewEncoder(rw).Encode(res)
+
+	handleJsonResponse(rw, http.StatusOK, res)
 }

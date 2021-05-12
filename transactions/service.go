@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
-	log *log.Logger
 	db  Store
 	km  keys.Manager
 	fc  *client.Client
@@ -29,14 +27,13 @@ type Service struct {
 
 // NewService initiates a new transaction service.
 func NewService(
-	l *log.Logger,
 	db Store,
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{l, db, km, fc, wp, cfg}
+	return &Service{db, km, fc, wp, cfg}
 }
 
 func (s *Service) create(ctx context.Context, address string, code string, args []TransactionArg) (*Transaction, error) {
@@ -132,7 +129,6 @@ func (s *Service) CreateAsync(code string, args []TransactionArg, address string
 	job, err := s.wp.AddJob(func() (string, error) {
 		tx, err := s.create(context.Background(), address, code, args)
 		if err != nil {
-			s.log.Println(err)
 			return "", err
 		}
 		return tx.TransactionId, nil

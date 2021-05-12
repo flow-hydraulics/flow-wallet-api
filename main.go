@@ -18,6 +18,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
 	"github.com/eqlabs/flow-wallet-service/transactions"
+	g_handlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk/client"
@@ -50,7 +51,7 @@ func main() {
 	flag.Parse()
 
 	// Application wide logger
-	l := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+	l := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
 
 	// Flow client
 	// TODO: WithInsecure()?
@@ -73,16 +74,16 @@ func main() {
 	transactionStore := transactions.NewGormStore(db)
 
 	// Create a worker pool
-	wp := jobs.NewWorkerPool(l, jobStore)
+	wp := jobs.NewWorkerPool(jobStore)
 	wp.AddWorker(100) // Add a worker with capacity of 100
 
 	// Key manager
-	km := simple.NewKeyManager(l, keyStore, fc)
+	km := simple.NewKeyManager(keyStore, fc)
 
 	// Services
-	jobsService := jobs.NewService(l, jobStore)
-	accountService := accounts.NewService(l, accountStore, km, fc, wp)
-	transactionService := transactions.NewService(l, transactionStore, km, fc, wp)
+	jobsService := jobs.NewService(jobStore)
+	accountService := accounts.NewService(accountStore, km, fc, wp)
+	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 
 	// HTTP handling
 
@@ -128,10 +129,22 @@ func main() {
 
 	// TODO: nfts
 
-	// Server boilerplate
+	// Define middleware
+	useCors := g_handlers.CORS(g_handlers.AllowedOrigins([]string{"*"}))
+	useLogging := func(h http.Handler) http.Handler {
+		return g_handlers.CombinedLoggingHandler(os.Stdout, h)
+	}
+	useCompress := func(h http.Handler) http.Handler {
+		return g_handlers.CompressHandler(h)
+	}
+	useJson := func(h http.Handler) http.Handler {
+		// Only PUT, POST, and PATCH requests are considered.
+		return g_handlers.ContentTypeHandler(h, "application/json")
+	}
 
+	// Server boilerplate
 	srv := &http.Server{
-		Handler:      r,
+		Handler:      useCors(useLogging(useCompress(useJson(r)))),
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
@@ -141,7 +154,7 @@ func main() {
 	go func() {
 		l.Println("Server running")
 		if err := srv.ListenAndServe(); err != nil {
-			log.Println(err)
+			l.Println(err)
 		}
 	}()
 

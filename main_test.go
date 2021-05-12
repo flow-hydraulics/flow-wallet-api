@@ -89,13 +89,13 @@ func TestAccountServices(t *testing.T) {
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
-	km := simple.NewKeyManager(logger, keyStore, fc)
+	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(logger, jobStore)
+	wp := jobs.NewWorkerPool(jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	service := accounts.NewService(logger, accountStore, km, fc, wp)
+	service := accounts.NewService(accountStore, km, fc, wp)
 
 	t.Run("sync create", func(t *testing.T) {
 		account, err := service.CreateSync(context.Background())
@@ -271,14 +271,14 @@ func TestAccountHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
-	km := simple.NewKeyManager(logger, keyStore, fc)
+	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(logger, jobStore)
+	wp := jobs.NewWorkerPool(jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
 	store := accounts.NewGormStore(db)
-	service := accounts.NewService(logger, store, km, fc, wp)
+	service := accounts.NewService(store, km, fc, wp)
 	h := handlers.NewAccounts(logger, service)
 
 	router := mux.NewRouter()
@@ -368,7 +368,7 @@ func TestAccountHandlers(t *testing.T) {
 			// wait for the account to become available
 			// and store the new account in "tempAcc".
 			if step.status == http.StatusCreated {
-				jobService := jobs.NewService(logger, jobStore)
+				jobService := jobs.NewService(jobStore)
 				var rJob jobs.Job
 				json.Unmarshal(rr.Body.Bytes(), &rJob)
 				id := rJob.ID.String()
@@ -411,14 +411,14 @@ func TestTransactionHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
-	km := simple.NewKeyManager(logger, keyStore, fc)
+	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(logger, jobStore)
+	wp := jobs.NewWorkerPool(jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
 	store := transactions.NewGormStore(db)
-	service := transactions.NewService(logger, store, km, fc, wp)
+	service := transactions.NewService(store, km, fc, wp)
 	h := handlers.NewTransactions(logger, service)
 
 	router := mux.NewRouter()

@@ -27,23 +27,19 @@ func NewTransactions(l *log.Logger, service *transactions.Service) *Transactions
 }
 
 func (s *Transactions) List(rw http.ResponseWriter, r *http.Request) {
-	s.log.Println("List transactions")
-
 	vars := mux.Vars(r)
 
 	res, err := s.service.List(vars["address"])
+
 	if err != nil {
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
 
-	handleJsonResponse(rw, http.StatusOK)
-	json.NewEncoder(rw).Encode(res)
+	handleJsonResponse(rw, http.StatusOK, res)
 }
 
 func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
-	s.log.Println("Create transaction")
-
 	var err error
 
 	if r.Body == nil {
@@ -51,7 +47,7 @@ func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("empty body"),
 		}
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
 
@@ -66,7 +62,7 @@ func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("invalid body"),
 		}
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
 
@@ -79,25 +75,22 @@ func (s *Transactions) Create(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
 
-	handleJsonResponse(rw, http.StatusCreated)
-	json.NewEncoder(rw).Encode(res)
+	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
 func (s *Transactions) Details(rw http.ResponseWriter, r *http.Request) {
-	s.log.Println("Transaction details")
-
 	vars := mux.Vars(r)
 
 	res, err := s.service.Details(vars["address"], vars["transactionId"])
+
 	if err != nil {
-		handleError(err, s.log, rw)
+		handleError(rw, s.log, err)
 		return
 	}
 
-	handleJsonResponse(rw, http.StatusOK)
-	json.NewEncoder(rw).Encode(res)
+	handleJsonResponse(rw, http.StatusOK, res)
 }

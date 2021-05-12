@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -11,7 +12,7 @@ import (
 const SYNC_HEADER = "Use-Sync"
 
 // handleError is a helper function for unified HTTP error handling.
-func handleError(err error, logger *log.Logger, rw http.ResponseWriter) {
+func handleError(rw http.ResponseWriter, logger *log.Logger, err error) {
 	logger.Printf("Error: %v\n", err)
 
 	// Check if the error was an errors.RequestError
@@ -26,7 +27,8 @@ func handleError(err error, logger *log.Logger, rw http.ResponseWriter) {
 }
 
 // handleJsonResponse is a helper function for unified JSON response handling.
-func handleJsonResponse(rw http.ResponseWriter, status int) {
+func handleJsonResponse(rw http.ResponseWriter, status int, res interface{}) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(status)
+	json.NewEncoder(rw).Encode(res)
 }
