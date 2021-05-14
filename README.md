@@ -306,7 +306,7 @@ curl --request GET \
 
 > :warning: Not yet implemented
 
-`GET /v1/accounts/{v1/accounts/{address}/fungible-tokens}/fungible-tokens/{tokenName}/withdrawals`
+`GET /v1/accounts/{address}/fungible-tokens/{tokenName}/withdrawals`
 
 Parameters
 
