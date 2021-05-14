@@ -73,7 +73,11 @@ npm run dev
 ## Deploy with Docker
 
 To deploy this API as a Docker container in your infrastructure,
-either build from source or use the pre-built image: TODO
+either build from source or use the pre-built image:
+
+```sh
+docker pull gcr.io/flow-container-registry/flow-wallet-api-demo:latest
+```
 
 The Docker Compose sample configurations
 in this repository show how to configure this application when
