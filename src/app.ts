@@ -1,4 +1,5 @@
 import * as express from "express"
+import * as fcl from "@onflow/fcl"
 import {PrismaClient} from "@prisma/client"
 
 import morganMiddleware from "src/middleware/morgan"
@@ -20,6 +21,8 @@ const app = express()
 app.use(morganMiddleware)
 app.use(express.json())
 app.use(express.urlencoded({extended: false}))
+
+fcl.config().put("accessNode.api", config.accessApiHost)
 
 const prisma = new PrismaClient()
 

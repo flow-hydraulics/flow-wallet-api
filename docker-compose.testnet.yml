@@ -1,0 +1,36 @@
+version: "3"
+services:
+  web:
+    image: gcr.io/flow-container-registry/flow-wallet-api-demo:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      - ACCESS_API_HOST=https://access-testnet.onflow.org
+      - CHAIN=testnet
+      - DATABASE_URL=postgresql://wallet:wallet@db:5432/wallet?schema=public
+      - ADMIN_ADDRESS=${ADMIN_ADDRESS}
+      - ADMIN_KEY_TYPE=${ADMIN_KEY_TYPE}
+      - ADMIN_PRIVATE_KEY=${ADMIN_PRIVATE_KEY}
+      - USER_ENCRYPTION_KEY=${USER_ENCRYPTION_KEY}
+      
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=wallet
+      - POSTGRES_USER=wallet
+      - POSTGRES_PASSWORD=wallet
+
+  emulator:
+    image: gcr.io/flow-container-registry/emulator:v0.16.1
+    ports:
+      - "8080:8080"
+      - "3569:3569"
+    environment:
+      - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}
+      - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
+      - FLOW_SERVICEKEYHASHALGO=SHA3_256
+      - FLOW_VERBOSE=true

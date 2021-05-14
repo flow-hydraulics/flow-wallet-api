@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
-    "outDir": "./built",
-    "target": "es2020",
+    "module": "commonjs",
     "moduleResolution": "node",
-    "baseUrl": ".",
+    "outDir": "./dist",
+    "target": "es6",
+    "baseUrl": "src",
     "paths": {
-      "src": ["./src"]
+      "src/*": ["*"]
     }
   },
   "include": ["./src/**/*"]

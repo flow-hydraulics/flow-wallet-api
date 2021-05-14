@@ -3,9 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "npm run deploy-contracts && npm run db-migrate-dev && npm run db-sync-admin-keys && npm run start-api",
-    "start-api": "NODE_ENV=development ts-node-dev -r tsconfig-paths/register --respawn ./src/index.ts",
-    "deploy-contracts": "flow project deploy --network=emulator --update",
+    "dev": "npm run dev-prepare && npm run dev-api",
+    "dev-api": "NODE_ENV=development ts-node-dev -r tsconfig-paths/register --respawn ./src/index.ts",
+    "dev-prepare": "npm run dev-deploy-contracts && npm run db-migrate-dev && npm run db-sync-admin-keys",
+    "dev-deploy-contracts": "flow project deploy --network=emulator --update",
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run start-prepare && npm run start-api",
+    "start-api": "node -r tsconfig-paths/register dist/index.js",
+    "start-prepare": "npm run db-migrate-deploy && npm run db-sync-admin-keys",
     "db-migrate-dev": "prisma migrate dev --preview-feature",
     "db-migrate-deploy": "prisma migrate deploy --preview-feature",
     "db-generate-client": "prisma generate",
@@ -26,6 +31,7 @@
     "elliptic": "^6.5.4",
     "express": "~4.16.1",
     "http-status": "^1.5.0",
+    "module-alias": "^2.2.2",
     "morgan": "~1.9.1",
     "sha3": "^2.1.4",
     "winston": "^3.3.3"
@@ -48,5 +54,8 @@
     "ts-node-dev": "^1.1.6",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^4.2.4"
+  },
+  "_moduleAliases": {
+    "src": "dist"
   }
 }

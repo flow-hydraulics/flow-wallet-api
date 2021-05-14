@@ -1,5 +1,20 @@
 version: "3"
 services:
+  web:
+    image: gcr.io/flow-container-registry/flow-wallet-api-demo:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - emulator
+    environment:
+      - ACCESS_API_HOST=http://emulator:8080
+      - DATABASE_URL=postgresql://wallet:wallet@db:5432/wallet?schema=public
+      - ADMIN_ADDRESS=${ADMIN_ADDRESS}
+      - ADMIN_KEY_TYPE=${ADMIN_KEY_TYPE}
+      - ADMIN_PRIVATE_KEY=${ADMIN_PRIVATE_KEY}
+      - USER_ENCRYPTION_KEY=${USER_ENCRYPTION_KEY}
+      
   db:
     image: postgres
     ports:
@@ -8,6 +23,7 @@ services:
       - POSTGRES_DB=wallet
       - POSTGRES_USER=wallet
       - POSTGRES_PASSWORD=wallet
+
   emulator:
     image: gcr.io/flow-container-registry/emulator:v0.16.1
     ports:

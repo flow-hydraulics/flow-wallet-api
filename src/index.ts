@@ -1,3 +1,5 @@
+require("module-alias/register")
+
 import config from "src/config"
 import logger from "src/logger"
 import app from "src/app"
