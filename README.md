@@ -88,7 +88,7 @@ running as a Docker container.
 > This example shows how to connect the Docker container
 > to an instance of the [Flow Emulator](https://docs.onflow.org/emulator).
 
-Configuration: s[docker-compose.emulator.yml](docker-compose.emulator.yml)
+Configuration: [docker-compose.emulator.yml](docker-compose.emulator.yml)
 
 ```sh
 cp .env.emulator.example .env
