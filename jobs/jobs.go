@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -30,6 +32,12 @@ type Job struct {
 	CreatedAt time.Time              `json:"createdAt"`
 	UpdatedAt time.Time              `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt         `json:"-" gorm:"index"`
+}
+
+var logger *log.Logger
+
+func init() {
+	logger = log.New(os.Stdout, "[JOBS] ", log.LstdFlags|log.Lshortfile)
 }
 
 func (j *Job) BeforeCreate(tx *gorm.DB) (err error) {
@@ -108,6 +116,7 @@ func (w *Worker) tryEnqueue(job *Job) bool {
 func (w *Worker) process(job *Job) {
 	result, err := job.Do()
 	if err != nil {
+		logger.Printf("[Job %s] Error while processing job: %s", job.ID, err)
 		job.Status = Error
 		job.Error = err.Error()
 		w.pool.db.UpdateJob(job)
