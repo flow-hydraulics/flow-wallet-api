@@ -54,7 +54,7 @@ func (s *Service) create(ctx context.Context) (*Account, error) {
 	}
 
 	// Store account and key
-	account.Keys = []keys.StorableKey{accountKey}
+	account.Keys = []keys.Storable{accountKey}
 	err = s.db.InsertAccount(&account)
 	if err != nil {
 		return nil, err

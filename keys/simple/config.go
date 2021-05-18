@@ -14,6 +14,8 @@ type Config struct {
 	DefaultKeyStorage    string `env:"DEFAULT_KEY_STORAGE" envDefault:"local"`
 	DefaultKeyIndex      int    `env:"DEFAULT_KEY_INDEX" envDefault:"0"`
 	DefaultKeyWeight     int    `env:"DEFAULT_KEY_WEIGHT" envDefault:"-1"`
+	DefaultSignAlgo      string `env:"DEFAULT_SIGN_ALGO" envDefault:"ECDSA_P256"`
+	DefaultHashAlgo      string `env:"DEFAULT_HASH_ALGO" envDefault:"SHA3_256"`
 	EncryptionKey        string `env:"ENCRYPTION_KEY,required"`
 }
 

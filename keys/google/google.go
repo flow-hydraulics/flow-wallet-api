@@ -19,76 +19,73 @@ type Config struct {
 	KeyRingID  string `env:"GOOGLE_KMS_KEYRING_ID"`
 }
 
-func Generate(
-	ctx context.Context,
-	keyIndex, weight int,
-) (result keys.Wrapped, err error) {
+func Generate(ctx context.Context, keyIndex, weight int) (keys.Wrapped, error) {
 	var cfg Config
-	if err = env.Parse(&cfg); err != nil {
-		return
+	if err := env.Parse(&cfg); err != nil {
+		return keys.Wrapped{}, err
 	}
 
-	keyUUID := uuid.New()
+	u := uuid.New()
 
 	// Create the new key in Google KMS
-	createdKey, err := AsymKey(
+	k, err := AsymKey(
 		ctx,
 		fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", cfg.ProjectID, cfg.LocationID, cfg.KeyRingID),
-		fmt.Sprintf("flow-wallet-account-key-%s", keyUUID.String()),
+		fmt.Sprintf("flow-wallet-account-key-%s", u.String()),
 	)
 	if err != nil {
-		return
+		return keys.Wrapped{}, err
 	}
 
-	client, err := cloudkms.NewClient(ctx)
+	c, err := cloudkms.NewClient(ctx)
 	if err != nil {
-		return
+		return keys.Wrapped{}, err
 	}
 
 	// Get the public key (using flow-go-sdk's cloudkms.Client)
-	publicKey, hashAlgorithm, err := client.GetPublicKey(ctx, createdKey)
+	pub, h, err := c.GetPublicKey(ctx, k)
 	if err != nil {
-		return
+		return keys.Wrapped{}, err
 	}
 
-	key := keys.Key{
+	f := flow.NewAccountKey().
+		SetPublicKey(pub).
+		SetHashAlgo(h).
+		SetWeight(weight)
+	f.Index = keyIndex
+
+	p := keys.Private{
 		Index: keyIndex,
 		Type:  keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS,
-		Value: createdKey.ResourceID(),
+		Value: k.ResourceID(),
 	}
 
-	flowKey := flow.NewAccountKey().
-		SetPublicKey(publicKey).
-		SetHashAlgo(hashAlgorithm).
-		SetWeight(weight)
-	flowKey.Index = keyIndex
-
-	result.AccountKey = key
-	result.FlowKey = flowKey
-
-	return
+	return keys.Wrapped{
+		AccountKey: f,
+		PrivateKey: p,
+	}, nil
 }
 
-func Signer(
-	ctx context.Context,
-	address string,
-	key keys.Key,
-) (result crypto.Signer, err error) {
-	kmsClient, err := cloudkms.NewClient(ctx)
+func Signer(ctx context.Context, address string, key keys.Private) (crypto.Signer, error) {
+	c, err := cloudkms.NewClient(ctx)
 	if err != nil {
-		return
+		return &cloudkms.Signer{}, err
 	}
 
-	kmsKey, err := cloudkms.KeyFromResourceID(key.Value)
+	k, err := cloudkms.KeyFromResourceID(key.Value)
 	if err != nil {
-		return
+		return &cloudkms.Signer{}, err
 	}
 
-	result, err = kmsClient.SignerForKey(
+	s, err := c.SignerForKey(
 		ctx,
 		flow.HexToAddress(address),
-		kmsKey,
+		k,
 	)
 
-	return
+	if err != nil {
+		return &cloudkms.Signer{}, err
+	}
+
+	return s, nil
 }

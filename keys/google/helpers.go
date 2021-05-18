@@ -12,13 +12,13 @@ import (
 )
 
 // AsymKey creates a new asymmetric signing key in Google KMS and returns a cloudkms.Key (the "raw" result isn't needed)
-func AsymKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, err error) {
-	kmsClient, err := kms.NewKeyManagementClient(ctx)
+func AsymKey(ctx context.Context, parent, id string) (cloudkms.Key, error) {
+	c, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
-		return
+		return cloudkms.Key{}, err
 	}
 
-	req := &kmspb.CreateCryptoKeyRequest{
+	r := &kmspb.CreateCryptoKeyRequest{
 		Parent:      parent,
 		CryptoKeyId: id,
 		CryptoKey: &kmspb.CryptoKey{
@@ -31,27 +31,27 @@ func AsymKey(ctx context.Context, parent, id string) (createdKey cloudkms.Key, e
 				"service":         "flow-wallet-service",
 				"account_address": "",
 				"chain_id":        "",
-				"environment":     "development",
+				"environment":     "",
 			},
 		},
 	}
 
-	googleKey, err := kmsClient.CreateCryptoKey(ctx, req)
+	gk, err := c.CreateCryptoKey(ctx, r)
 	if err != nil {
-		return
+		return cloudkms.Key{}, err
 	}
 
 	// Append cryptoKeyVersions so that we can utilize the KeyFromResourceID method
-	createdKey, err = cloudkms.KeyFromResourceID(fmt.Sprintf("%s/cryptoKeyVersions/1", googleKey.Name))
+	k, err := cloudkms.KeyFromResourceID(fmt.Sprintf("%s/cryptoKeyVersions/1", gk.Name))
 	if err != nil {
-		return
+		return cloudkms.Key{}, err
 	}
 
 	// Validate key name
-	if !strings.HasPrefix(createdKey.ResourceID(), googleKey.Name) {
+	if !strings.HasPrefix(k.ResourceID(), gk.Name) {
 		err = fmt.Errorf("WARNING: created Google KMS key name does not match the expected")
-		return
+		return cloudkms.Key{}, err
 	}
 
-	return
+	return k, nil
 }
