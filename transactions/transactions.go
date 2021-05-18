@@ -50,7 +50,7 @@ func New(
 	code string,
 	args []TransactionArg,
 	proposer, payer keys.Authorizer,
-	others []keys.Authorizer) (*Transaction, error) {
+	authorizers []keys.Authorizer) (*Transaction, error) {
 
 	// Create Flow transaction
 	// TODO: Gas limit?
@@ -70,21 +70,21 @@ func New(
 	}
 
 	// Add authorizers
-	for _, other := range others {
-		tx.AddAuthorizer(other.Address)
+	for _, a := range authorizers {
+		tx.AddAuthorizer(a.Address)
 	}
 
-	// Sign the payload
-	// TODO: support multiple keys per account
-	for _, other := range others {
-		err := tx.SignPayload(other.Address, other.Key.Index, other.Signer)
+	// Authorizers sign the payload
+	// TODO: support multiple keys per account?
+	for _, a := range authorizers {
+		err := tx.SignPayload(a.Address, a.Key.Index, a.Signer)
 		if err != nil {
 			return &EmptyTransaction, err
 		}
 	}
 
-	// Sign the envelope
-	// TODO: support multiple keys per account
+	// Payer signs the envelope
+	// TODO: support multiple keys per account?
 	err := tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer)
 	if err != nil {
 		return &EmptyTransaction, err

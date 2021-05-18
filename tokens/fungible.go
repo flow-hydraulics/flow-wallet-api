@@ -2,9 +2,6 @@ package tokens
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
@@ -12,12 +9,6 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
-
-var EmulatorFlowToken Token = Token{
-	"FlowToken",
-	"0xee82856bf20e2aa6",
-	"0x0ae53cb6e3f42a79",
-}
 
 func TransferFlow(
 	ctx context.Context,
@@ -27,18 +18,10 @@ func TransferFlow(
 	senderAddress flow.Address,
 	amount string) (flow.Identifier, error) {
 
-	tmplPath := filepath.Join(TemplatePath(), "transactions", "transfer_flow.cdc")
-	txTemplate, err := ioutil.ReadFile(tmplPath)
+	txStr, err := ParseTransferFlowToken(flow.Emulator)
 	if err != nil {
 		return flow.EmptyID, err
 	}
-
-	replacer := strings.NewReplacer(
-		"<BaseTokenAddress>", EmulatorFlowToken.BaseAddress,
-		"<TokenAddress>", EmulatorFlowToken.Address,
-	)
-
-	txStr := replacer.Replace(string(txTemplate))
 
 	senderAuthorizer, err := km.UserAuthorizer(ctx, senderAddress.Hex())
 	if err != nil {
