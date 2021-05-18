@@ -16,11 +16,11 @@ import (
 
 // Account struct represents a storable account.
 type Account struct {
-	Address   string             `json:"address" gorm:"primaryKey"`
-	Keys      []keys.StorableKey `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	CreatedAt time.Time          `json:"createdAt" `
-	UpdatedAt time.Time          `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt     `json:"-" gorm:"index"`
+	Address   string          `json:"address" gorm:"primaryKey"`
+	Keys      []keys.Storable `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	CreatedAt time.Time       `json:"createdAt" `
+	UpdatedAt time.Time       `json:"updatedAt"`
+	DeletedAt gorm.DeletedAt  `json:"-" gorm:"index"`
 }
 
 // New creates a new account on the Flow blockchain.
@@ -33,7 +33,7 @@ func New(
 	km keys.Manager,
 ) (
 	newAccount Account,
-	newKey keys.Key,
+	newPrivateKey keys.Private,
 	err error,
 ) {
 	// Get admin account authorizer
@@ -55,8 +55,8 @@ func New(
 	}
 
 	// Destruct the wrapped key
-	publicKey := wrapped.FlowKey
-	newKey = wrapped.AccountKey
+	publicKey := wrapped.AccountKey
+	newPrivateKey = wrapped.PrivateKey
 
 	// Setup a transaction to create an account
 	tx := templates.

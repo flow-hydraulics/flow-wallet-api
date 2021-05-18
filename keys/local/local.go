@@ -11,49 +11,47 @@ import (
 )
 
 func Generate(
+	keyIndex, weight int,
 	signAlgo crypto.SignatureAlgorithm,
 	hashAlgo crypto.HashAlgorithm,
-	keyIndex, weight int,
-) (result keys.Wrapped, err error) {
-	seed := make([]byte, crypto.MinSeedLength)
-	_, err = rand.Read(seed)
+) (keys.Wrapped, error) {
+	s := make([]byte, crypto.MinSeedLength)
+
+	_, err := rand.Read(s)
 	if err != nil {
-		return
+		return keys.Wrapped{}, err
 	}
 
-	privateKey, err := crypto.GeneratePrivateKey(signAlgo, seed)
+	pk, err := crypto.GeneratePrivateKey(signAlgo, s)
 	if err != nil {
-		return
+		return keys.Wrapped{}, err
 	}
 
-	flowKey := flow.NewAccountKey().
-		FromPrivateKey(privateKey).
+	f := flow.NewAccountKey().
+		FromPrivateKey(pk).
 		SetHashAlgo(hashAlgo).
 		SetWeight(weight)
 
-	flowKey.Index = keyIndex
+	f.Index = keyIndex
 
-	key := keys.Key{
-		Index: keyIndex,
-		Type:  keys.ACCOUNT_KEY_TYPE_LOCAL,
-		Value: strings.TrimPrefix(privateKey.String(), "0x"),
+	p := keys.Private{
+		Index:    keyIndex,
+		Type:     keys.ACCOUNT_KEY_TYPE_LOCAL,
+		Value:    strings.TrimPrefix(pk.String(), "0x"),
+		SignAlgo: signAlgo,
+		HashAlgo: hashAlgo,
 	}
 
-	result.AccountKey = key
-	result.FlowKey = flowKey
-
-	return
+	return keys.Wrapped{
+		AccountKey: f,
+		PrivateKey: p,
+	}, nil
 }
 
-func Signer(
-	signAlgo crypto.SignatureAlgorithm,
-	hashAlgo crypto.HashAlgorithm,
-	key keys.Key,
-) (result crypto.Signer, err error) {
-	pk, err := crypto.DecodePrivateKeyHex(signAlgo, key.Value)
+func Signer(key keys.Private) (crypto.Signer, error) {
+	p, err := crypto.DecodePrivateKeyHex(key.SignAlgo, key.Value)
 	if err != nil {
-		return
+		return crypto.InMemorySigner{}, err
 	}
-	result = crypto.NewInMemorySigner(pk, hashAlgo)
-	return
+	return crypto.NewInMemorySigner(p, key.HashAlgo), nil
 }

@@ -18,9 +18,7 @@ type KeyManager struct {
 	db              keys.Store
 	fc              *client.Client
 	crypter         encryption.Crypter
-	signAlgo        crypto.SignatureAlgorithm
-	hashAlgo        crypto.HashAlgorithm
-	adminAccountKey keys.Key
+	adminAccountKey keys.Private
 	cfg             Config
 }
 
@@ -29,10 +27,12 @@ type KeyManager struct {
 func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 	cfg := ParseConfig()
 
-	adminAccountKey := keys.Key{
-		Index: cfg.AdminAccountKeyIndex,
-		Type:  cfg.AdminAccountKeyType,
-		Value: cfg.AdminAccountKeyValue,
+	adminAccountKey := keys.Private{
+		Index:    cfg.AdminAccountKeyIndex,
+		Type:     cfg.AdminAccountKeyType,
+		Value:    cfg.AdminAccountKeyValue,
+		SignAlgo: crypto.StringToSignatureAlgorithm(cfg.DefaultSignAlgo),
+		HashAlgo: crypto.StringToHashAlgorithm(cfg.DefaultHashAlgo),
 	}
 
 	crypter := encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
@@ -41,58 +41,55 @@ func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 		db,
 		fc,
 		crypter,
-		crypto.ECDSA_P256, // TODO: from config?
-		crypto.SHA3_256,   // TODO: from config?
 		adminAccountKey,
 		cfg,
 	}
 }
 
-func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (result keys.Wrapped, err error) {
+func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.Wrapped, error) {
 	switch s.cfg.DefaultKeyStorage {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
-		result, err = local.Generate(
-			s.signAlgo,
-			s.hashAlgo,
-			keyIndex,
-			weight,
-		)
+		return local.Generate(
+			keyIndex, weight,
+			crypto.StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo),
+			crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo))
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
-		result, err = google.Generate(
-			ctx,
-			keyIndex,
-			weight,
-		)
+		return google.Generate(ctx, keyIndex, weight)
 	default:
-		err = fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyStorage)
+		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyStorage)
 	}
-	return
 }
 
 func (s *KeyManager) GenerateDefault(ctx context.Context) (keys.Wrapped, error) {
 	return s.Generate(ctx, s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 
-func (s *KeyManager) Save(key keys.Key) (result keys.StorableKey, err error) {
+func (s *KeyManager) Save(key keys.Private) (keys.Storable, error) {
 	encValue, err := s.crypter.Encrypt([]byte(key.Value))
 	if err != nil {
-		return
+		return keys.Storable{}, err
 	}
-	result.Index = key.Index
-	result.Type = key.Type
-	result.Value = encValue
-	return
+	return keys.Storable{
+		Index:    key.Index,
+		Type:     key.Type,
+		Value:    encValue,
+		SignAlgo: key.SignAlgo.String(),
+		HashAlgo: key.HashAlgo.String(),
+	}, nil
 }
 
-func (s *KeyManager) Load(key keys.StorableKey) (result keys.Key, err error) {
+func (s *KeyManager) Load(key keys.Storable) (keys.Private, error) {
 	decValue, err := s.crypter.Decrypt([]byte(key.Value))
 	if err != nil {
-		return
+		return keys.Private{}, err
 	}
-	result.Index = key.Index
-	result.Type = key.Type
-	result.Value = string(decValue)
-	return
+	return keys.Private{
+		Index:    key.Index,
+		Type:     key.Type,
+		Value:    string(decValue),
+		SignAlgo: crypto.StringToSignatureAlgorithm(key.SignAlgo),
+		HashAlgo: crypto.StringToHashAlgorithm(key.HashAlgo),
+	}, nil
 }
 
 func (s *KeyManager) AdminAuthorizer(ctx context.Context) (keys.Authorizer, error) {
@@ -103,53 +100,50 @@ func (s *KeyManager) UserAuthorizer(ctx context.Context, address string) (keys.A
 	return s.MakeAuthorizer(ctx, address)
 }
 
-func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (result keys.Authorizer, err error) {
-	var key keys.Key
-
-	result.Address = flow.HexToAddress(address)
+func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (keys.Authorizer, error) {
+	var k keys.Private
 
 	if address == s.cfg.AdminAccountAddress {
-		key = s.adminAccountKey
+		k = s.adminAccountKey
 	} else {
-		var rawKey keys.StorableKey
 		// Get the "least recently used" key for this address
-		rawKey, err = s.db.AccountKey(address)
+		sk, err := s.db.AccountKey(address)
 		if err != nil {
-			return
+			return keys.Authorizer{}, err
 		}
-		key, err = s.Load(rawKey)
+		k, err = s.Load(sk)
 		if err != nil {
-			return
+			return keys.Authorizer{}, err
 		}
 	}
 
-	flowAcc, err := s.fc.GetAccount(ctx, flow.HexToAddress(address))
+	acc, err := s.fc.GetAccount(ctx, flow.HexToAddress(address))
 	if err != nil {
-		return
+		return keys.Authorizer{}, err
 	}
 
-	result.Key = flowAcc.Keys[key.Index]
-
-	var signer crypto.Signer
+	var sig crypto.Signer
 
 	// TODO: Decide whether we want to allow this kind of flexibility
 	// or should we just panic if `key.Type` != `s.defaultKeyManager`
-	switch key.Type {
+	switch k.Type {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
-		signer, err = local.Signer(s.signAlgo, s.hashAlgo, key)
+		sig, err = local.Signer(k)
 		if err != nil {
-			break
+			return keys.Authorizer{}, err
 		}
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
-		signer, err = google.Signer(ctx, address, key)
+		sig, err = google.Signer(ctx, address, k)
 		if err != nil {
-			break
+			return keys.Authorizer{}, err
 		}
 	default:
-		err = fmt.Errorf("key.Type not recognised: %s", key.Type)
+		return keys.Authorizer{}, fmt.Errorf("key.Type not recognised: %s", k.Type)
 	}
 
-	result.Signer = signer
-
-	return
+	return keys.Authorizer{
+		Address: flow.HexToAddress(address),
+		Key:     acc.Keys[k.Index],
+		Signer:  sig,
+	}, nil
 }
