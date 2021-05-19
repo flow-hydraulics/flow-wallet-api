@@ -6,7 +6,7 @@ import (
 
 // Store manages data regarding jobs.
 type Store interface {
-	Job(id uuid.UUID) (job Job, err error)
-	InsertJob(job *Job) error
-	UpdateJob(job *Job) error
+	Job(id uuid.UUID) (Job, error)
+	InsertJob(*Job) error
+	UpdateJob(*Job) error
 }

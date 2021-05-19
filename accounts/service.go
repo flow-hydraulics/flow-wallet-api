@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
@@ -34,8 +35,9 @@ func NewService(
 }
 
 // List returns all accounts in the datastore.
-func (s *Service) List() (result []Account, err error) {
-	return s.db.Accounts()
+func (s *Service) List(limit, offset int) (result []Account, err error) {
+	o := datastore.ParseListOptions(limit, offset)
+	return s.db.Accounts(o)
 }
 
 // Create calls account.New to generate a new account.
