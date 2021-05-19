@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/accounts"
+	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
@@ -157,13 +158,16 @@ func (s *Service) CreateAsync(code string, args []TransactionArg, address string
 }
 
 // List returns all transactions in the datastore for a given account.
-func (s *Service) List(address string) ([]Transaction, error) {
+func (s *Service) List(address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
 	err := accounts.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return []Transaction{}, err
 	}
-	return s.db.Transactions(address)
+
+	o := datastore.ParseListOptions(limit, offset)
+
+	return s.db.Transactions(address, o)
 }
 
 // Details returns a specific transaction.

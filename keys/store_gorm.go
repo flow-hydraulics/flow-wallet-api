@@ -13,8 +13,8 @@ func NewGormStore(db *gorm.DB) *GormStore {
 	return &GormStore{db}
 }
 
-func (s *GormStore) AccountKey(address string) (key Storable, err error) {
-	err = s.db.Where(&Storable{AccountAddress: address}).Order("updated_at asc").First(&key).Error
-	s.db.Save(&key) // Update the UpdatedAt field
+func (s *GormStore) AccountKey(address string) (k Storable, err error) {
+	err = s.db.Where(&Storable{AccountAddress: address}).Order("updated_at asc").First(&k).Error
+	s.db.Save(&k) // Update the UpdatedAt field
 	return
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/eqlabs/flow-wallet-service/accounts"
 	"github.com/gorilla/mux"
@@ -23,7 +24,17 @@ func NewAccounts(l *log.Logger, service *accounts.Service) *Accounts {
 
 // List returns all accounts.
 func (s *Accounts) List(rw http.ResponseWriter, r *http.Request) {
-	res, err := s.service.List()
+	limit, err := strconv.Atoi(r.FormValue("limit"))
+	if err != nil {
+		limit = 0
+	}
+
+	offset, err := strconv.Atoi(r.FormValue("offset"))
+	if err != nil {
+		offset = 0
+	}
+
+	res, err := s.service.List(limit, offset)
 
 	if err != nil {
 		handleError(rw, s.log, err)

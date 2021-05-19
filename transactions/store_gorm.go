@@ -1,6 +1,7 @@
 package transactions
 
 import (
+	"github.com/eqlabs/flow-wallet-service/datastore"
 	"gorm.io/gorm"
 )
 
@@ -13,20 +14,25 @@ func NewGormStore(db *gorm.DB) *GormStore {
 	return &GormStore{db}
 }
 
-func (s *GormStore) Transactions(address string) (transactions []Transaction, err error) {
-	err = s.db.Find(&transactions).Error
+func (s *GormStore) Transactions(address string, o datastore.ListOptions) (tt []Transaction, err error) {
+	err = s.db.
+		Where(&Transaction{AccountAddress: address}).
+		Order("created_at desc").
+		Limit(o.Limit).
+		Offset(o.Offset).
+		Find(&tt).Error
 	return
 }
 
-func (s *GormStore) Transaction(address, txId string) (transaction Transaction, err error) {
-	err = s.db.Where(&Transaction{AccountAddress: address, TransactionId: txId}).First(&transaction).Error
+func (s *GormStore) Transaction(address, txId string) (t Transaction, err error) {
+	err = s.db.Where(&Transaction{AccountAddress: address, TransactionId: txId}).First(&t).Error
 	return
 }
 
-func (s *GormStore) InsertTransaction(transaction *Transaction) error {
-	return s.db.Create(transaction).Error
+func (s *GormStore) InsertTransaction(t *Transaction) error {
+	return s.db.Create(t).Error
 }
 
-func (s *GormStore) UpdateTransaction(transaction *Transaction) error {
-	return s.db.Save(transaction).Error
+func (s *GormStore) UpdateTransaction(t *Transaction) error {
+	return s.db.Save(t).Error
 }

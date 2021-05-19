@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/transactions"
@@ -27,9 +28,19 @@ func NewTransactions(l *log.Logger, service *transactions.Service) *Transactions
 }
 
 func (s *Transactions) List(rw http.ResponseWriter, r *http.Request) {
+	limit, err := strconv.Atoi(r.FormValue("limit"))
+	if err != nil {
+		limit = 0
+	}
+
+	offset, err := strconv.Atoi(r.FormValue("offset"))
+	if err != nil {
+		offset = 0
+	}
+
 	vars := mux.Vars(r)
 
-	res, err := s.service.List(vars["address"])
+	res, err := s.service.List(vars["address"], limit, offset)
 
 	if err != nil {
 		handleError(rw, s.log, err)

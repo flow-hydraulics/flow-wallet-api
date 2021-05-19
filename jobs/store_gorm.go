@@ -14,15 +14,15 @@ func NewGormStore(db *gorm.DB) *GormStore {
 	return &GormStore{db}
 }
 
-func (s *GormStore) Job(id uuid.UUID) (job Job, err error) {
-	err = s.db.First(&job, "id = ?", id).Error
+func (s *GormStore) Job(id uuid.UUID) (j Job, err error) {
+	err = s.db.First(&j, "id = ?", id).Error
 	return
 }
 
-func (s *GormStore) InsertJob(job *Job) error {
-	return s.db.Create(job).Error
+func (s *GormStore) InsertJob(j *Job) error {
+	return s.db.Create(j).Error
 }
 
-func (s *GormStore) UpdateJob(job *Job) error {
-	return s.db.Save(job).Error
+func (s *GormStore) UpdateJob(j *Job) error {
+	return s.db.Save(j).Error
 }
