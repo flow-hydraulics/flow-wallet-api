@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/accounts"
@@ -37,46 +38,53 @@ func NewService(
 }
 
 func (s *Service) create(ctx context.Context, address string, code string, args []TransactionArg) (*Transaction, error) {
-	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, s.fc)
+	id, err := flow_helpers.LatestBlockId(ctx, s.fc)
 	if err != nil {
 		return &EmptyTransaction, err
 	}
 
-	authorizer, err := s.km.UserAuthorizer(ctx, address)
+	a, err := s.km.UserAuthorizer(ctx, address)
 	if err != nil {
 		return &EmptyTransaction, err
 	}
 
-	transaction, err := New(referenceBlockID, code, args, authorizer, authorizer, []keys.Authorizer{})
+	var aa []keys.Authorizer
+
+	// Check if we need to add this account as an authorizer
+	if strings.Contains(code, ": AuthAccount") {
+		aa = append(aa, a)
+	}
+
+	t, err := New(id, code, args, a, a, aa)
 	if err != nil {
 		return &EmptyTransaction, err
 	}
 
 	// Send the transaction
-	err = transaction.Send(ctx, s.fc)
+	err = t.Send(ctx, s.fc)
 	if err != nil {
-		return transaction, err
+		return t, err
 	}
 
 	// Set TransactionId
-	transaction.TransactionId = transaction.tx.ID().Hex()
+	t.TransactionId = t.tx.ID().Hex()
 
 	// Insert to datastore
-	err = s.db.InsertTransaction(transaction)
+	err = s.db.InsertTransaction(t)
 	if err != nil {
-		return transaction, err
+		return t, err
 	}
 
 	// Wait for the transaction to be sealed
-	err = transaction.Wait(ctx, s.fc)
+	err = t.Wait(ctx, s.fc)
 	if err != nil {
-		return transaction, err
+		return t, err
 	}
 
 	// Update in datastore
-	err = s.db.UpdateTransaction(transaction)
+	err = s.db.UpdateTransaction(t)
 
-	return transaction, err
+	return t, err
 }
 
 func (s *Service) CreateSync(ctx context.Context, code string, args []TransactionArg, address string) (*Transaction, error) {

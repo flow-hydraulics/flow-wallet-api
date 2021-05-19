@@ -39,7 +39,8 @@ var cfg testConfig
 var logger *log.Logger
 
 type testConfig struct {
-	FlowGateway string `env:"FLOW_GATEWAY,required"`
+	FlowGateway string       `env:"FLOW_GATEWAY,required"`
+	ChainId     flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
 type TestLogger struct {
@@ -426,15 +427,30 @@ func TestTransactionHandlers(t *testing.T) {
 	router.HandleFunc("/{address}/transactions", h.Create).Methods(http.MethodPost)
 	router.HandleFunc("/{address}/transactions/{transactionId}", h.Details).Methods(http.MethodGet)
 
-	invalid := []byte(`{
-		"code":"this is not valid cadence code",
-		"arguments":[{"type":"String","value":"Hello"}]
-	}`)
+	tFlow, err := tokens.ParseTransferFlowToken(cfg.ChainId)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	valid := []byte(`{
+	tFlowBytes, err := json.Marshal(tFlow)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	validTransferFlow := fmt.Sprintf(`{
+		"code":%s,
+		"arguments":[{"type":"UFix64","value":"1.0"},{"type":"Address","value":"0xf8d6e0586b0a20c7"}]
+	}`, tFlowBytes)
+
+	validHello := `{
 		"code":"transaction(greeting: String) { execute { log(greeting.concat(\", World!\")) }}",
 		"arguments":[{"type":"String","value":"Hello"}]
-	}`)
+	}`
+
+	invalidHello := `{
+		"code":"this is not valid cadence code",
+		"arguments":[{"type":"String","value":"Hello"}]
+	}`
 
 	var tempTxId string
 
@@ -465,7 +481,7 @@ func TestTransactionHandlers(t *testing.T) {
 		{
 			name:     "HTTP POST list ok async",
 			method:   http.MethodPost,
-			body:     strings.NewReader(string(valid)),
+			body:     strings.NewReader(validHello),
 			url:      "/f8d6e0586b0a20c7/transactions",
 			expected: `.*"jobId":".+".*`,
 			status:   http.StatusCreated,
@@ -490,7 +506,7 @@ func TestTransactionHandlers(t *testing.T) {
 		{
 			name:     "HTTP POST list invalid code sync",
 			method:   http.MethodPost,
-			body:     strings.NewReader(string(invalid)),
+			body:     strings.NewReader(invalidHello),
 			url:      "/f8d6e0586b0a20c7/transactions",
 			expected: `.*Parsing failed.*`,
 			status:   http.StatusBadRequest,
@@ -499,7 +515,16 @@ func TestTransactionHandlers(t *testing.T) {
 		{
 			name:     "HTTP POST list ok sync",
 			method:   http.MethodPost,
-			body:     strings.NewReader(string(valid)),
+			body:     strings.NewReader(validHello),
+			url:      "/f8d6e0586b0a20c7/transactions",
+			expected: `.*"transactionId":".+".*`,
+			status:   http.StatusCreated,
+			sync:     true,
+		},
+		{
+			name:     "HTTP POST list ok sync requires authorizer",
+			method:   http.MethodPost,
+			body:     strings.NewReader(validTransferFlow),
 			url:      "/f8d6e0586b0a20c7/transactions",
 			expected: `.*"transactionId":".+".*`,
 			status:   http.StatusCreated,
@@ -508,7 +533,7 @@ func TestTransactionHandlers(t *testing.T) {
 		{
 			name:     "HTTP POST list invalid address sync",
 			method:   http.MethodPost,
-			body:     strings.NewReader(string(valid)),
+			body:     strings.NewReader(validHello),
 			url:      "/invalid-address/transactions",
 			expected: "not a valid address\n",
 			status:   http.StatusBadRequest,
@@ -571,14 +596,15 @@ func TestTransactionHandlers(t *testing.T) {
 			rr := httptest.NewRecorder()
 			router.ServeHTTP(rr, req)
 
+			status := rr.Code
 			// Check the status code is what we expect.
-			if status := rr.Code; status != step.status {
+			if status != step.status {
 				t.Errorf("handler returned wrong status code: got %v want %v",
 					status, step.status)
 			}
 
 			// If this step was creating a new transaction store the new txId in "tempTxId".
-			if step.sync && step.status == http.StatusCreated {
+			if step.sync && status == http.StatusCreated {
 				var transaction transactions.Transaction
 				json.Unmarshal(rr.Body.Bytes(), &transaction)
 				tempTxId = transaction.TransactionId
