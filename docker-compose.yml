@@ -1,0 +1,27 @@
+version: "3.9"
+services:
+  wallet:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    links:
+      - db
+      - emulator
+    env_file:
+      - ./.env
+    environment:
+      DB_DSN: host=db user=postgres password=postgres dbname=postgres
+      DB_TYPE: psql
+      FLOW_GATEWAY: emulator:3569
+  emulator:
+    build:
+      context: ./scripts/flow-cli
+    command: emulator -v
+    volumes:
+      - ./:/app # This allows to pass the flow.json in the current directory
+  db:
+    image: postgres:13-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
