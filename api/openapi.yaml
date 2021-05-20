@@ -1,9 +1,12 @@
 openapi: 3.0.3
+
 info:
   title: Flow Custodial Wallet API
   version: 0.0.1
+
 servers:
-  - url: /v1
+  - url: http://localhost:3000/v1
+
 components:
   schemas:
     account:
@@ -11,13 +14,14 @@ components:
       properties:
         address:
           type: string
-          example: "0xf8d6e0586b0a20c7"
+          example: "f8d6e0586b0a20c7"
         createdAt:
           type: string
-          example: "2021-04-27T05:49:53.211Z"
+          example: "2021-04-27T05:49:53.211+00:00"
         updatedAt:
           type: string
-          example: "2021-04-27T05:49:53.211Z"
+          example: "2021-04-27T05:49:53.211+00:00"
+
     transaction:
       type: object
       properties:
@@ -26,40 +30,67 @@ components:
           example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
         createdAt:
           type: string
-          example: "2021-04-27T05:49:53.211Z"
-    fungibleToken:
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    job:
       type: object
       properties:
-        name:
+        jobId:
           type: string
-          example: FLOW
-          enum: [FLOW, FUSD]
-        balance:
+          example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
+        status:
           type: string
-          example: "42.0"
-    fungibleTokenWithdrawal:
-      type: object
-      properties:
-        transactionId:
+          example: "Accepted"
+        result:
           type: string
-          example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
-        recipient:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        amount:
-          type: string
-          example: "42.0"
+          example: ""
         createdAt:
           type: string
-          example: "2021-04-27T05:49:53.211Z"
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
   parameters:
+    limit:
+      name: limit
+      description: The maximum number of items to return. -1 disables the limit. If no limit is given (or limit=0) 1000 is used as a default.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: -1
+        example: 1000
+
+    offset:
+      name: offset
+      description: The number of items to skip before starting to collect the result set.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        example: 0
+
     address:
       name: address
       in: path
       required: true
       schema:
         type: string
-        example: "0xf8d6e0586b0a20c7"
+        example: "f8d6e0586b0a20c7"
+
+    jobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
+
     tokenName:
       name: tokenName
       in: path
@@ -68,6 +99,7 @@ components:
         type: string
         enum: [FLOW, FUSD]
         example: FLOW
+
     transactionId:
       name: transactionId
       in: path
@@ -75,11 +107,45 @@ components:
       schema:
         type: string
         example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+
 paths:
+  /jobs:
+    get:
+      summary: List all jobs
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /jobs/{jobId}:
+    parameters:
+    - $ref: "#/components/parameters/jobId"
+    get:
+      summary: Get a job
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: "#/components/schemas/job"
+
   /accounts:
     get:
       summary: List all accounts
-      description: Get a list of all accounts manged by the wallet service.
+      description: Get a list of all accounts managed by the wallet service.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -91,20 +157,21 @@ paths:
                   $ref: "#/components/schemas/account"
     post:
       summary: Create an account
-      description: Create a new account that will be managed by the wallet service.
+      description: Create a new account that will be managed by the wallet service. Returns a job.
       responses:
         "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/account"
+                $ref: "#/components/schemas/job"
+
   /accounts/{address}:
+    parameters:
+    - $ref: "#/components/parameters/address"
     get:
       summary: Get an account
       description: Get the details of a specific account.
-      parameters:
-      - $ref: "#/components/parameters/address"
       responses:
         "200":
           description: OK
@@ -112,12 +179,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/account"
+
   /accounts/{address}/transactions:
+    parameters:
+      - $ref: "#/components/parameters/address"
     get:
-      summary: List all account transactions
+      summary: List account raw transactions
       description: Get a list of all transactions sent by an account.
       parameters:
-      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -128,10 +199,8 @@ paths:
                 items:
                   $ref: "#/components/schemas/transaction"
     post:
-      summary: Create a transaction
-      description: Send a transaction from an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
+      summary: Send a raw transaction
+      description: Send a transaction from an account. Returns a job.
       requestBody:
         content:
           application/json:
@@ -155,14 +224,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/transaction"
+                $ref: "#/components/schemas/job"
+
   /accounts/{address}/transactions/{transactionId}:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    - $ref: "#/components/parameters/transactionId"
     get:
-      summary: Get a transaction
-      description: Get the details of a transaction sent by an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/transactionId"
+      summary: Get a raw transaction
+      description: Get the details of a raw transaction sent by an account.
       responses:
         "200":
           description: OK
@@ -170,86 +240,3 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/transaction"
-  /accounts/{address}/fungible-tokens:
-    get:
-      summary: List account fungible tokens
-      description: Get a list of all fungible tokens held by an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/fungibleToken"
-  /accounts/{address}/fungible-tokens/{tokenName}:
-    get:
-      summary: Get an account fungible token
-      description: Get the details of a fungible token held by an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/fungibleToken"
-  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
-    get:
-      summary: List account fungible token withdrawals
-      description: Get a list of all fungible token withdrawals sent by an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/fungibleTokenWithdrawal"
-    post:
-      summary: Create a fungible token withdrawal
-      description: Send a fungible token withdrawal transaction from an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                recipient:
-                  type: string
-                amount:
-                  type: string
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/fungibleTokenWithdrawal"
-  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
-    get:
-      summary: Get an account fungible token withdrawal
-      description: Get the details of a fungible token withdrawal sent by an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-      - $ref: "#/components/parameters/transactionId"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/fungibleTokenWithdrawal"
