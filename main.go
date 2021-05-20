@@ -98,7 +98,8 @@ func main() {
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
 	// Jobs
-	rv.Handle("/status/{jobId}", jobsHandler.Details()).Methods(http.MethodGet) // details
+	rv.Handle("/jobs", jobsHandler.List()).Methods(http.MethodGet)            // details
+	rv.Handle("/jobs/{jobId}", jobsHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()

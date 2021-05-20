@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/google/uuid"
 )
@@ -16,6 +17,12 @@ type Service struct {
 // NewService initiates a new job service.
 func NewService(db Store) *Service {
 	return &Service{db}
+}
+
+// List returns all jobs in the datastore.
+func (s *Service) List(limit, offset int) (result []Job, err error) {
+	o := datastore.ParseListOptions(limit, offset)
+	return s.db.Jobs(o)
 }
 
 // Details returns a specific job.

@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -12,6 +13,15 @@ type GormStore struct {
 func NewGormStore(db *gorm.DB) *GormStore {
 	db.AutoMigrate(&Job{})
 	return &GormStore{db}
+}
+
+func (s *GormStore) Jobs(o datastore.ListOptions) (jj []Job, err error) {
+	err = s.db.
+		Order("created_at desc").
+		Limit(o.Limit).
+		Offset(o.Offset).
+		Find(&jj).Error
+	return
 }
 
 func (s *GormStore) Job(id uuid.UUID) (j Job, err error) {

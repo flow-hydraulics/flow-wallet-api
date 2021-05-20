@@ -20,6 +20,10 @@ func NewJobs(l *log.Logger, service *jobs.Service) *Jobs {
 	return &Jobs{l, service}
 }
 
+func (s *Jobs) List() http.Handler {
+	return http.HandlerFunc(s.ListFunc)
+}
+
 func (s *Jobs) Details() http.Handler {
 	return http.HandlerFunc(s.DetailsFunc)
 }
