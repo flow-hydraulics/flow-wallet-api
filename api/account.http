@@ -1,14 +1,24 @@
-GET http://localhost:3000/v1/accounts HTTP/1.1
+### Get a list of accounts
+GET http://localhost:3000/v1/accounts?limit=0&offset=0 HTTP/1.1
 content-type: application/json
 
-###
+
+### Create a new account (async)
 POST http://localhost:3000/v1/accounts HTTP/1.1
 content-type: application/json
 
-###
-GET http://localhost:3000/v1/accounts/d31ecd5dc0f4eb68 HTTP/1.1
+
+### Create a new account (sync)
+POST http://localhost:3000/v1/accounts HTTP/1.1
+content-type: application/json
+use-sync: yes
+
+
+### Get account details
+GET http://localhost:3000/v1/accounts/aaaabbbbccccdddd HTTP/1.1
 content-type: application/json
 
-###
-GET http://localhost:3000/v1/status/9ca2c01e-d01a-4d25-8576-ccf8cc90784f HTTP/1.1
+
+### Get job status
+GET http://localhost:3000/v1/status/00000000-0000-0000-0000-000000000000 HTTP/1.1
 content-type: application/json
