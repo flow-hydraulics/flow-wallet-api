@@ -11,7 +11,7 @@ content-type: application/json
 ### Create a new account (sync)
 POST http://localhost:3000/v1/accounts HTTP/1.1
 content-type: application/json
-use-sync: yes
+use-sync: what-ever-non-empty
 
 
 ### Get account details
