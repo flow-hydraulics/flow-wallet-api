@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/eqlabs/flow-wallet-service/jobs"
-	"github.com/gorilla/mux"
 )
 
 // Jobs is a HTTP server for jobs.
@@ -21,18 +20,6 @@ func NewJobs(l *log.Logger, service *jobs.Service) *Jobs {
 	return &Jobs{l, service}
 }
 
-// Details returns details regarding a job.
-// It reads the job id for the wanted job from URL.
-// Job service is responsible for validating the job id.
-func (s *Jobs) Details(rw http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	res, err := s.service.Details(vars["jobId"])
-
-	if err != nil {
-		handleError(rw, s.log, err)
-		return
-	}
-
-	handleJsonResponse(rw, http.StatusOK, res)
+func (s *Jobs) Details() http.Handler {
+	return http.HandlerFunc(s.DetailsFunc)
 }

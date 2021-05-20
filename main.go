@@ -18,7 +18,6 @@ import (
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
 	"github.com/eqlabs/flow-wallet-service/transactions"
-	g_handlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk/client"
@@ -99,20 +98,20 @@ func main() {
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
 	// Jobs
-	rv.HandleFunc("/status/{jobId}", jobsHandler.Details).Methods(http.MethodGet) // details
+	rv.Handle("/status/{jobId}", jobsHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()
-	ra.HandleFunc("", accountsHandler.List).Methods(http.MethodGet)              // list
-	ra.HandleFunc("", accountsHandler.Create).Methods(http.MethodPost)           // create
-	ra.HandleFunc("/{address}", accountsHandler.Details).Methods(http.MethodGet) // details
+	ra.Handle("", accountsHandler.List()).Methods(http.MethodGet)              // list
+	ra.Handle("", accountsHandler.Create()).Methods(http.MethodPost)           // create
+	ra.Handle("/{address}", accountsHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account raw transactions
 	if !disable_raw_tx {
 		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
-		rt.HandleFunc("", transactions.List).Methods(http.MethodGet)                    // list
-		rt.HandleFunc("", transactions.Create).Methods(http.MethodPost)                 // create
-		rt.HandleFunc("/{transactionId}", transactions.Details).Methods(http.MethodGet) // details
+		rt.Handle("", transactions.List()).Methods(http.MethodGet)                    // list
+		rt.Handle("", transactions.Create()).Methods(http.MethodPost)                 // create
+		rt.Handle("/{transactionId}", transactions.Details()).Methods(http.MethodGet) // details
 	} else {
 		ls.Println("raw transactions disabled")
 	}
@@ -131,21 +130,13 @@ func main() {
 	// TODO: nfts
 
 	// Define middleware
-	useCors := g_handlers.CORS(g_handlers.AllowedOrigins([]string{"*"}))
-	useLogging := func(h http.Handler) http.Handler {
-		return g_handlers.CombinedLoggingHandler(os.Stdout, h)
-	}
-	useCompress := func(h http.Handler) http.Handler {
-		return g_handlers.CompressHandler(h)
-	}
-	useJson := func(h http.Handler) http.Handler {
-		// Only PUT, POST, and PATCH requests are considered.
-		return g_handlers.ContentTypeHandler(h, "application/json")
-	}
+	h := handlers.UseCors(r)
+	h = handlers.UseLogging(os.Stdout, h)
+	h = handlers.UseCompress(h)
 
 	// Server boilerplate
 	srv := &http.Server{
-		Handler:      useCors(useLogging(useCompress(useJson(r)))),
+		Handler:      h,
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
