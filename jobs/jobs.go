@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 )
 
 type WorkerPool struct {
+	log     *log.Logger
 	wg      *sync.WaitGroup
 	workers []*Worker
 	db      Store
@@ -37,8 +39,8 @@ func (j *Job) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-func NewWorkerPool(db Store) *WorkerPool {
-	return &WorkerPool{&sync.WaitGroup{}, []*Worker{}, db}
+func NewWorkerPool(l *log.Logger, db Store) *WorkerPool {
+	return &WorkerPool{l, &sync.WaitGroup{}, []*Worker{}, db}
 }
 
 func (p *WorkerPool) AddWorker(capacity uint) {
@@ -108,6 +110,9 @@ func (w *Worker) tryEnqueue(job *Job) bool {
 func (w *Worker) process(job *Job) {
 	result, err := job.Do()
 	if err != nil {
+		if w.pool.log != nil {
+			w.pool.log.Printf("[Job %s] Error while processing job: %s", job.ID, err)
+		}
 		job.Status = Error
 		job.Error = err.Error()
 		w.pool.db.UpdateJob(job)

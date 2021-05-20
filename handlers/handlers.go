@@ -13,7 +13,9 @@ const SYNC_HEADER = "Use-Sync"
 
 // handleError is a helper function for unified HTTP error handling.
 func handleError(rw http.ResponseWriter, logger *log.Logger, err error) {
-	logger.Printf("Error: %v\n", err)
+	if logger != nil {
+		logger.Printf("Error: %v\n", err)
+	}
 
 	// Check if the error was an errors.RequestError
 	reqErr, isReqErr := err.(*errors.RequestError)

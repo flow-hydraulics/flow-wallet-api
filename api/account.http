@@ -20,5 +20,5 @@ content-type: application/json
 
 
 ### Get job status
-GET http://localhost:3000/v1/status/00000000-0000-0000-0000-000000000000 HTTP/1.1
+GET http://localhost:3000/v1/jobs/00000000-0000-0000-0000-000000000000 HTTP/1.1
 content-type: application/json

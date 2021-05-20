@@ -92,7 +92,7 @@ func TestAccountServices(t *testing.T) {
 
 	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
@@ -274,7 +274,7 @@ func TestAccountHandlers(t *testing.T) {
 
 	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
@@ -283,9 +283,9 @@ func TestAccountHandlers(t *testing.T) {
 	h := handlers.NewAccounts(logger, service)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/", h.List).Methods(http.MethodGet)
-	router.HandleFunc("/", h.Create).Methods(http.MethodPost)
-	router.HandleFunc("/{address}", h.Details).Methods(http.MethodGet)
+	router.Handle("/", h.List()).Methods(http.MethodGet)
+	router.Handle("/", h.Create()).Methods(http.MethodPost)
+	router.Handle("/{address}", h.Details()).Methods(http.MethodGet)
 
 	var tempAccAddress string
 
@@ -414,7 +414,7 @@ func TestTransactionHandlers(t *testing.T) {
 
 	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
@@ -423,9 +423,9 @@ func TestTransactionHandlers(t *testing.T) {
 	h := handlers.NewTransactions(logger, service)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/{address}/transactions", h.List).Methods(http.MethodGet)
-	router.HandleFunc("/{address}/transactions", h.Create).Methods(http.MethodPost)
-	router.HandleFunc("/{address}/transactions/{transactionId}", h.Details).Methods(http.MethodGet)
+	router.Handle("/{address}/transactions", h.List()).Methods(http.MethodGet)
+	router.Handle("/{address}/transactions", h.Create()).Methods(http.MethodPost)
+	router.Handle("/{address}/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
 
 	tFlow, err := tokens.ParseTransferFlowToken(cfg.ChainId)
 	if err != nil {
@@ -456,13 +456,14 @@ func TestTransactionHandlers(t *testing.T) {
 
 	// NOTE: The order of the test "steps" matters
 	steps := []struct {
-		name     string
-		method   string
-		body     io.Reader
-		url      string
-		expected string
-		status   int
-		sync     bool
+		name        string
+		method      string
+		body        io.Reader
+		contentType string
+		url         string
+		expected    string
+		status      int
+		sync        bool
 	}{
 		{
 			name:     "HTTP GET list db empty",
@@ -479,65 +480,82 @@ func TestTransactionHandlers(t *testing.T) {
 			status:   http.StatusBadRequest,
 		},
 		{
-			name:     "HTTP POST list ok async",
-			method:   http.MethodPost,
-			body:     strings.NewReader(validHello),
-			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: `.*"jobId":".+".*`,
-			status:   http.StatusCreated,
+			name:        "HTTP POST list ok async",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        strings.NewReader(validHello),
+			url:         "/f8d6e0586b0a20c7/transactions",
+			expected:    `.*"jobId":".+".*`,
+			status:      http.StatusCreated,
 		},
 		{
-			name:     "HTTP POST list empty body sync",
-			method:   http.MethodPost,
-			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: "empty body\n",
-			status:   http.StatusBadRequest,
-			sync:     true,
+			name:        "HTTP POST list ok sync",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        strings.NewReader(validHello),
+			url:         "/f8d6e0586b0a20c7/transactions",
+			expected:    `.*"transactionId":".+".*`,
+			status:      http.StatusCreated,
+			sync:        true,
 		},
 		{
-			name:     "HTTP POST list invalid body sync",
-			method:   http.MethodPost,
-			body:     strings.NewReader("notvalidobject"),
-			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: "invalid body\n",
-			status:   http.StatusBadRequest,
-			sync:     true,
+			name:        "HTTP POST list invalid content-type",
+			method:      http.MethodPost,
+			contentType: "",
+			body:        strings.NewReader(validHello),
+			url:         "/f8d6e0586b0a20c7/transactions",
+			expected:    `Unsupported content type.*`,
+			status:      http.StatusUnsupportedMediaType,
+			sync:        true,
 		},
 		{
-			name:     "HTTP POST list invalid code sync",
-			method:   http.MethodPost,
-			body:     strings.NewReader(invalidHello),
-			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: `.*Parsing failed.*`,
-			status:   http.StatusBadRequest,
-			sync:     true,
+			name:        "HTTP POST list ok sync requires authorizer",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        strings.NewReader(validTransferFlow),
+			url:         "/f8d6e0586b0a20c7/transactions",
+			expected:    `.*"transactionId":".+".*`,
+			status:      http.StatusCreated,
+			sync:        true,
 		},
 		{
-			name:     "HTTP POST list ok sync",
-			method:   http.MethodPost,
-			body:     strings.NewReader(validHello),
-			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: `.*"transactionId":".+".*`,
-			status:   http.StatusCreated,
-			sync:     true,
+			name:        "HTTP POST list empty body sync",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			url:         "/f8d6e0586b0a20c7/transactions",
+			expected:    "empty body\n",
+			status:      http.StatusBadRequest,
+			sync:        true,
 		},
 		{
-			name:     "HTTP POST list ok sync requires authorizer",
-			method:   http.MethodPost,
-			body:     strings.NewReader(validTransferFlow),
-			url:      "/f8d6e0586b0a20c7/transactions",
-			expected: `.*"transactionId":".+".*`,
-			status:   http.StatusCreated,
-			sync:     true,
+			name:        "HTTP POST list invalid body sync",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        strings.NewReader("notvalidobject"),
+			url:         "/f8d6e0586b0a20c7/transactions",
+			expected:    "invalid body\n",
+			status:      http.StatusBadRequest,
+			sync:        true,
 		},
 		{
-			name:     "HTTP POST list invalid address sync",
-			method:   http.MethodPost,
-			body:     strings.NewReader(validHello),
-			url:      "/invalid-address/transactions",
-			expected: "not a valid address\n",
-			status:   http.StatusBadRequest,
-			sync:     true,
+			name:        "HTTP POST list invalid code sync",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        strings.NewReader(invalidHello),
+			url:         "/f8d6e0586b0a20c7/transactions",
+			expected:    `.*Parsing failed.*`,
+			status:      http.StatusBadRequest,
+			sync:        true,
+		},
+		{
+			name:        "HTTP POST list invalid address sync",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        strings.NewReader(validHello),
+			url:         "/invalid-address/transactions",
+			expected:    "not a valid address\n",
+			status:      http.StatusBadRequest,
+			sync:        true,
 		},
 		{
 			name:     "HTTP GET list db not empty",
@@ -587,6 +605,10 @@ func TestTransactionHandlers(t *testing.T) {
 			req, err := http.NewRequest(step.method, url, step.body)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if step.contentType != "" {
+				req.Header.Set("content-type", "application/json")
 			}
 
 			if step.sync {
