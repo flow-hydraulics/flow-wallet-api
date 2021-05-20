@@ -3,18 +3,31 @@ services:
   db:
     image: postgres:13-alpine
     restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_PASSWORD: postgres
+
+  wallet:
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_DSN: postgresql://postgres:postgres@db:5432/postgres
+      DATABASE_TYPE: psql
+      ACCESS_API_HOST: emulator:3569
+      CHAIN_ID: flow-emulator
+    depends_on:
+      - db
+      - emulator
 
   emulator:
     build:
       context: ./docker/flow-cli
     restart: unless-stopped
-    ports:
-      - "3569:3569"
-      - "8080:8080"
     command: emulator -v
     environment:
       - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}

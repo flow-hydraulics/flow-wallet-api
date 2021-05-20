@@ -25,9 +25,9 @@ import (
 )
 
 type Config struct {
-	Host        string `env:"HOST"`
-	Port        int    `env:"PORT" envDefault:"3000"`
-	FlowGateway string `env:"FLOW_GATEWAY,required"`
+	Host          string `env:"HOST"`
+	Port          int    `env:"PORT" envDefault:"3000"`
+	AccessApiHost string `env:"ACCESS_API_HOST,required"`
 }
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 
 	// Flow client
 	// TODO: WithInsecure()?
-	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}

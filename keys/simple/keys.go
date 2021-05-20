@@ -47,7 +47,7 @@ func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 }
 
 func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.Wrapped, error) {
-	switch s.cfg.DefaultKeyStorage {
+	switch s.cfg.DefaultKeyType {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		return local.Generate(
 			keyIndex, weight,
@@ -56,7 +56,7 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.W
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		return google.Generate(ctx, keyIndex, weight)
 	default:
-		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyStorage)
+		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyType)
 	}
 }
 
