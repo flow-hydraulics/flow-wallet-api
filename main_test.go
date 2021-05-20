@@ -92,7 +92,7 @@ func TestAccountServices(t *testing.T) {
 
 	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
@@ -274,7 +274,7 @@ func TestAccountHandlers(t *testing.T) {
 
 	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
@@ -414,7 +414,7 @@ func TestTransactionHandlers(t *testing.T) {
 
 	km := simple.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 

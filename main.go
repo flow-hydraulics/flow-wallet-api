@@ -51,7 +51,8 @@ func main() {
 	flag.Parse()
 
 	// Application wide logger
-	l := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
+	ls := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
+	lj := log.New(os.Stdout, "[JOBS] ", log.LstdFlags|log.Lshortfile)
 
 	// Flow client
 	// TODO: WithInsecure()?
@@ -74,7 +75,7 @@ func main() {
 	transactionStore := transactions.NewGormStore(db)
 
 	// Create a worker pool
-	wp := jobs.NewWorkerPool(jobStore)
+	wp := jobs.NewWorkerPool(lj, jobStore)
 	wp.AddWorker(100) // Add a worker with capacity of 100
 
 	// Key manager
@@ -87,9 +88,9 @@ func main() {
 
 	// HTTP handling
 
-	jobsHandler := handlers.NewJobs(l, jobsService)
-	accountsHandler := handlers.NewAccounts(l, accountService)
-	transactions := handlers.NewTransactions(l, transactionService)
+	jobsHandler := handlers.NewJobs(ls, jobsService)
+	accountsHandler := handlers.NewAccounts(ls, accountService)
+	transactions := handlers.NewTransactions(ls, transactionService)
 	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, km)
 
 	r := mux.NewRouter()
@@ -113,7 +114,7 @@ func main() {
 		rt.HandleFunc("", transactions.Create).Methods(http.MethodPost)                 // create
 		rt.HandleFunc("/{transactionId}", transactions.Details).Methods(http.MethodGet) // details
 	} else {
-		l.Println("raw transactions disabled")
+		ls.Println("raw transactions disabled")
 	}
 
 	// // Fungible tokens
@@ -152,9 +153,9 @@ func main() {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		l.Println("Server running")
+		ls.Println("Server running")
 		if err := srv.ListenAndServe(); err != nil {
-			l.Println(err)
+			ls.Println(err)
 		}
 	}()
 
@@ -167,7 +168,7 @@ func main() {
 	// Block until we receive our signal.
 	sig := <-c
 
-	l.Printf("Got signal: %s. Shutting down..\n", sig)
+	ls.Printf("Got signal: %s. Shutting down..\n", sig)
 
 	// Stop the worker pool, waits
 	wp.Stop()
