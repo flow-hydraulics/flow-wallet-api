@@ -42,8 +42,8 @@ func FlowTokenContractAddress(chainId flow.ChainID) (string, error) {
 	}
 }
 
-func ParseFlowTokenTransactionCode(filename string, chainId flow.ChainID) (string, error) {
-	p := filepath.Join(TemplatePath(), "transactions", filename)
+func ParseFlowTokenCode(filename string, chainId flow.ChainID) (string, error) {
+	p := filepath.Join(TemplatePath(), filename)
 
 	t, err := ioutil.ReadFile(p)
 	if err != nil {
@@ -60,18 +60,18 @@ func ParseFlowTokenTransactionCode(filename string, chainId flow.ChainID) (strin
 		return "", err
 	}
 
-	replacer := strings.NewReplacer(
+	r := strings.NewReplacer(
 		"<BaseTokenAddress>", b,
 		"<TokenAddress>", a,
 	)
 
-	return replacer.Replace(string(t)), nil
+	return r.Replace(string(t)), nil
 }
 
 func ParseTransferFlowToken(chainId flow.ChainID) (string, error) {
-	return ParseFlowTokenTransactionCode("transfer_flow.cdc", chainId)
+	return ParseFlowTokenCode(filepath.Join("transactions", "transfer_flow.cdc"), chainId)
 }
 
 func ParseGetFlowTokenBalance(chainId flow.ChainID) (string, error) {
-	return ParseFlowTokenTransactionCode("get_balance.cdc", chainId)
+	return ParseFlowTokenCode(filepath.Join("scripts", "get_balance.cdc"), chainId)
 }
