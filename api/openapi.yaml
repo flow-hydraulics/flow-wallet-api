@@ -1,9 +1,12 @@
 openapi: 3.0.3
+
 info:
   title: Flow Custodial Wallet API
   version: 0.0.1
+
 servers:
   - url: http://localhost:3000/v1
+
 components:
   schemas:
     account:
@@ -18,6 +21,7 @@ components:
         updatedAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
+
     transaction:
       type: object
       properties:
@@ -30,6 +34,7 @@ components:
         updatedAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
+
     job:
       type: object
       properties:
@@ -48,7 +53,28 @@ components:
         updatedAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
+
   parameters:
+    limit:
+      name: limit
+      description: The maximum number of items to return. -1 disables the limit. If no limit is given (or limit=0) 1000 is used as a default.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: -1
+        example: 1000
+
+    offset:
+      name: offset
+      description: The number of items to skip before starting to collect the result set.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        example: 0
+
     address:
       name: address
       in: path
@@ -56,6 +82,7 @@ components:
       schema:
         type: string
         example: "f8d6e0586b0a20c7"
+
     jobId:
       name: jobId
       in: path
@@ -63,6 +90,7 @@ components:
       schema:
         type: string
         example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
+
     tokenName:
       name: tokenName
       in: path
@@ -71,6 +99,7 @@ components:
         type: string
         enum: [FLOW, FUSD]
         example: FLOW
+
     transactionId:
       name: transactionId
       in: path
@@ -78,10 +107,14 @@ components:
       schema:
         type: string
         example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+
 paths:
   /jobs:
     get:
       summary: List all jobs
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -91,11 +124,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/job"
+
   /jobs/{jobId}:
+    parameters:
+    - $ref: "#/components/parameters/jobId"
     get:
       summary: Get a job
-      parameters:
-      - $ref: "#/components/parameters/jobId"
       responses:
         "200":
           description: OK
@@ -104,10 +138,14 @@ paths:
               schema:
                 type: object
                 $ref: "#/components/schemas/job"
+
   /accounts:
     get:
       summary: List all accounts
       description: Get a list of all accounts managed by the wallet service.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -127,12 +165,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/job"
+
   /accounts/{address}:
+    parameters:
+    - $ref: "#/components/parameters/address"
     get:
       summary: Get an account
       description: Get the details of a specific account.
-      parameters:
-      - $ref: "#/components/parameters/address"
       responses:
         "200":
           description: OK
@@ -140,12 +179,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/account"
+
   /accounts/{address}/transactions:
+    parameters:
+      - $ref: "#/components/parameters/address"
     get:
       summary: List account raw transactions
       description: Get a list of all transactions sent by an account.
       parameters:
-      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -158,8 +201,6 @@ paths:
     post:
       summary: Send a raw transaction
       description: Send a transaction from an account. Returns a job.
-      parameters:
-      - $ref: "#/components/parameters/address"
       requestBody:
         content:
           application/json:
@@ -184,13 +225,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/job"
+
   /accounts/{address}/transactions/{transactionId}:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get a raw transaction
       description: Get the details of a raw transaction sent by an account.
-      parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/transactionId"
       responses:
         "200":
           description: OK
