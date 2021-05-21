@@ -39,8 +39,8 @@ var cfg testConfig
 var logger *log.Logger
 
 type testConfig struct {
-	FlowGateway string       `env:"FLOW_GATEWAY,required"`
-	ChainId     flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	AccessApiHost string       `env:"ACCESS_API_HOST,required"`
+	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
 type TestLogger struct {
@@ -55,8 +55,8 @@ func (tl *TestLogger) Write(p []byte) (n int, err error) {
 func TestMain(m *testing.M) {
 	godotenv.Load(".env.test")
 
-	os.Setenv("DB_DSN", testDbDSN)
-	os.Setenv("DB_TYPE", testDbType)
+	os.Setenv("DATABASE_DSN", testDbDSN)
+	os.Setenv("DATABASE_TYPE", testDbType)
 
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
@@ -73,7 +73,7 @@ func TestAccountServices(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestAccountServices(t *testing.T) {
 			km,
 			fc,
 			flow.HexToAddress(job.Result),
-			flow.HexToAddress(os.Getenv("ADMIN_ACC_ADDRESS")),
+			flow.HexToAddress(os.Getenv("ADMIN_ADDRESS")),
 			"1.0",
 		)
 		if err != nil {
@@ -195,7 +195,7 @@ func TestAccountServices(t *testing.T) {
 			ctx,
 			km,
 			fc,
-			flow.HexToAddress(os.Getenv("ADMIN_ACC_ADDRESS")),
+			flow.HexToAddress(os.Getenv("ADMIN_ADDRESS")),
 			flow.HexToAddress(job.Result),
 			"1.0",
 		)
@@ -232,7 +232,7 @@ func TestAccountServices(t *testing.T) {
 			ctx,
 			km,
 			fc,
-			flow.HexToAddress(os.Getenv("ADMIN_ACC_ADDRESS")),
+			flow.HexToAddress(os.Getenv("ADMIN_ADDRESS")),
 			flow.HexToAddress(job.Result),
 			"1.0",
 		)
@@ -256,7 +256,7 @@ func TestAccountHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +396,7 @@ func TestTransactionHandlers(t *testing.T) {
 
 	// logger = log.New(&TestLogger{t}, "", log.Lshortfile)
 
-	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}

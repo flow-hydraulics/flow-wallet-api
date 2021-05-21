@@ -99,7 +99,7 @@ func New(
 		return
 	}
 
-	newAccount.Address = newAddress
+	newAccount.Address = fmt.Sprintf("0x%s", newAddress)
 
 	return
 }

@@ -7,11 +7,11 @@ import (
 
 // Config struct for key manager.
 type Config struct {
-	AdminAccountAddress  string `env:"ADMIN_ACC_ADDRESS,required"`
-	AdminAccountKeyIndex int    `env:"ADMIN_ACC_KEY_INDEX" envDefault:"0"`
-	AdminAccountKeyType  string `env:"ADMIN_ACC_KEY_TYPE" envDefault:"local"`
-	AdminAccountKeyValue string `env:"ADMIN_ACC_KEY_VALUE,required"`
-	DefaultKeyStorage    string `env:"DEFAULT_KEY_STORAGE" envDefault:"local"`
+	AdminAccountAddress  string `env:"ADMIN_ADDRESS,required"`
+	AdminAccountKeyIndex int    `env:"ADMIN_KEY_INDEX" envDefault:"0"`
+	AdminAccountKeyType  string `env:"ADMIN_KEY_TYPE" envDefault:"local"`
+	AdminAccountKeyValue string `env:"ADMIN_PRIVATE_KEY,required"`
+	DefaultKeyType       string `env:"DEFAULT_KEY_TYPE" envDefault:"local"`
 	DefaultKeyIndex      int    `env:"DEFAULT_KEY_INDEX" envDefault:"0"`
 	DefaultKeyWeight     int    `env:"DEFAULT_KEY_WEIGHT" envDefault:"-1"`
 	DefaultSignAlgo      string `env:"DEFAULT_SIGN_ALGO" envDefault:"ECDSA_P256"`

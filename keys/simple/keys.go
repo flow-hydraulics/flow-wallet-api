@@ -47,7 +47,7 @@ func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 }
 
 func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.Wrapped, error) {
-	switch s.cfg.DefaultKeyStorage {
+	switch s.cfg.DefaultKeyType {
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		return local.Generate(
 			keyIndex, weight,
@@ -56,7 +56,7 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.W
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		return google.Generate(ctx, keyIndex, weight)
 	default:
-		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyStorage)
+		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyType)
 	}
 }
 
@@ -93,21 +93,21 @@ func (s *KeyManager) Load(key keys.Storable) (keys.Private, error) {
 }
 
 func (s *KeyManager) AdminAuthorizer(ctx context.Context) (keys.Authorizer, error) {
-	return s.MakeAuthorizer(ctx, s.cfg.AdminAccountAddress)
+	return s.MakeAuthorizer(ctx, flow.HexToAddress(s.cfg.AdminAccountAddress))
 }
 
-func (s *KeyManager) UserAuthorizer(ctx context.Context, address string) (keys.Authorizer, error) {
+func (s *KeyManager) UserAuthorizer(ctx context.Context, address flow.Address) (keys.Authorizer, error) {
 	return s.MakeAuthorizer(ctx, address)
 }
 
-func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (keys.Authorizer, error) {
+func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (keys.Authorizer, error) {
 	var k keys.Private
 
-	if address == s.cfg.AdminAccountAddress {
+	if address == flow.HexToAddress(s.cfg.AdminAccountAddress) {
 		k = s.adminAccountKey
 	} else {
 		// Get the "least recently used" key for this address
-		sk, err := s.db.AccountKey(address)
+		sk, err := s.db.AccountKey(fmt.Sprintf("0x%s", address.Hex()))
 		if err != nil {
 			return keys.Authorizer{}, err
 		}
@@ -117,7 +117,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (keys.A
 		}
 	}
 
-	acc, err := s.fc.GetAccount(ctx, flow.HexToAddress(address))
+	acc, err := s.fc.GetAccount(ctx, address)
 	if err != nil {
 		return keys.Authorizer{}, err
 	}
@@ -142,7 +142,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address string) (keys.A
 	}
 
 	return keys.Authorizer{
-		Address: flow.HexToAddress(address),
+		Address: address,
 		Key:     acc.Keys[k.Index],
 		Signer:  sig,
 	}, nil

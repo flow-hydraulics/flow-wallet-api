@@ -66,7 +66,7 @@ func Generate(ctx context.Context, keyIndex, weight int) (keys.Wrapped, error) {
 	}, nil
 }
 
-func Signer(ctx context.Context, address string, key keys.Private) (crypto.Signer, error) {
+func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto.Signer, error) {
 	c, err := cloudkms.NewClient(ctx)
 	if err != nil {
 		return &cloudkms.Signer{}, err
@@ -77,11 +77,7 @@ func Signer(ctx context.Context, address string, key keys.Private) (crypto.Signe
 		return &cloudkms.Signer{}, err
 	}
 
-	s, err := c.SignerForKey(
-		ctx,
-		flow.HexToAddress(address),
-		k,
-	)
+	s, err := c.SignerForKey(ctx, address, k)
 
 	if err != nil {
 		return &cloudkms.Signer{}, err

@@ -25,9 +25,9 @@ import (
 )
 
 type Config struct {
-	Host        string `env:"HOST"`
-	Port        int    `env:"PORT" envDefault:"3000"`
-	FlowGateway string `env:"FLOW_GATEWAY,required"`
+	Host          string `env:"HOST"`
+	Port          int    `env:"PORT" envDefault:"3000"`
+	AccessApiHost string `env:"ACCESS_API_HOST,required"`
 }
 
 func main() {
@@ -40,13 +40,13 @@ func main() {
 
 	var (
 		disable_raw_tx bool
-		disable_ft     bool
-		disable_nft    bool
+		// disable_ft     bool
+		// disable_nft    bool
 	)
 
 	flag.BoolVar(&disable_raw_tx, "disable-raw-tx", false, "disable sending raw transactions for an account")
-	flag.BoolVar(&disable_ft, "disable-ft", false, "disable fungible token functionality")
-	flag.BoolVar(&disable_nft, "disable-nft", false, "disable non-fungible token functionality")
+	// flag.BoolVar(&disable_ft, "disable-ft", false, "disable fungible token functionality")
+	// flag.BoolVar(&disable_nft, "disable-nft", false, "disable non-fungible token functionality")
 	flag.Parse()
 
 	// Application wide logger
@@ -55,7 +55,7 @@ func main() {
 
 	// Flow client
 	// TODO: WithInsecure()?
-	fc, err := client.New(cfg.FlowGateway, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func main() {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		ls.Println("Server running")
+		ls.Printf("Listening on port %d\n", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil {
 			ls.Println(err)
 		}

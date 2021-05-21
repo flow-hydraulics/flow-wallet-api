@@ -38,7 +38,7 @@ func NewService(
 	return &Service{db, km, fc, wp, cfg}
 }
 
-func (s *Service) create(ctx context.Context, address string, code string, args []TransactionArg) (*Transaction, error) {
+func (s *Service) create(ctx context.Context, address flow.Address, code string, args []TransactionArg) (*Transaction, error) {
 	id, err := flow_helpers.LatestBlockId(ctx, s.fc)
 	if err != nil {
 		return &EmptyTransaction, err
@@ -101,7 +101,7 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Transactio
 	}
 
 	_, jobErr = s.wp.AddJob(func() (string, error) {
-		result, createErr = s.create(context.Background(), address, code, args)
+		result, createErr = s.create(context.Background(), flow.HexToAddress(address), code, args)
 		done = true
 		if createErr != nil {
 			return "", createErr
@@ -136,7 +136,7 @@ func (s *Service) CreateAsync(code string, args []TransactionArg, address string
 	}
 
 	job, err := s.wp.AddJob(func() (string, error) {
-		tx, err := s.create(context.Background(), address, code, args)
+		tx, err := s.create(context.Background(), flow.HexToAddress(address), code, args)
 		if err != nil {
 			return "", err
 		}
