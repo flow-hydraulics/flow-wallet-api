@@ -1,4 +1,3 @@
-# NOTE: Don't include the 0x prefix in account addresses here
 @testnetCustodyAccount = 0x0000000000000000
 @emulatorCustodyAccount = 0x0000000000000000
 @transferAmount = 0.05
