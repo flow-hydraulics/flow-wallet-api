@@ -22,6 +22,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
+	"github.com/eqlabs/flow-wallet-service/scripts"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
@@ -630,6 +631,96 @@ func TestTransactionHandlers(t *testing.T) {
 				var transaction transactions.Transaction
 				json.Unmarshal(rr.Body.Bytes(), &transaction)
 				tempTxId = transaction.TransactionId
+			}
+
+			// Check the response body is what we expect.
+			re := regexp.MustCompile(step.expected)
+			match := re.FindString(rr.Body.String())
+			if match == "" {
+				t.Errorf("handler returned unexpected body: got %q want %v", rr.Body.String(), re)
+			}
+		})
+	}
+}
+
+func TestScriptsHandlers(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fc.Close()
+
+	service := scripts.NewService(fc)
+	h := handlers.NewScripts(logger, service)
+
+	router := mux.NewRouter()
+	router.Handle("/", h.Execute()).Methods(http.MethodPost)
+
+	steps := []struct {
+		name        string
+		method      string
+		body        io.Reader
+		contentType string
+		expected    string
+		status      int
+	}{
+		{
+			name:   "HTTP POST int 1",
+			method: http.MethodPost,
+			body: strings.NewReader(`{
+				"code":"pub fun main(): Int { return 1 }",
+				"arguments":[]
+			}`),
+			contentType: "application/json",
+			expected:    "{\"Value\":1}",
+			status:      http.StatusOK,
+		},
+		{
+			name:   "HTTP POST get supply",
+			method: http.MethodPost,
+			body: strings.NewReader(`{
+				"code":"import FlowToken from 0x0ae53cb6e3f42a79\npub fun main(): UFix64 {\nlet supply = FlowToken.totalSupply\nreturn supply\n}",
+				"arguments":[]
+			}`),
+			contentType: "application/json",
+			expected:    "1000000000000000000",
+			status:      http.StatusOK,
+		},
+		{
+			name:   "HTTP POST get balance",
+			method: http.MethodPost,
+			body: strings.NewReader(`{
+				"code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
+				"arguments":[{"type":"Address","value":"0xf8d6e0586b0a20c7"}]
+			}`),
+			contentType: "application/json",
+			expected:    "\\d+",
+			status:      http.StatusOK,
+		},
+	}
+
+	for _, step := range steps {
+		t.Run(step.name, func(t *testing.T) {
+			req, err := http.NewRequest(step.method, "/", step.body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if step.contentType != "" {
+				req.Header.Set("content-type", "application/json")
+			}
+
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			status := rr.Code
+			// Check the status code is what we expect.
+			if status != step.status {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, step.status)
 			}
 
 			// Check the response body is what we expect.
