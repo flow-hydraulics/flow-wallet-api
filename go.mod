@@ -15,8 +15,8 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.6.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.7 // indirect
-	github.com/onflow/cadence v0.14.2
-	github.com/onflow/flow-go-sdk v0.18.0
+	github.com/onflow/cadence v0.16.0
+	github.com/onflow/flow-go-sdk v0.20.0
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
