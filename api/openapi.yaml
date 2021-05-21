@@ -54,6 +54,30 @@ components:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
 
+    script:
+      type: object
+      properties:
+        code:
+          type: string
+        arguments:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              value:
+                type: string
+
+    cadenceValue:
+      type: object
+      properties:
+        Value:
+          type: string
+
+    plainValue:
+      type: string
+
   parameters:
     limit:
       name: limit
@@ -205,19 +229,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                code:
-                  type: string
-                arguments:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                      value:
-                        type: string
+              $ref: "#/components/schemas/script"
       responses:
         "201":
           description: Created
@@ -240,3 +252,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/transaction"
+
+  /scripts:
+    post:
+      summary: Execute a script on chain
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/script"
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  -  $ref: "#/components/schemas/cadenceValue"
+                  -  $ref: "#/components/schemas/plainValue"
