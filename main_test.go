@@ -675,7 +675,7 @@ func TestScriptsHandlers(t *testing.T) {
 				"arguments":[]
 			}`),
 			contentType: "application/json",
-			expected:    "{\"Value\":1}\n",
+			expected:    "{\"Value\":1}",
 			status:      http.StatusOK,
 		},
 		{
@@ -686,7 +686,7 @@ func TestScriptsHandlers(t *testing.T) {
 				"arguments":[]
 			}`),
 			contentType: "application/json",
-			expected:    "1000000000000000000\n",
+			expected:    "1000000000000000000",
 			status:      http.StatusOK,
 		},
 		{
@@ -697,7 +697,7 @@ func TestScriptsHandlers(t *testing.T) {
 				"arguments":[{"type":"Address","value":"0xf8d6e0586b0a20c7"}]
 			}`),
 			contentType: "application/json",
-			expected:    "\\d+\n",
+			expected:    "\\d+",
 			status:      http.StatusOK,
 		},
 	}
