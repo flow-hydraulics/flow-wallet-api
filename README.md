@@ -1,10 +1,26 @@
-# Flow Wallet service
+# Flow Wallet Service
 
 A custodial wallet service for tokens on the Flow blockchain.
 
-## Production
+**DISCLAIMER**: This is alpha software. Use at your own risk. We are not responsible for any damages caused by using this software.
 
-TODO
+## Basic example setup (testnet)
+
+`.env` -file:
+
+    ACCESS_API_HOST=https://access-testnet.onflow.org
+    CHAIN_ID=flow-testnet
+    DATABASE_DSN=postgresql://postgres:postgres@db:5432/postgres # replace this
+    DATABASE_TYPE=psql
+
+    ADMIN_ADDRESS=<your testnet admin account address>
+    ADMIN_PRIVATE_KEY=<your testnet  admin account private key>
+    DEFAULT_KEY_TYPE=local # Will store keys in your database, use "google_kms" if you have that setup
+    ENCRYPTION_KEY=passphrasewhichneedstobe32bytes! # replace this with something that is 32 bytes
+
+Running:
+
+    docker run -d --name flow-wallet-service --env-file .env ghcr.io/eqlabs/flow-wallet-service:0.0.1
 
 ## Developing
 
