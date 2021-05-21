@@ -690,7 +690,7 @@ func TestScriptsHandlers(t *testing.T) {
 			status:      http.StatusOK,
 		},
 		{
-			name:   "HTTP POST get supply",
+			name:   "HTTP POST get balance",
 			method: http.MethodPost,
 			body: strings.NewReader(`{
 				"code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
