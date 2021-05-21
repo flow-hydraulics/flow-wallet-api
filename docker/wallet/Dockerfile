@@ -3,7 +3,8 @@ FROM golang:alpine AS builder
 RUN apk update && apk add --no-cache \
   musl-dev \
   gcc \
-  build-base
+  build-base \
+  git
 
 ENV GO111MODULE=on \
   CGO_ENABLED=1 \
@@ -18,7 +19,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -a -ldflags "-linkmode external -extldflags '-static' -s -w" -o main main.go
+RUN ./build.sh
 
 WORKDIR /dist
 

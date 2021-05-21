@@ -13,6 +13,7 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-wallet-service/accounts"
 	"github.com/eqlabs/flow-wallet-service/datastore/gorm"
+	"github.com/eqlabs/flow-wallet-service/debug"
 	"github.com/eqlabs/flow-wallet-service/handlers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
@@ -24,6 +25,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	sha1ver   string // sha1 revision used to build the program
+	buildTime string // when the executable was built
+)
+
 type Config struct {
 	Host          string `env:"HOST"`
 	Port          int    `env:"PORT" envDefault:"3000"`
@@ -33,20 +39,41 @@ type Config struct {
 func main() {
 	godotenv.Load(".env")
 
+	var (
+		flgVersion   bool
+		flgRunServer bool
+	)
+
+	flag.BoolVar(&flgVersion, "version", false, "if true, print version and exit")
+	flag.BoolVar(&flgRunServer, "server", true, "run the server")
+	flag.Parse()
+
+	if flgVersion {
+		fmt.Printf("Build on %s from sha1 %s\n", buildTime, sha1ver)
+		os.Exit(0)
+	}
+
+	if flgRunServer {
+		runServer()
+		os.Exit(0)
+	}
+}
+
+func runServer() {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
 	}
 
 	var (
-		disable_raw_tx bool
-		// disable_ft     bool
-		// disable_nft    bool
+		flgDisableRawTx bool
+		// flgDisableFt     bool
+		// flgDisableNft    bool
 	)
 
-	flag.BoolVar(&disable_raw_tx, "disable-raw-tx", false, "disable sending raw transactions for an account")
-	// flag.BoolVar(&disable_ft, "disable-ft", false, "disable fungible token functionality")
-	// flag.BoolVar(&disable_nft, "disable-nft", false, "disable non-fungible token functionality")
+	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable sending raw transactions for an account")
+	// flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token functionality")
+	// flag.BoolVar(&flgDisableNft, "disable-nft", false, "disable non-fungible token functionality")
 	flag.Parse()
 
 	// Application wide logger
@@ -85,6 +112,12 @@ func main() {
 	accountService := accounts.NewService(accountStore, km, fc, wp)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 
+	debugService := debug.Service{
+		RepoUrl:   "https://github.com/eqlabs/flow-wallet-service",
+		Sha1ver:   sha1ver,
+		BuildTime: buildTime,
+	}
+
 	// HTTP handling
 
 	jobsHandler := handlers.NewJobs(ls, jobsService)
@@ -97,6 +130,9 @@ func main() {
 	// Catch the api version
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
+	// Debug
+	rv.HandleFunc("/debug", debugService.HandleDebug).Methods(http.MethodGet) // details
+
 	// Jobs
 	rv.Handle("/jobs", jobsHandler.List()).Methods(http.MethodGet)            // details
 	rv.Handle("/jobs/{jobId}", jobsHandler.Details()).Methods(http.MethodGet) // details
@@ -108,7 +144,7 @@ func main() {
 	ra.Handle("/{address}", accountsHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account raw transactions
-	if !disable_raw_tx {
+	if !flgDisableRawTx {
 		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
 		rt.Handle("", transactions.List()).Methods(http.MethodGet)                    // list
 		rt.Handle("", transactions.Create()).Methods(http.MethodPost)                 // create
@@ -118,7 +154,7 @@ func main() {
 	}
 
 	// // Fungible tokens
-	// if !disable_ft {
+	// if !flgDisableFt {
 	// 	// Handle "/accounts/{address}/fungible-tokens"
 	// 	rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
 	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Details).Methods(http.MethodGet)
@@ -169,5 +205,4 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	srv.Shutdown(ctx)
-	os.Exit(0)
 }
