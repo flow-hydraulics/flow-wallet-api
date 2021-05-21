@@ -14,7 +14,21 @@ type Script struct {
 
 type Argument interface{}
 
-func ArgToCadence(a Argument) (cadence.Value, error) {
+func (s *Script) MustDecodeArgs() []cadence.Value {
+	var aa []cadence.Value
+
+	for _, sa := range s.Arguments {
+		a, err := DecodeArgument(sa)
+		if err != nil {
+			panic("unable to decode arguments")
+		}
+		aa = append(aa, a)
+	}
+
+	return aa
+}
+
+func DecodeArgument(a Argument) (cadence.Value, error) {
 	j, err := json.Marshal(a)
 	if err != nil {
 		return cadence.Void{}, err

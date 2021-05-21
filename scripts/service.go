@@ -18,17 +18,12 @@ func NewService(fc *client.Client) *Service {
 }
 
 func (s *Service) Execute(ctx context.Context, script Script) (cadence.Value, error) {
-	var aa []cadence.Value
+	value, err := s.fc.ExecuteScriptAtLatestBlock(
+		ctx,
+		[]byte(script.Code),
+		script.MustDecodeArgs(),
+	)
 
-	for _, sa := range script.Arguments {
-		a, err := ArgToCadence(sa)
-		if err != nil {
-			return cadence.Void{}, err
-		}
-		aa = append(aa, a)
-	}
-
-	value, err := s.fc.ExecuteScriptAtLatestBlock(ctx, []byte(script.Code), aa)
 	if err != nil {
 		return cadence.Void{}, err
 	}
