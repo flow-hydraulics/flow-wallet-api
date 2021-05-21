@@ -28,7 +28,7 @@ type Manager interface {
 	// AdminAuthorizer returns an Authorizer for the applications admin account.
 	AdminAuthorizer(context.Context) (Authorizer, error)
 	// UserAuthorizer returns an Authorizer for the given address.
-	UserAuthorizer(ctx context.Context, address string) (Authorizer, error)
+	UserAuthorizer(ctx context.Context, address flow.Address) (Authorizer, error)
 }
 
 // Storable struct represents a storable account private key.

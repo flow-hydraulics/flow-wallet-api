@@ -15,7 +15,7 @@ use-sync: what-ever-non-empty
 
 
 ### Get account details
-GET http://localhost:3000/v1/accounts/aaaabbbbccccdddd HTTP/1.1
+GET http://localhost:3000/v1/accounts/0xaaaabbbbccccdddd HTTP/1.1
 content-type: application/json
 
 

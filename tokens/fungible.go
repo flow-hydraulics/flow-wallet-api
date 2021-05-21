@@ -23,7 +23,7 @@ func TransferFlow(
 		return flow.EmptyID, err
 	}
 
-	senderAuthorizer, err := km.UserAuthorizer(ctx, senderAddress.Hex())
+	senderAuthorizer, err := km.UserAuthorizer(ctx, senderAddress)
 	if err != nil {
 		return flow.EmptyID, err
 	}

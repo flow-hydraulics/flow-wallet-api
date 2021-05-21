@@ -1,6 +1,6 @@
 # NOTE: Don't include the 0x prefix in account addresses here
-@testnetCustodyAccount = 0000000000000000
-@emulatorCustodyAccount = 0000000000000000
+@testnetCustodyAccount = 0x0000000000000000
+@emulatorCustodyAccount = 0x0000000000000000
 @transferAmount = 0.05
 @jobId = 00000000-0000-0000-0000-000000000000
 
@@ -23,7 +23,7 @@ content-type: application/json
 
 {
   "code":"import FungibleToken from 0x9a0766d93b6608b7\nimport FlowToken from 0x7e60df042a9c0868\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
-  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"0x{{testnetCustodyAccount}}"}]
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{testnetCustodyAccount}}"}]
 }
 
 
@@ -33,7 +33,7 @@ content-type: application/json
 
 {
   "code":"import FungibleToken from 0x9a0766d93b6608b7\nimport FlowToken from 0x7e60df042a9c0868\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
-  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"0x{{$dotenv ADMIN_ADDRESS}}"}]
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{$dotenv ADMIN_ADDRESS}}"}]
 }
 
 
@@ -46,7 +46,7 @@ content-type: application/json
 
 {
   "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
-  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"0x{{emulatorCustodyAccount}}"}]
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{emulatorCustodyAccount}}"}]
 }
 
 ### Transfer FLOW on emulator, custody account -> admin
@@ -55,7 +55,7 @@ content-type: application/json
 
 {
   "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
-  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"0x{{$dotenv ADMIN_ADDRESS}}"}]
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{$dotenv ADMIN_ADDRESS}}"}]
 }
 
 

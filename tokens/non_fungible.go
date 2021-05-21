@@ -17,7 +17,7 @@ type NftInfo struct {
 	Name        string
 }
 
-func SetupNFT(ctx context.Context, fc *client.Client, km keys.Manager, address string, n NftInfo) (*flow.TransactionResult, error) {
+func SetupNFT(ctx context.Context, fc *client.Client, km keys.Manager, address flow.Address, n NftInfo) (*flow.TransactionResult, error) {
 	serviceAuth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
 		return &flow.TransactionResult{}, err

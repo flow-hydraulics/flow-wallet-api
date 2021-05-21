@@ -14,7 +14,7 @@ components:
       properties:
         address:
           type: string
-          example: "f8d6e0586b0a20c7"
+          example: "0xf8d6e0586b0a20c7"
         createdAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
@@ -81,7 +81,7 @@ components:
       required: true
       schema:
         type: string
-        example: "f8d6e0586b0a20c7"
+        example: "0xf8d6e0586b0a20c7"
 
     jobId:
       name: jobId
