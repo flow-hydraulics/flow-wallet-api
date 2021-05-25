@@ -9,6 +9,7 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
@@ -67,7 +68,7 @@ func New(
 
 	t, err := transactions.New(
 		id,
-		transactions.CreateAccountTemplate,
+		templates.CreateAccount,
 		aa,
 		auth, auth, []keys.Authorizer{auth},
 	)

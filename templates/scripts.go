@@ -1,5 +1,8 @@
-import FungibleToken from <BaseTokenAddress>
-import FlowToken from <TokenAddress>
+package templates
+
+const GetFlowBalance = `
+import FungibleToken from FUNGIBLE_TOKEN_ADDRESS
+import FlowToken from FLOW_TOKEN_ADDRESS
 
 pub fun main(account: Address): UFix64 {
 
@@ -10,3 +13,4 @@ pub fun main(account: Address): UFix64 {
 
     return vaultRef.balance
 }
+`
