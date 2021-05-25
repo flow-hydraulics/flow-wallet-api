@@ -22,6 +22,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/basic"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
@@ -427,10 +428,7 @@ func TestTransactionHandlers(t *testing.T) {
 	router.Handle("/{address}/transactions", h.Create()).Methods(http.MethodPost)
 	router.Handle("/{address}/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
 
-	tFlow, err := tokens.ParseTransferFlowToken(cfg.ChainId)
-	if err != nil {
-		t.Fatal(err)
-	}
+	tFlow := templates.ParseCode(templates.TransferFlow, cfg.ChainId)
 
 	tFlowBytes, err := json.Marshal(tFlow)
 	if err != nil {
