@@ -1,11 +1,9 @@
 name: ci
 
-on: [push]
-
-# on:
-#   push:
-#     branches:
-#       - main
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   docker:
@@ -28,14 +26,33 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
+        name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      -
         name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: "./docker/wallet/Dockerfile"
+          file: ./docker/wallet/Dockerfile
           push: true
           tags: ghcr.io/eqlabs/flow-wallet-service:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
       -
         name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+
+        # Temp fix
+        # https://github.com/docker/build-push-action/issues/252
+        # https://github.com/moby/buildkit/issues/1896
+      -
+        name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
