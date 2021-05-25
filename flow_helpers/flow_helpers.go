@@ -3,8 +3,12 @@ package flow_helpers
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
@@ -46,4 +50,32 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (res
 	}
 
 	return result, nil
+}
+
+// ValidateAddress checks if the given address is valid in the current Flow network.
+func ValidateAddress(address string, chainId flow.ChainID) (err error) {
+	flowAddress := flow.HexToAddress(address)
+	if !flowAddress.IsValid(chainId) {
+		err = &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("not a valid address"),
+		}
+	}
+
+	return
+}
+
+func ValidateTransactionId(id string) error {
+	invalidErr := &errors.RequestError{
+		StatusCode: http.StatusBadRequest,
+		Err:        fmt.Errorf("not a valid transaction id"),
+	}
+	b, err := hex.DecodeString(id)
+	if err != nil {
+		return invalidErr
+	}
+	if id != flow.BytesToID(b).Hex() {
+		return invalidErr
+	}
+	return nil
 }

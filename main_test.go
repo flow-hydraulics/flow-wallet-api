@@ -22,7 +22,6 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
-	"github.com/eqlabs/flow-wallet-service/scripts"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
@@ -105,7 +104,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := accounts.ValidateAddress(account.Address, flow.Emulator); err != nil {
+		if err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 	})
@@ -134,7 +133,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := accounts.ValidateAddress(account.Address, flow.Emulator); err != nil {
+		if err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 
@@ -653,11 +652,11 @@ func TestScriptsHandlers(t *testing.T) {
 	}
 	defer fc.Close()
 
-	service := scripts.NewService(fc)
-	h := handlers.NewScripts(logger, service)
+	service := transactions.NewService(nil, nil, fc, nil)
+	h := handlers.NewTransactions(logger, service)
 
 	router := mux.NewRouter()
-	router.Handle("/", h.Execute()).Methods(http.MethodPost)
+	router.Handle("/", h.ExecuteScript()).Methods(http.MethodPost)
 
 	steps := []struct {
 		name        string

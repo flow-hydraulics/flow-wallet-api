@@ -2,7 +2,6 @@ package transactions
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
@@ -12,43 +11,68 @@ import (
 	"gorm.io/gorm"
 )
 
-type Transaction struct {
-	ID             int                     `json:"-" gorm:"primaryKey"`
-	AccountAddress string                  `json:"-" gorm:"index"`
-	TransactionId  string                  `json:"transactionId" gorm:"index"`
-	CreatedAt      time.Time               `json:"createdAt"`
-	UpdatedAt      time.Time               `json:"updatedAt"`
-	DeletedAt      gorm.DeletedAt          `json:"-" gorm:"index"`
-	Code           string                  `json:"-" gorm:"-"`
-	Arguments      []TransactionArg        `json:"-" gorm:"-"`
-	tx             *flow.Transaction       `json:"-" gorm:"-"`
-	result         *flow.TransactionResult `json:"-" gorm:"-"`
+// https://docs.onflow.org/cadence/json-cadence-spec/
+type Argument interface{}
+
+type Script struct {
+	Code      string     `json:"code" gorm:"-"`
+	Arguments []Argument `json:"arguments" gorm:"-"`
 }
 
-// https://docs.onflow.org/cadence/json-cadence-spec/
-type TransactionArg interface{}
+type Transaction struct {
+	Script
+	ID            int                     `json:"-" gorm:"primaryKey"`
+	PayerAddress  string                  `json:"-" gorm:"index"`
+	TransactionId string                  `json:"transactionId" gorm:"index"`
+	CreatedAt     time.Time               `json:"createdAt"`
+	UpdatedAt     time.Time               `json:"updatedAt"`
+	DeletedAt     gorm.DeletedAt          `json:"-" gorm:"index"`
+	Result        *flow.TransactionResult `json:"-" gorm:"-"`
+	flowTx        *flow.Transaction       `json:"-" gorm:"-"`
+}
 
 var EmptyTransaction Transaction = Transaction{}
 
+// Send the transaction to the network and wait for seal
+func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client) error {
+	err := t.Send(ctx, fc)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the transaction to be sealed
+	err = t.Wait(ctx, fc)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 // Send the transaction to the network
 func (t *Transaction) Send(ctx context.Context, fc *client.Client) error {
-	return fc.SendTransaction(ctx, *t.tx)
+	err := fc.SendTransaction(ctx, *t.flowTx)
+
+	// Set TransactionId
+	t.TransactionId = t.flowTx.ID().Hex()
+
+	return err
 }
 
 // Wait for the transaction to be sealed
 func (t *Transaction) Wait(ctx context.Context, fc *client.Client) error {
-	result, err := flow_helpers.WaitForSeal(ctx, fc, t.tx.ID())
+	result, err := flow_helpers.WaitForSeal(ctx, fc, t.flowTx.ID())
 	if err != nil {
 		return err
 	}
-	t.result = result
+	t.Result = result
 	return nil
 }
 
 func New(
 	referenceBlockID flow.Identifier,
 	code string,
-	args []TransactionArg,
+	args []Argument,
 	proposer, payer keys.Authorizer,
 	authorizers []keys.Authorizer) (*Transaction, error) {
 
@@ -61,12 +85,12 @@ func New(
 		SetPayer(payer.Address)
 
 	// Add arguments
-	for _, arg := range args {
-		jsonbytes, err := json.Marshal(arg)
+	for _, a := range args {
+		c, err := AsCadence(&a)
 		if err != nil {
 			return &EmptyTransaction, err
 		}
-		tx.AddRawArgument(jsonbytes)
+		tx.AddArgument(c)
 	}
 
 	// Add authorizers
@@ -91,9 +115,11 @@ func New(
 	}
 
 	return &Transaction{
-		AccountAddress: payer.Address.Hex(),
-		Code:           code,
-		Arguments:      args,
-		tx:             tx,
+		PayerAddress: payer.Address.Hex(),
+		Script: Script{
+			Code:      code,
+			Arguments: args,
+		},
+		flowTx: tx,
 	}, nil
 }

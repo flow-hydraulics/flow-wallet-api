@@ -1,4 +1,4 @@
-package accounts
+package flow_helpers
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-func TestAccountService(t *testing.T) {
+func TestValidateAddress(t *testing.T) {
 	t.Run("ValidateAddress", func(t *testing.T) {
 		if err := ValidateAddress("not-a-valid-address", flow.Emulator); err == nil {
 			t.Error("Expected an error")

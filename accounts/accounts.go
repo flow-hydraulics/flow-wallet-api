@@ -3,14 +3,16 @@ package accounts
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
-	"github.com/onflow/flow-go-sdk/templates"
 	"gorm.io/gorm"
 )
 
@@ -37,13 +39,13 @@ func New(
 	err error,
 ) {
 	// Get admin account authorizer
-	adminAuth, err := km.AdminAuthorizer(ctx)
+	auth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
 		return
 	}
 
 	// Get latest blocks id as reference id
-	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, fc)
+	id, err := flow_helpers.LatestBlockId(ctx, fc)
 	if err != nil {
 		return
 	}
@@ -55,37 +57,26 @@ func New(
 	}
 
 	// Destruct the wrapped key
-	publicKey := wrapped.AccountKey
+	accountKey := wrapped.AccountKey
 	newPrivateKey = wrapped.PrivateKey
 
-	// Setup a transaction to create an account
-	tx := templates.
-		CreateAccount([]*flow.AccountKey{publicKey}, nil, adminAuth.Address).
-		SetProposalKey(adminAuth.Address, adminAuth.Key.Index, adminAuth.Key.SequenceNumber).
-		SetReferenceBlockID(referenceBlockID).
-		SetPayer(adminAuth.Address)
+	aa := []transactions.Argument{
+		cadence.NewArray([]cadence.Value{
+			cadence.NewString(hex.EncodeToString(accountKey.Encode())),
+		})}
 
-	// Sign the transaction with the service account
-	err = tx.SignEnvelope(adminAuth.Address, adminAuth.Key.Index, adminAuth.Signer)
-	if err != nil {
-		return
-	}
+	t, err := transactions.New(
+		id,
+		transactions.CreateAccountTemplate,
+		aa,
+		auth, auth, []keys.Authorizer{auth},
+	)
 
-	// Send the transaction to the network
-	err = fc.SendTransaction(ctx, *tx)
-	if err != nil {
-		return
-	}
-
-	// Wait for the transaction to be sealed
-	result, err := flow_helpers.WaitForSeal(ctx, fc, tx.ID())
-	if err != nil {
-		return
-	}
+	t.SendAndWait(ctx, fc)
 
 	// Grab the new address from transaction events
 	var newAddress string
-	for _, event := range result.Events {
+	for _, event := range t.Result.Events {
 		if event.Type == flow.EventAccountCreated {
 			accountCreatedEvent := flow.AccountCreatedEvent(event)
 			newAddress = accountCreatedEvent.Address().Hex()

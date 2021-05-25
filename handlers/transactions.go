@@ -12,11 +12,6 @@ type Transactions struct {
 	service *transactions.Service
 }
 
-type CreateTransactionBody struct {
-	Code      string                        `json:"code"`
-	Arguments []transactions.TransactionArg `json:"arguments"`
-}
-
 // NewTransactions initiates a new transactions server.
 func NewTransactions(l *log.Logger, service *transactions.Service) *Transactions {
 	return &Transactions{l, service}
@@ -33,4 +28,9 @@ func (s *Transactions) Create() http.Handler {
 
 func (s *Transactions) Details() http.Handler {
 	return http.HandlerFunc(s.DetailsFunc)
+}
+
+func (s *Transactions) ExecuteScript() http.Handler {
+	h := http.HandlerFunc(s.ExecuteScriptFunc)
+	return UseJson(h)
 }

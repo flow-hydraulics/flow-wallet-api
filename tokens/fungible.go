@@ -5,6 +5,7 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -18,71 +19,37 @@ func TransferFlow(
 	senderAddress flow.Address,
 	amount string) (flow.Identifier, error) {
 
-	txStr, err := ParseTransferFlowToken(flow.Emulator)
+	code, err := ParseTransferFlowToken(flow.Emulator)
 	if err != nil {
 		return flow.EmptyID, err
 	}
 
-	senderAuthorizer, err := km.UserAuthorizer(ctx, senderAddress)
+	aa := make([]transactions.Argument, 2)
+
+	c_amount, err := cadence.NewUFix64(amount)
 	if err != nil {
 		return flow.EmptyID, err
 	}
 
-	tx, err := makeTransferTokensTx(recipientAddress, senderAddress, *senderAuthorizer.Key, amount, txStr)
+	aa[0] = c_amount
+	aa[1] = cadence.NewAddress(recipientAddress)
+
+	id, err := flow_helpers.LatestBlockId(context.Background(), fc)
 	if err != nil {
 		return flow.EmptyID, err
 	}
 
-	referenceBlockID, err := flow_helpers.LatestBlockId(context.Background(), fc)
+	auth, err := km.UserAuthorizer(ctx, senderAddress)
 	if err != nil {
 		return flow.EmptyID, err
 	}
 
-	tx.SetReferenceBlockID(referenceBlockID)
-
-	err = tx.SignEnvelope(senderAddress, senderAuthorizer.Key.Index, senderAuthorizer.Signer)
+	t, err := transactions.New(id, code, aa, auth, auth, []keys.Authorizer{auth})
 	if err != nil {
 		return flow.EmptyID, err
 	}
 
-	err = fc.SendTransaction(context.Background(), *tx)
-	if err != nil {
-		return flow.EmptyID, err
-	}
+	t.Send(ctx, fc)
 
-	return tx.ID(), nil
-}
-
-func makeTransferTokensTx(
-	recipientAddress flow.Address,
-	senderAddress flow.Address,
-	senderAccountKey flow.AccountKey,
-	amount string,
-	transferTemplate string) (*flow.Transaction, error) {
-
-	tx := flow.NewTransaction().
-		SetScript([]byte(transferTemplate)).
-		SetGasLimit(100).
-		SetPayer(senderAddress).
-		AddAuthorizer(senderAddress).
-		SetProposalKey(senderAddress, senderAccountKey.Index, senderAccountKey.SequenceNumber)
-
-	amountFixed, err := cadence.NewUFix64(amount)
-	if err != nil {
-		return &flow.Transaction{}, err
-	}
-
-	recipient := cadence.NewAddress(recipientAddress)
-
-	err = tx.AddArgument(amountFixed)
-	if err != nil {
-		return &flow.Transaction{}, err
-	}
-
-	err = tx.AddArgument(recipient)
-	if err != nil {
-		return &flow.Transaction{}, err
-	}
-
-	return tx, nil
+	return flow.HexToID(t.TransactionId), nil
 }
