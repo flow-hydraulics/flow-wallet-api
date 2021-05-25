@@ -21,7 +21,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/handlers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/eqlabs/flow-wallet-service/keys/simple"
+	"github.com/eqlabs/flow-wallet-service/keys/basic"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
@@ -90,7 +90,7 @@ func TestAccountServices(t *testing.T) {
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
-	km := simple.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
@@ -272,7 +272,7 @@ func TestAccountHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
-	km := simple.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
@@ -412,7 +412,7 @@ func TestTransactionHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
-	km := simple.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
