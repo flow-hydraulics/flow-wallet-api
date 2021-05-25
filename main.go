@@ -18,7 +18,6 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/simple"
-	"github.com/eqlabs/flow-wallet-service/scripts"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -112,7 +111,6 @@ func runServer() {
 	jobsService := jobs.NewService(jobStore)
 	accountService := accounts.NewService(accountStore, km, fc, wp)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	scriptsService := scripts.NewService(fc)
 
 	debugService := debug.Service{
 		RepoUrl:   "https://github.com/eqlabs/flow-wallet-service",
@@ -125,7 +123,6 @@ func runServer() {
 	jobsHandler := handlers.NewJobs(ls, jobsService)
 	accountsHandler := handlers.NewAccounts(ls, accountService)
 	transactions := handlers.NewTransactions(ls, transactionService)
-	scriptsHandler := handlers.NewScripts(ls, scriptsService)
 	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, km)
 
 	r := mux.NewRouter()
@@ -157,7 +154,7 @@ func runServer() {
 	}
 
 	// Scripts
-	rv.Handle("/scripts", scriptsHandler.Execute()).Methods(http.MethodPost) // create
+	rv.Handle("/scripts", transactions.ExecuteScript()).Methods(http.MethodPost) // create
 
 	// // Fungible tokens
 	// if !flgDisableFt {

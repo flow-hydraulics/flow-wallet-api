@@ -2,7 +2,6 @@ package transactions
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
@@ -38,7 +38,7 @@ func NewService(
 	return &Service{db, km, fc, wp, cfg}
 }
 
-func (s *Service) create(ctx context.Context, address flow.Address, code string, args []TransactionArg) (*Transaction, error) {
+func (s *Service) create(ctx context.Context, address flow.Address, code string, args []Argument) (*Transaction, error) {
 	id, err := flow_helpers.LatestBlockId(ctx, s.fc)
 	if err != nil {
 		return &EmptyTransaction, err
@@ -67,9 +67,6 @@ func (s *Service) create(ctx context.Context, address flow.Address, code string,
 		return t, err
 	}
 
-	// Set TransactionId
-	t.TransactionId = t.tx.ID().Hex()
-
 	// Insert to datastore
 	err = s.db.InsertTransaction(t)
 	if err != nil {
@@ -88,7 +85,7 @@ func (s *Service) create(ctx context.Context, address flow.Address, code string,
 	return t, err
 }
 
-func (s *Service) CreateSync(ctx context.Context, code string, args []TransactionArg, address string) (*Transaction, error) {
+func (s *Service) CreateSync(ctx context.Context, code string, args []Argument, address string) (*Transaction, error) {
 	var result *Transaction
 	var jobErr error
 	var createErr error
@@ -128,7 +125,7 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Transactio
 	return result, createErr
 }
 
-func (s *Service) CreateAsync(code string, args []TransactionArg, address string) (*jobs.Job, error) {
+func (s *Service) CreateAsync(code string, args []Argument, address string) (*jobs.Job, error) {
 	// Check if the input is a valid address
 	err := accounts.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -198,17 +195,17 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	return
 }
 
-func ValidateTransactionId(id string) error {
-	invalidErr := &errors.RequestError{
-		StatusCode: http.StatusBadRequest,
-		Err:        fmt.Errorf("not a valid transaction id"),
-	}
-	b, err := hex.DecodeString(id)
+// Execute a script
+func (s *Service) ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error) {
+	value, err := s.fc.ExecuteScriptAtLatestBlock(
+		ctx,
+		[]byte(code),
+		MustDecodeArgs(args),
+	)
+
 	if err != nil {
-		return invalidErr
+		return cadence.Void{}, err
 	}
-	if id != flow.BytesToID(b).Hex() {
-		return invalidErr
-	}
-	return nil
+
+	return value, err
 }
