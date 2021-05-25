@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eqlabs/flow-wallet-service/accounts"
 	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
@@ -92,7 +91,7 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Argument, 
 	var done bool = false
 
 	// Check if the input is a valid address
-	err := accounts.ValidateAddress(address, s.cfg.ChainId)
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +126,7 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Argument, 
 
 func (s *Service) CreateAsync(code string, args []Argument, address string) (*jobs.Job, error) {
 	// Check if the input is a valid address
-	err := accounts.ValidateAddress(address, s.cfg.ChainId)
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +156,7 @@ func (s *Service) CreateAsync(code string, args []Argument, address string) (*jo
 // List returns all transactions in the datastore for a given account.
 func (s *Service) List(address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
-	err := accounts.ValidateAddress(address, s.cfg.ChainId)
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return []Transaction{}, err
 	}
@@ -170,13 +169,13 @@ func (s *Service) List(address string, limit, offset int) ([]Transaction, error)
 // Details returns a specific transaction.
 func (s *Service) Details(address, transactionId string) (result Transaction, err error) {
 	// Check if the input is a valid address
-	err = accounts.ValidateAddress(address, s.cfg.ChainId)
+	err = flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return
 	}
 
 	// Check if the input is a valid transaction id
-	err = ValidateTransactionId(transactionId)
+	err = flow_helpers.ValidateTransactionId(transactionId)
 	if err != nil {
 		return
 	}

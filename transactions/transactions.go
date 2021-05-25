@@ -33,6 +33,22 @@ type Transaction struct {
 
 var EmptyTransaction Transaction = Transaction{}
 
+// Send the transaction to the network and wait for seal
+func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client) error {
+	err := t.Send(ctx, fc)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the transaction to be sealed
+	err = t.Wait(ctx, fc)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 // Send the transaction to the network
 func (t *Transaction) Send(ctx context.Context, fc *client.Client) error {
 	err := fc.SendTransaction(ctx, *t.flowTx)

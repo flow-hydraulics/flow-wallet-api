@@ -8,9 +8,9 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
+	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
@@ -132,7 +132,7 @@ func (s *Service) CreateAsync() (*jobs.Job, error) {
 // Details returns a specific account.
 func (s *Service) Details(address string) (result Account, err error) {
 	// Check if the input is a valid address
-	err = ValidateAddress(address, s.cfg.ChainId)
+	err = flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return
 	}
@@ -144,19 +144,6 @@ func (s *Service) Details(address string) (result Account, err error) {
 		err = &errors.RequestError{
 			StatusCode: http.StatusNotFound,
 			Err:        fmt.Errorf("account not found"),
-		}
-	}
-
-	return
-}
-
-// ValidateAddress checks if the given address is valid in the current Flow network.
-func ValidateAddress(address string, chainId flow.ChainID) (err error) {
-	flowAddress := flow.HexToAddress(address)
-	if !flowAddress.IsValid(chainId) {
-		err = &errors.RequestError{
-			StatusCode: http.StatusBadRequest,
-			Err:        fmt.Errorf("not a valid address"),
 		}
 	}
 

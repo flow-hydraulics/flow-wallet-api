@@ -1,18 +1,18 @@
 package transactions
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"net/http"
 
-	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/onflow/cadence"
 	c_json "github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/flow-go-sdk"
 )
 
 func AsCadence(a *Argument) (cadence.Value, error) {
+	c, ok := (*a).(cadence.Value)
+	if ok {
+		return c, nil
+	}
+
 	// Convert to json bytes so we can use cadence's own encoding library
 	j, err := json.Marshal(a)
 	if err != nil {
@@ -20,7 +20,7 @@ func AsCadence(a *Argument) (cadence.Value, error) {
 	}
 
 	// Use cadence's own encoding library
-	c, err := c_json.Decode(j)
+	c, err = c_json.Decode(j)
 	if err != nil {
 		return cadence.Void{}, err
 	}
@@ -40,19 +40,4 @@ func MustDecodeArgs(aa []Argument) []cadence.Value {
 	}
 
 	return cc
-}
-
-func ValidateTransactionId(id string) error {
-	invalidErr := &errors.RequestError{
-		StatusCode: http.StatusBadRequest,
-		Err:        fmt.Errorf("not a valid transaction id"),
-	}
-	b, err := hex.DecodeString(id)
-	if err != nil {
-		return invalidErr
-	}
-	if id != flow.BytesToID(b).Hex() {
-		return invalidErr
-	}
-	return nil
 }

@@ -104,7 +104,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := accounts.ValidateAddress(account.Address, flow.Emulator); err != nil {
+		if err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 	})
@@ -133,7 +133,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := accounts.ValidateAddress(account.Address, flow.Emulator); err != nil {
+		if err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 
