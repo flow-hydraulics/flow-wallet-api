@@ -1,5 +1,20 @@
-import FungibleToken from <BaseTokenAddress>
-import FlowToken from <TokenAddress>
+package templates
+
+const CreateAccount = `
+transaction(publicKeys: [String]) {
+	prepare(signer: AuthAccount) {
+		let acct = AuthAccount(payer: signer)
+
+		for key in publicKeys {
+			acct.addPublicKey(key.decodeHex())
+		}
+	}
+}
+`
+
+const TransferFlow = `
+import FungibleToken from FUNGIBLE_TOKEN_ADDRESS
+import FlowToken from FLOW_TOKEN_ADDRESS
 
 transaction(amount: UFix64, recipient: Address) {
   let sentVault: @FungibleToken.Vault
@@ -20,3 +35,4 @@ transaction(amount: UFix64, recipient: Address) {
     receiverRef.deposit(from: <-self.sentVault)
   }
 }
+`

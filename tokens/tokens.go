@@ -3,11 +3,10 @@
 package tokens
 
 import (
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"strings"
 
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/onflow/flow-go-sdk"
 )
 
@@ -16,62 +15,31 @@ func TemplatePath() string {
 	return filepath.Join("cadence")
 }
 
-func FungibleTokenContractAddress(chainId flow.ChainID) (string, error) {
-	switch chainId {
-	default:
-		return "", fmt.Errorf("FungibleToken address not found for '%s'", chainId)
-	case flow.Emulator:
-		return "0xee82856bf20e2aa6", nil
-	case flow.Testnet:
-		return "0x9a0766d93b6608b7", nil
-	case flow.Mainnet:
-		return "0xf233dcee88fe0abe", nil
-	}
-}
-
-func FlowTokenContractAddress(chainId flow.ChainID) (string, error) {
-	switch chainId {
-	default:
-		return "", fmt.Errorf("FlowToken address not found for '%s'", chainId)
-	case flow.Emulator:
-		return "0x0ae53cb6e3f42a79", nil
-	case flow.Testnet:
-		return "0x7e60df042a9c0868", nil
-	case flow.Mainnet:
-		return "0x1654653399040a61", nil
-	}
-}
-
-func ParseFlowTokenCode(filename string, chainId flow.ChainID) (string, error) {
-	p := filepath.Join(TemplatePath(), filename)
-
-	t, err := ioutil.ReadFile(p)
+func ParseCode(template string, chainId flow.ChainID) (string, error) {
+	a1, err := FungibleTokenContractAddress(chainId)
 	if err != nil {
 		return "", err
 	}
 
-	b, err := FungibleTokenContractAddress(chainId)
-	if err != nil {
-		return "", err
-	}
-
-	a, err := FlowTokenContractAddress(chainId)
+	a2, err := FlowTokenContractAddress(chainId)
 	if err != nil {
 		return "", err
 	}
 
 	r := strings.NewReplacer(
-		"<BaseTokenAddress>", b,
-		"<TokenAddress>", a,
+		"FUNGIBLE_TOKEN_ADDRESS", a1,
+		"FLOW_TOKEN_ADDRESS", a2,
 	)
 
-	return r.Replace(string(t)), nil
+	return r.Replace(template), nil
 }
 
 func ParseTransferFlowToken(chainId flow.ChainID) (string, error) {
-	return ParseFlowTokenCode(filepath.Join("transactions", "transfer_flow.cdc"), chainId)
+	t := templates.TransferFlow
+	return ParseCode(t, chainId)
 }
 
 func ParseGetFlowTokenBalance(chainId flow.ChainID) (string, error) {
-	return ParseFlowTokenCode(filepath.Join("scripts", "get_balance.cdc"), chainId)
+	t := templates.GetFlowBalance
+	return ParseCode(t, chainId)
 }
