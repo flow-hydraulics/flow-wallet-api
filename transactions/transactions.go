@@ -21,14 +21,14 @@ type Script struct {
 
 type Transaction struct {
 	Script
-	ID             int                     `json:"-" gorm:"primaryKey"`
-	AccountAddress string                  `json:"-" gorm:"index"`
-	TransactionId  string                  `json:"transactionId" gorm:"index"`
-	CreatedAt      time.Time               `json:"createdAt"`
-	UpdatedAt      time.Time               `json:"updatedAt"`
-	DeletedAt      gorm.DeletedAt          `json:"-" gorm:"index"`
-	Result         *flow.TransactionResult `json:"-" gorm:"-"`
-	flowTx         *flow.Transaction       `json:"-" gorm:"-"`
+	ID            int                     `json:"-" gorm:"primaryKey"`
+	PayerAddress  string                  `json:"-" gorm:"index"`
+	TransactionId string                  `json:"transactionId" gorm:"index"`
+	CreatedAt     time.Time               `json:"createdAt"`
+	UpdatedAt     time.Time               `json:"updatedAt"`
+	DeletedAt     gorm.DeletedAt          `json:"-" gorm:"index"`
+	Result        *flow.TransactionResult `json:"-" gorm:"-"`
+	flowTx        *flow.Transaction       `json:"-" gorm:"-"`
 }
 
 var EmptyTransaction Transaction = Transaction{}
@@ -115,7 +115,7 @@ func New(
 	}
 
 	return &Transaction{
-		AccountAddress: payer.Address.Hex(),
+		PayerAddress: payer.Address.Hex(),
 		Script: Script{
 			Code:      code,
 			Arguments: args,
