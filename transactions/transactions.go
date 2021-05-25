@@ -69,10 +69,6 @@ func (t *Transaction) Wait(ctx context.Context, fc *client.Client) error {
 	return nil
 }
 
-func (t *Transaction) SetReferenceBlockID(id flow.Identifier) {
-	t.flowTx.SetReferenceBlockID(id)
-}
-
 func New(
 	referenceBlockID flow.Identifier,
 	code string,
