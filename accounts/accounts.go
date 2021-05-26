@@ -70,6 +70,7 @@ func New(
 		id,
 		templates.CreateAccount,
 		aa,
+		transactions.General,
 		auth, auth, []keys.Authorizer{auth},
 	)
 

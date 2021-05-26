@@ -21,14 +21,15 @@ type Script struct {
 
 type Transaction struct {
 	Script
-	ID            int                     `json:"-" gorm:"primaryKey"`
-	PayerAddress  string                  `json:"-" gorm:"index"`
-	TransactionId string                  `json:"transactionId" gorm:"index"`
-	CreatedAt     time.Time               `json:"createdAt"`
-	UpdatedAt     time.Time               `json:"updatedAt"`
-	DeletedAt     gorm.DeletedAt          `json:"-" gorm:"index"`
-	Result        *flow.TransactionResult `json:"-" gorm:"-"`
-	flowTx        *flow.Transaction       `json:"-" gorm:"-"`
+	ID              int                     `json:"-" gorm:"primaryKey"`
+	PayerAddress    string                  `json:"-" gorm:"index"`
+	TransactionId   string                  `json:"transactionId" gorm:"index"`
+	TransactionType Type                    `json:"transactionType" gorm:"index"`
+	CreatedAt       time.Time               `json:"createdAt"`
+	UpdatedAt       time.Time               `json:"updatedAt"`
+	DeletedAt       gorm.DeletedAt          `json:"-" gorm:"index"`
+	Result          *flow.TransactionResult `json:"-" gorm:"-"`
+	flowTx          *flow.Transaction       `json:"-" gorm:"-"`
 }
 
 var EmptyTransaction Transaction = Transaction{}
@@ -73,6 +74,7 @@ func New(
 	referenceBlockID flow.Identifier,
 	code string,
 	args []Argument,
+	tType Type,
 	proposer, payer keys.Authorizer,
 	authorizers []keys.Authorizer) (*Transaction, error) {
 
@@ -120,6 +122,7 @@ func New(
 			Code:      code,
 			Arguments: args,
 		},
-		flowTx: tx,
+		TransactionType: tType,
+		flowTx:          tx,
 	}, nil
 }
