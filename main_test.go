@@ -90,6 +90,7 @@ func TestAccountServices(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
+	transactionStore := transactions.NewGormStore(db)
 
 	km := basic.NewKeyManager(keyStore, fc)
 
@@ -176,28 +177,11 @@ func TestAccountServices(t *testing.T) {
 		}
 
 		// Fund the account from service account
-		txId, err := tokens.TransferFlow(
+		_, err = tokens.TransferFlow(
 			ctx,
-			km,
-			fc,
-			flow.HexToAddress(job.Result),
-			flow.HexToAddress(os.Getenv("ADMIN_ADDRESS")),
-			"1.0",
-		)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = flow_helpers.WaitForSeal(context.Background(), fc, txId)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		txId, err = tokens.TransferFlow(
-			ctx,
-			km,
-			fc,
-			flow.HexToAddress(os.Getenv("ADMIN_ADDRESS")),
-			flow.HexToAddress(job.Result),
+			transactions.NewService(transactionStore, km, fc, nil),
+			job.Result,
+			os.Getenv("ADMIN_ADDRESS"),
 			"1.0",
 		)
 
@@ -205,13 +189,20 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if txId == flow.EmptyID {
+		tx, err := tokens.TransferFlow(
+			ctx,
+			transactions.NewService(transactionStore, km, fc, nil),
+			os.Getenv("ADMIN_ADDRESS"),
+			job.Result,
+			"1.0",
+		)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
 			t.Fatalf("Expected txId not to be empty")
-		}
-
-		_, err = flow_helpers.WaitForSeal(context.Background(), fc, txId)
-		if err != nil {
-			t.Fatal(err)
 		}
 	})
 
@@ -229,24 +220,18 @@ func TestAccountServices(t *testing.T) {
 			time.Sleep(10 * time.Millisecond)
 		}
 
-		txId, err := tokens.TransferFlow(
+		tx, err := tokens.TransferFlow(
 			ctx,
-			km,
-			fc,
-			flow.HexToAddress(os.Getenv("ADMIN_ADDRESS")),
-			flow.HexToAddress(job.Result),
+			transactions.NewService(transactionStore, km, fc, nil),
+			os.Getenv("ADMIN_ADDRESS"),
+			job.Result,
 			"1.0",
 		)
 
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if txId == flow.EmptyID {
+		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
 			t.Fatal("Expected txId not to be empty")
 		}
 
-		_, err = flow_helpers.WaitForSeal(context.Background(), fc, txId)
 		if err == nil {
 			t.Fatal("Expected an error")
 		}

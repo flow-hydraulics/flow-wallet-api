@@ -3,51 +3,35 @@ package tokens
 import (
 	"context"
 
-	"github.com/eqlabs/flow-wallet-service/flow_helpers"
-	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 )
 
 func TransferFlow(
 	ctx context.Context,
-	km keys.Manager,
-	fc *client.Client,
-	recipientAddress flow.Address,
-	senderAddress flow.Address,
-	amount string) (flow.Identifier, error) {
+	s *transactions.Service,
+	recipientAddress,
+	senderAddress,
+	amount string) (*transactions.Transaction, error) {
 
-	code := templates.ParseCode(templates.TransferFlow, flow.Emulator)
+	c := templates.ParseCode(templates.TransferFlow, flow.Emulator)
 
 	aa := make([]transactions.Argument, 2)
 
-	c_amount, err := cadence.NewUFix64(amount)
+	_amount, err := cadence.NewUFix64(amount)
 	if err != nil {
-		return flow.EmptyID, err
+		return &transactions.EmptyTransaction, err
 	}
 
-	aa[0] = c_amount
-	aa[1] = cadence.NewAddress(recipientAddress)
+	aa[0] = _amount
+	aa[1] = cadence.NewAddress(flow.HexToAddress(recipientAddress))
 
-	id, err := flow_helpers.LatestBlockId(context.Background(), fc)
+	t, err := s.Create(ctx, senderAddress, c, aa, transactions.Withdrawal)
 	if err != nil {
-		return flow.EmptyID, err
+		return t, err
 	}
 
-	auth, err := km.UserAuthorizer(ctx, senderAddress)
-	if err != nil {
-		return flow.EmptyID, err
-	}
-
-	t, err := transactions.New(id, code, aa, auth, auth, []keys.Authorizer{auth})
-	if err != nil {
-		return flow.EmptyID, err
-	}
-
-	t.Send(ctx, fc)
-
-	return flow.HexToID(t.TransactionId), nil
+	return t, nil
 }

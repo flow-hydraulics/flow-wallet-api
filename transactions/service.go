@@ -20,8 +20,8 @@ import (
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
 	db  Store
-	km  keys.Manager
-	fc  *client.Client
+	Km  keys.Manager
+	Fc  *client.Client
 	wp  *jobs.WorkerPool
 	cfg Config
 }
@@ -37,13 +37,19 @@ func NewService(
 	return &Service{db, km, fc, wp, cfg}
 }
 
-func (s *Service) create(ctx context.Context, address flow.Address, code string, args []Argument) (*Transaction, error) {
-	id, err := flow_helpers.LatestBlockId(ctx, s.fc)
+func (s *Service) Create(ctx context.Context, address, code string, args []Argument, tType Type) (*Transaction, error) {
+	// Check if the input is a valid address
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return &EmptyTransaction, err
 	}
 
-	a, err := s.km.UserAuthorizer(ctx, address)
+	id, err := flow_helpers.LatestBlockId(ctx, s.Fc)
+	if err != nil {
+		return &EmptyTransaction, err
+	}
+
+	a, err := s.Km.UserAuthorizer(ctx, flow.HexToAddress(address))
 	if err != nil {
 		return &EmptyTransaction, err
 	}
@@ -55,13 +61,13 @@ func (s *Service) create(ctx context.Context, address flow.Address, code string,
 		aa = append(aa, a)
 	}
 
-	t, err := New(id, code, args, a, a, aa)
+	t, err := New(id, code, args, tType, a, a, aa)
 	if err != nil {
 		return &EmptyTransaction, err
 	}
 
 	// Send the transaction
-	err = t.Send(ctx, s.fc)
+	err = t.Send(ctx, s.Fc)
 	if err != nil {
 		return t, err
 	}
@@ -73,7 +79,7 @@ func (s *Service) create(ctx context.Context, address flow.Address, code string,
 	}
 
 	// Wait for the transaction to be sealed
-	err = t.Wait(ctx, s.fc)
+	err = t.Wait(ctx, s.Fc)
 	if err != nil {
 		return t, err
 	}
@@ -84,20 +90,14 @@ func (s *Service) create(ctx context.Context, address flow.Address, code string,
 	return t, err
 }
 
-func (s *Service) CreateSync(ctx context.Context, code string, args []Argument, address string) (*Transaction, error) {
+func (s *Service) CreateSync(ctx context.Context, address, code string, args []Argument, tType Type) (*Transaction, error) {
 	var result *Transaction
 	var jobErr error
 	var createErr error
 	var done bool = false
 
-	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
-		return nil, err
-	}
-
 	_, jobErr = s.wp.AddJob(func() (string, error) {
-		result, createErr = s.create(context.Background(), flow.HexToAddress(address), code, args)
+		result, createErr = s.Create(context.Background(), address, code, args, tType)
 		done = true
 		if createErr != nil {
 			return "", createErr
@@ -124,15 +124,9 @@ func (s *Service) CreateSync(ctx context.Context, code string, args []Argument, 
 	return result, createErr
 }
 
-func (s *Service) CreateAsync(code string, args []Argument, address string) (*jobs.Job, error) {
-	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *Service) CreateAsync(address, code string, args []Argument, tType Type) (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
-		tx, err := s.create(context.Background(), flow.HexToAddress(address), code, args)
+		tx, err := s.Create(context.Background(), address, code, args, tType)
 		if err != nil {
 			return "", err
 		}
@@ -196,7 +190,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 
 // Execute a script
 func (s *Service) ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error) {
-	value, err := s.fc.ExecuteScriptAtLatestBlock(
+	value, err := s.Fc.ExecuteScriptAtLatestBlock(
 		ctx,
 		[]byte(code),
 		MustDecodeArgs(args),
