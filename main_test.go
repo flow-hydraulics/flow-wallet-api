@@ -413,7 +413,7 @@ func TestTransactionHandlers(t *testing.T) {
 	router.Handle("/{address}/transactions", h.Create()).Methods(http.MethodPost)
 	router.Handle("/{address}/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
 
-	tFlow := templates.ParseCode(templates.TransferFlow, cfg.ChainId)
+	tFlow := templates.ParseCode(cfg.ChainId, templates.TransferFlow)
 
 	tFlowBytes, err := json.Marshal(tFlow)
 	if err != nil {

@@ -9,14 +9,20 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-func TransferFlow(
+func createFTWithdrawal(
 	ctx context.Context,
 	s *transactions.Service,
 	recipientAddress,
 	senderAddress,
-	amount string) (*transactions.Transaction, error) {
-
-	c := templates.ParseCode(templates.TransferFlow, flow.Emulator)
+	amount,
+	TokenName, TOKEN_NAME, tokenName,
+	baseAddress, tokenAddress string,
+) (*transactions.Transaction, error) {
+	c := templates.ParseGenericFungibleTransfer(
+		flow.Emulator,
+		TokenName, TOKEN_NAME, tokenName,
+		baseAddress, tokenAddress,
+	)
 
 	aa := make([]transactions.Argument, 2)
 
@@ -34,4 +40,32 @@ func TransferFlow(
 	}
 
 	return t, nil
+}
+
+func TransferFlow(
+	ctx context.Context,
+	s *transactions.Service,
+	recipientAddress,
+	senderAddress,
+	amount string,
+) (*transactions.Transaction, error) {
+	return createFTWithdrawal(
+		ctx, s, recipientAddress, senderAddress, amount,
+		"FlowToken", "FLOW_TOKEN", "flowToken",
+		"", "",
+	)
+}
+
+func TransferFUSD(
+	ctx context.Context,
+	s *transactions.Service,
+	recipientAddress,
+	senderAddress,
+	amount string,
+) (*transactions.Transaction, error) {
+	return createFTWithdrawal(
+		ctx, s, recipientAddress, senderAddress, amount,
+		"FUSD", "FUSD", "fusd",
+		"", "",
+	)
 }
