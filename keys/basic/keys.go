@@ -1,5 +1,5 @@
-// Package simple provides straightforward implementation for key management.
-package simple
+// Package basic provides straightforward implementation for key management.
+package basic
 
 import (
 	"context"
@@ -48,6 +48,8 @@ func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 
 func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.Wrapped, error) {
 	switch s.cfg.DefaultKeyType {
+	default:
+		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyType)
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		return local.Generate(
 			keyIndex, weight,
@@ -55,8 +57,6 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.W
 			crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo))
 	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
 		return google.Generate(ctx, keyIndex, weight)
-	default:
-		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyType)
 	}
 }
 
@@ -127,6 +127,8 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 	// TODO: Decide whether we want to allow this kind of flexibility
 	// or should we just panic if `key.Type` != `s.defaultKeyManager`
 	switch k.Type {
+	default:
+		return keys.Authorizer{}, fmt.Errorf("key.Type not recognised: %s", k.Type)
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		sig, err = local.Signer(k)
 		if err != nil {
@@ -137,8 +139,6 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 		if err != nil {
 			return keys.Authorizer{}, err
 		}
-	default:
-		return keys.Authorizer{}, fmt.Errorf("key.Type not recognised: %s", k.Type)
 	}
 
 	return keys.Authorizer{

@@ -33,14 +33,14 @@ func ParseConfig() (cfg Config) {
 
 	var d gorm.Dialector
 	switch cfg.DatabaseType {
+	default:
+		panic(fmt.Sprintf("database type '%s' not supported", cfg.DatabaseType))
 	case DATABASE_TYPE_POSTGRESQL:
 		d = postgres.Open(cfg.DatabaseDSN)
 	case DATABASE_TYPE_MYSQL:
 		d = mysql.Open(cfg.DatabaseDSN)
 	case DATABASE_TYPE_SQLITE:
 		d = sqlite.Open(cfg.DatabaseDSN)
-	default:
-		panic(fmt.Sprintf("database type '%s' not supported", cfg.DatabaseType))
 	}
 
 	cfg.Dialector = d

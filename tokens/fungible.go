@@ -5,6 +5,7 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
@@ -19,10 +20,7 @@ func TransferFlow(
 	senderAddress flow.Address,
 	amount string) (flow.Identifier, error) {
 
-	code, err := ParseTransferFlowToken(flow.Emulator)
-	if err != nil {
-		return flow.EmptyID, err
-	}
+	code := templates.ParseCode(templates.TransferFlow, flow.Emulator)
 
 	aa := make([]transactions.Argument, 2)
 

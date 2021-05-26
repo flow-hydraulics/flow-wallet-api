@@ -17,7 +17,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/handlers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/eqlabs/flow-wallet-service/keys/simple"
+	"github.com/eqlabs/flow-wallet-service/keys/basic"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -105,7 +105,7 @@ func runServer() {
 	wp.AddWorker(100) // Add a worker with capacity of 100
 
 	// Key manager
-	km := simple.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(keyStore, fc)
 
 	// Services
 	jobsService := jobs.NewService(jobStore)
