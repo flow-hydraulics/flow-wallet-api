@@ -53,6 +53,52 @@ func (tl *TestLogger) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+type httpTestStep struct {
+	name        string
+	method      string
+	body        io.Reader
+	contentType string
+	url         string
+	expected    string
+	status      int
+	sync        bool
+}
+
+func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.ResponseRecorder {
+	req, err := http.NewRequest(s.method, s.url, s.body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.contentType != "" {
+		req.Header.Set("content-type", "application/json")
+	}
+
+	if s.sync {
+		req.Header.Set(handlers.SYNC_HEADER, "go ahead")
+	}
+
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+
+	status := rr.Code
+	// Check the status code is what we expect.
+	if status != s.status {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, s.status)
+	}
+
+	// Check the response body is what we expect.
+	re := regexp.MustCompile(s.expected)
+	match := re.FindString(rr.Body.String())
+	if match == "" {
+		t.Errorf("handler returned unexpected body: got %q want %v", rr.Body.String(), re)
+	}
+
+	return rr
+}
+
 func TestMain(m *testing.M) {
 	godotenv.Load(".env.test")
 
@@ -90,7 +136,6 @@ func TestAccountServices(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
 
 	km := basic.NewKeyManager(keyStore, fc)
 
@@ -156,84 +201,6 @@ func TestAccountServices(t *testing.T) {
 		}
 		if err3 == nil {
 			t.Error("expected 503 'max capacity reached, try again later' but got no error")
-		}
-	})
-
-	// Sleep a moment to allow job queue to empty
-	time.Sleep(100 * time.Millisecond)
-
-	t.Run("account can make a transaction", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		job, err := service.CreateAsync()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Wait for the job to complete
-		for job.Status == jobs.Accepted {
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		// Fund the account from service account
-		_, err = tokens.TransferFlow(
-			ctx,
-			transactions.NewService(transactionStore, km, fc, nil),
-			job.Result,
-			os.Getenv("ADMIN_ADDRESS"),
-			"1.0",
-		)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		tx, err := tokens.TransferFlow(
-			ctx,
-			transactions.NewService(transactionStore, km, fc, nil),
-			os.Getenv("ADMIN_ADDRESS"),
-			job.Result,
-			"1.0",
-		)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
-			t.Fatalf("Expected txId not to be empty")
-		}
-	})
-
-	t.Run("account can not make a transaction without funds", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		job, err := service.CreateAsync()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Wait for the job to complete
-		for job.Status == jobs.Accepted {
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		tx, err := tokens.TransferFlow(
-			ctx,
-			transactions.NewService(transactionStore, km, fc, nil),
-			os.Getenv("ADMIN_ADDRESS"),
-			job.Result,
-			"1.0",
-		)
-
-		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
-			t.Fatal("Expected txId not to be empty")
-		}
-
-		if err == nil {
-			t.Fatal("Expected an error")
 		}
 	})
 }
@@ -711,6 +678,189 @@ func TestScriptsHandlers(t *testing.T) {
 			if match == "" {
 				t.Errorf("handler returned unexpected body: got %q want %v", rr.Body.String(), re)
 			}
+		})
+	}
+}
+
+func TestTokenServices(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fc.Close()
+
+	db, err := gorm.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(testDbDSN)
+	defer gorm.Close(db)
+
+	jobStore := jobs.NewGormStore(db)
+	accountStore := accounts.NewGormStore(db)
+	keyStore := keys.NewGormStore(db)
+	transactionStore := transactions.NewGormStore(db)
+
+	km := basic.NewKeyManager(keyStore, fc)
+
+	wp := jobs.NewWorkerPool(nil, jobStore)
+	defer wp.Stop()
+	wp.AddWorker(1)
+
+	accountService := accounts.NewService(accountStore, km, fc, wp)
+	transactionService := transactions.NewService(transactionStore, km, fc, wp)
+	service := tokens.NewService(transactionService)
+
+	t.Run("account can make a transaction", func(t *testing.T) {
+		// Create an account
+		account, err := accountService.CreateSync(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Fund the account from service account
+		_, err = service.CreateFtWithdrawalSync(
+			context.Background(),
+			"flow-token",
+			os.Getenv("ADMIN_ADDRESS"),
+			account.Address,
+			"1.0",
+		)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tx, err := service.CreateFtWithdrawalSync(
+			context.Background(),
+			"flow-token",
+			account.Address,
+			os.Getenv("ADMIN_ADDRESS"),
+			"1.0",
+		)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
+			t.Fatalf("Expected txId not to be empty")
+		}
+	})
+
+	t.Run("account can not make a transaction without funds", func(t *testing.T) {
+		// Create an account
+		account, err := accountService.CreateSync(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tx, err := service.CreateFtWithdrawalSync(
+			context.Background(),
+			"flow-token",
+			account.Address,
+			os.Getenv("ADMIN_ADDRESS"),
+			"1.0",
+		)
+
+		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
+			t.Fatal("Expected txId not to be empty")
+		}
+
+		if err == nil {
+			t.Fatal("Expected an error")
+		}
+	})
+}
+
+func TestTokenHandlers(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fc.Close()
+
+	db, err := gorm.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(testDbDSN)
+	defer gorm.Close(db)
+
+	jobStore := jobs.NewGormStore(db)
+	accountStore := accounts.NewGormStore(db)
+	keyStore := keys.NewGormStore(db)
+	transactionStore := transactions.NewGormStore(db)
+
+	km := basic.NewKeyManager(keyStore, fc)
+
+	wp := jobs.NewWorkerPool(nil, jobStore)
+	defer wp.Stop()
+	wp.AddWorker(1)
+
+	accountService := accounts.NewService(accountStore, km, fc, wp)
+	transactionService := transactions.NewService(transactionStore, km, fc, wp)
+	service := tokens.NewService(transactionService)
+
+	h := handlers.NewFungibleTokens(logger, service)
+
+	router := mux.NewRouter()
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", h.CreateWithdrawal()).Methods(http.MethodPost)
+
+	account, err := accountService.CreateSync(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	createWithdrawalSteps := []httpTestStep{
+		{
+			name:        "HTTP POST CreateWithdrawal FlowToken valid async",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/flow-token/withdrawals", os.Getenv("ADMIN_ADDRESS")),
+			expected:    `.*"jobId":".+".*`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "HTTP POST CreateWithdrawal FlowToken valid sync",
+			sync:        true,
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/flow-token/withdrawals", os.Getenv("ADMIN_ADDRESS")),
+			expected:    `.*"transactionId":".+".*`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "HTTP POST CreateWithdrawal FlowToken invalid recipient",
+			method:      http.MethodPost,
+			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/flow-token/withdrawals", os.Getenv("ADMIN_ADDRESS")),
+			expected:    "not a valid address",
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "HTTP POST CreateWithdrawal FlowToken invalid amount",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, account.Address)),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/flow-token/withdrawals", os.Getenv("ADMIN_ADDRESS")),
+			expected:    "missing decimal point",
+			status:      http.StatusBadRequest,
+		},
+	}
+
+	for _, s := range createWithdrawalSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
 		})
 	}
 }

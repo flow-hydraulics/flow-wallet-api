@@ -7,11 +7,33 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
+func TestParseName(t *testing.T) {
+	n := parseName("FUSD")
+	if n != [3]string{"FUSD", "FUSD", "fusd"} {
+		t.Error("invalid output for FUSD")
+	}
+
+	n = parseName("fusd")
+	if n != [3]string{"FUSD", "FUSD", "fusd"} {
+		t.Error("invalid output for fusd")
+	}
+
+	n = parseName("FlowToken")
+	if n != [3]string{"FlowToken", "FLOW_TOKEN", "flowToken"} {
+		t.Error("invalid output for FlowToken")
+	}
+
+	n = parseName("flow-token")
+	if n != [3]string{"FlowToken", "FLOW_TOKEN", "flowToken"} {
+		t.Error("invalid output for flow-token")
+	}
+}
+
 func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
 			flow.Emulator,
-			"FlowToken", "FLOW_TOKEN", "flowToken",
+			"FlowToken",
 			"", "",
 		)
 
@@ -25,8 +47,8 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken with non-standard addresses", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
 			flow.Emulator,
-			"FlowToken", "FLOW_TOKEN", "flowToken",
-			"some_other_baseaddress", "some_other_tokenaddress",
+			"FlowToken",
+			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
 		c := ParseCode(flow.Emulator, TransferFlow)
@@ -47,7 +69,7 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FUSD", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
 			flow.Emulator,
-			"FUSD", "FUSD", "fusd",
+			"FUSD",
 			"", "",
 		)
 
@@ -61,8 +83,8 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FUSD with non-standard addresses", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
 			flow.Emulator,
-			"FUSD", "FUSD", "fusd",
-			"some_other_baseaddress", "some_other_tokenaddress",
+			"FUSD",
+			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
 		c := ParseCode(flow.Emulator, TransferFlow)

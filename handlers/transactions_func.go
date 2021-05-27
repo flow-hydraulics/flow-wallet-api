@@ -48,10 +48,10 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var t transactions.Transaction
+	var b CreateTransactionRequest
 
 	// Try to decode the request body into the struct.
-	err = json.NewDecoder(r.Body).Decode(&t)
+	err = json.NewDecoder(r.Body).Decode(&b)
 	if err != nil {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
@@ -67,13 +67,13 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 		res, err = s.service.CreateSync(
 			r.Context(),
 			vars["address"],
-			t.Code, t.Arguments,
+			b.Code, b.Arguments,
 			transactions.General,
 		)
 	} else {
 		res, err = s.service.CreateAsync(
 			vars["address"],
-			t.Code, t.Arguments,
+			b.Code, b.Arguments,
 			transactions.General,
 		)
 	}
@@ -111,10 +111,10 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var t transactions.Script
+	var b CreateTransactionRequest
 
 	// Try to decode the request body into the struct.
-	err = json.NewDecoder(r.Body).Decode(&t)
+	err = json.NewDecoder(r.Body).Decode(&b)
 	if err != nil {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
@@ -124,7 +124,7 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	res, err := s.service.ExecuteScript(r.Context(), t.Code, t.Arguments)
+	res, err := s.service.ExecuteScript(r.Context(), b.Code, b.Arguments)
 
 	if err != nil {
 		handleError(rw, s.log, err)

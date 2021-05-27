@@ -18,6 +18,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/basic"
+	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -67,12 +68,12 @@ func runServer() {
 
 	var (
 		flgDisableRawTx bool
-		// flgDisableFt     bool
+		flgDisableFt    bool
 		// flgDisableNft    bool
 	)
 
-	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable sending raw transactions for an account")
-	// flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token functionality")
+	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable raw transactions api")
+	flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token api")
 	// flag.BoolVar(&flgDisableNft, "disable-nft", false, "disable non-fungible token functionality")
 	flag.Parse()
 
@@ -102,6 +103,7 @@ func runServer() {
 
 	// Create a worker pool
 	wp := jobs.NewWorkerPool(lj, jobStore)
+	// TODO: make this configurable
 	wp.AddWorker(100) // Add a worker with capacity of 100
 
 	// Key manager
@@ -111,6 +113,7 @@ func runServer() {
 	jobsService := jobs.NewService(jobStore)
 	accountService := accounts.NewService(accountStore, km, fc, wp)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
+	tokenService := tokens.NewService(transactionService)
 
 	debugService := debug.Service{
 		RepoUrl:   "https://github.com/eqlabs/flow-wallet-service",
@@ -123,7 +126,7 @@ func runServer() {
 	jobsHandler := handlers.NewJobs(ls, jobsService)
 	accountsHandler := handlers.NewAccounts(ls, accountService)
 	transactions := handlers.NewTransactions(ls, transactionService)
-	// fungibleTokens := handlers.NewFungibleTokens(l, fc, db, km)
+	fungibleTokens := handlers.NewFungibleTokens(ls, tokenService)
 
 	r := mux.NewRouter()
 
@@ -156,16 +159,15 @@ func runServer() {
 	// Scripts
 	rv.Handle("/scripts", transactions.ExecuteScript()).Methods(http.MethodPost) // create
 
-	// // Fungible tokens
-	// if !flgDisableFt {
-	// 	// Handle "/accounts/{address}/fungible-tokens"
-	// 	rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
-	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Details).Methods(http.MethodGet)
-	// 	rft.HandleFunc("/{tokenName}", fungibleTokens.Init).Methods(http.MethodPost)
-	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods(http.MethodGet)
-	// 	rft.HandleFunc("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal).Methods(http.MethodPost)
-	// 	rft.HandleFunc("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods(http.MethodGet)
-	// }
+	// Fungible tokens
+	if !flgDisableFt {
+		// Handle "/accounts/{address}/fungible-tokens"
+		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
+		// rft.Handle("/{tokenName}", fungibleTokens.Details).Methods(http.MethodGet)
+		// rft.Handle("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal()).Methods(http.MethodPost)
+		// rft.Handle("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods(http.MethodGet)
+	}
 
 	// TODO: nfts
 
