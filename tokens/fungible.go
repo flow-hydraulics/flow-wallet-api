@@ -15,13 +15,13 @@ func createFTWithdrawal(
 	recipientAddress,
 	senderAddress,
 	amount,
-	TokenName, TOKEN_NAME, tokenName,
-	baseAddress, tokenAddress string,
+	tokenName string,
+	addresses ...string,
 ) (*transactions.Transaction, error) {
 	c := templates.ParseGenericFungibleTransfer(
 		flow.Emulator,
-		TokenName, TOKEN_NAME, tokenName,
-		baseAddress, tokenAddress,
+		tokenName,
+		addresses...,
 	)
 
 	aa := make([]transactions.Argument, 2)
@@ -51,8 +51,7 @@ func TransferFlow(
 ) (*transactions.Transaction, error) {
 	return createFTWithdrawal(
 		ctx, s, recipientAddress, senderAddress, amount,
-		"FlowToken", "FLOW_TOKEN", "flowToken",
-		"", "",
+		"FlowToken",
 	)
 }
 
@@ -65,7 +64,6 @@ func TransferFUSD(
 ) (*transactions.Transaction, error) {
 	return createFTWithdrawal(
 		ctx, s, recipientAddress, senderAddress, amount,
-		"FUSD", "FUSD", "fusd",
-		"", "",
+		"FUSD",
 	)
 }
