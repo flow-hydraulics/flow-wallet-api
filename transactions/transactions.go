@@ -15,8 +15,8 @@ import (
 type Argument interface{}
 
 type Script struct {
-	Code      string     `json:"code" gorm:"-"`
-	Arguments []Argument `json:"arguments" gorm:"-"`
+	Code      string     `json:"-" gorm:"-"`
+	Arguments []Argument `json:"-" gorm:"-"`
 }
 
 type Transaction struct {
@@ -32,6 +32,7 @@ type Transaction struct {
 	flowTx          *flow.Transaction       `json:"-" gorm:"-"`
 }
 
+var EmptyArguments []Argument = []Argument{}
 var EmptyTransaction Transaction = Transaction{}
 
 // Send the transaction to the network and wait for seal

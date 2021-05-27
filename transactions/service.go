@@ -37,7 +37,7 @@ func NewService(
 	return &Service{db, km, fc, wp, cfg}
 }
 
-func (s *Service) Create(ctx context.Context, address, code string, args []Argument, tType Type) (*Transaction, error) {
+func (s *Service) create(ctx context.Context, address, code string, args []Argument, tType Type) (*Transaction, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -97,7 +97,7 @@ func (s *Service) CreateSync(ctx context.Context, address, code string, args []A
 	var done bool = false
 
 	_, jobErr = s.wp.AddJob(func() (string, error) {
-		result, createErr = s.Create(context.Background(), address, code, args, tType)
+		result, createErr = s.create(context.Background(), address, code, args, tType)
 		done = true
 		if createErr != nil {
 			return "", createErr
@@ -126,7 +126,7 @@ func (s *Service) CreateSync(ctx context.Context, address, code string, args []A
 
 func (s *Service) CreateAsync(address, code string, args []Argument, tType Type) (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
-		tx, err := s.Create(context.Background(), address, code, args, tType)
+		tx, err := s.create(context.Background(), address, code, args, tType)
 		if err != nil {
 			return "", err
 		}
