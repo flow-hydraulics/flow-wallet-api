@@ -138,7 +138,7 @@ func (s *Service) Details(address string) (result Account, err error) {
 	}
 
 	// Get from datastore
-	result, err = s.db.Account(address)
+	result, err = s.db.Account(flow_helpers.HexString(address))
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{

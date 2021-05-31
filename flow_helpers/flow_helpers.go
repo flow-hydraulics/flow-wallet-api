@@ -6,12 +6,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
+
+const hexPrefix = "0x"
+
+func HexString(str string) string {
+	if strings.HasPrefix(str, hexPrefix) {
+		return str
+	}
+	return fmt.Sprintf("%s%s", hexPrefix, str)
+}
 
 // LatestBlockId retuns the flow.Identifier for the latest block in the chain.
 func LatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, error) {
@@ -53,16 +63,20 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (res
 }
 
 // ValidateAddress checks if the given address is valid in the current Flow network.
-func ValidateAddress(address string, chainId flow.ChainID) (err error) {
+func ValidateAddress(address string, chainId flow.ChainID) error {
 	flowAddress := flow.HexToAddress(address)
 	if !flowAddress.IsValid(chainId) {
-		err = &errors.RequestError{
+		err := &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("not a valid address"),
 		}
+		return err
 	}
+	return nil
+}
 
-	return
+func FormatAddress(address flow.Address) string {
+	return HexString(address.Hex())
 }
 
 func ValidateTransactionId(id string) error {

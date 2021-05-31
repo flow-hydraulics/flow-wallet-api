@@ -77,22 +77,22 @@ func New(
 	t.SendAndWait(ctx, fc)
 
 	// Grab the new address from transaction events
-	var newAddress string
+	var newAddress flow.Address
 	for _, event := range t.Result.Events {
 		if event.Type == flow.EventAccountCreated {
 			accountCreatedEvent := flow.AccountCreatedEvent(event)
-			newAddress = accountCreatedEvent.Address().Hex()
+			newAddress = accountCreatedEvent.Address()
 			break
 		}
 	}
 
 	// Check that we actually got a new address
-	if newAddress == (flow.Address{}.Hex()) {
+	if newAddress == flow.EmptyAddress {
 		err = fmt.Errorf("something went wrong when waiting for address")
 		return
 	}
 
-	newAccount.Address = fmt.Sprintf("0x%s", newAddress)
+	newAccount.Address = flow_helpers.FormatAddress(newAddress)
 
 	return
 }
