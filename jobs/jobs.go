@@ -39,6 +39,19 @@ func (j *Job) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
+func (j *Job) Wait(wait bool) error {
+	if wait {
+		// Wait for the job to have finished
+		for j.Status == Accepted {
+			time.Sleep(10 * time.Millisecond)
+		}
+		if j.Status == Error {
+			return fmt.Errorf(j.Error)
+		}
+	}
+	return nil
+}
+
 func NewWorkerPool(l *log.Logger, db Store) *WorkerPool {
 	return &WorkerPool{l, &sync.WaitGroup{}, []*Worker{}, db}
 }
