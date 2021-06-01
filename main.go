@@ -173,6 +173,7 @@ func runServer() {
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
 		// rft.Handle("/{tokenName}", fungibleTokens.Details).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}", fungibleTokens.Setup()).Methods(http.MethodPost)
 		// rft.Handle("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal()).Methods(http.MethodPost)
 		// rft.Handle("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods(http.MethodGet)

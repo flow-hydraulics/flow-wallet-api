@@ -18,7 +18,8 @@ func init() {
 	}
 
 	t["FUSD_ADDRESS"] = chainAddresses{
-		flow.Testnet: "0xe223d8a629e49c68",
+		flow.Emulator: "0xf8d6e0586b0a20c7",
+		flow.Testnet:  "0xe223d8a629e49c68",
 	}
 
 	replacers = makeChainReplacers(t)

@@ -68,13 +68,13 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 			r.Context(),
 			vars["address"],
 			b.Code, b.Arguments,
-			transactions.General,
+			transactions.Raw,
 		)
 	} else {
 		res, err = s.service.CreateAsync(
 			vars["address"],
 			b.Code, b.Arguments,
-			transactions.General,
+			transactions.Raw,
 		)
 	}
 

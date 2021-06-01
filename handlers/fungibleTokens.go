@@ -25,3 +25,8 @@ func (s *FungibleTokens) CreateWithdrawal() http.Handler {
 	h := http.HandlerFunc(s.CreateWithdrawalFunc)
 	return UseJson(h)
 }
+
+func (s *FungibleTokens) Setup() http.Handler {
+	h := http.HandlerFunc(s.SetupFunc)
+	return UseJson(h)
+}

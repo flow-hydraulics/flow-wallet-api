@@ -32,12 +32,12 @@ func TestParseName(t *testing.T) {
 func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
-			flow.Emulator,
 			"FlowToken",
+			flow.Emulator,
 			"", "",
 		)
 
-		c := ParseCode(flow.Emulator, TransferFlow)
+		c := ParseCode(TransferFlow, flow.Emulator)
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -46,12 +46,12 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 
 	t.Run("FlowToken with non-standard addresses", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
-			flow.Emulator,
 			"FlowToken",
+			flow.Emulator,
 			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
-		c := ParseCode(flow.Emulator, TransferFlow)
+		c := ParseCode(TransferFlow, flow.Emulator)
 
 		if g == c {
 			t.Error("expected outputs not to equal")
@@ -68,12 +68,12 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 
 	t.Run("FUSD", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
-			flow.Emulator,
 			"FUSD",
+			flow.Emulator,
 			"", "",
 		)
 
-		c := ParseCode(flow.Emulator, TransferFUSD)
+		c := ParseCode(TransferFUSD, flow.Emulator)
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -82,12 +82,12 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 
 	t.Run("FUSD with non-standard addresses", func(t *testing.T) {
 		g := ParseGenericFungibleTransfer(
-			flow.Emulator,
 			"FUSD",
+			flow.Emulator,
 			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
-		c := ParseCode(flow.Emulator, TransferFlow)
+		c := ParseCode(TransferFlow, flow.Emulator)
 
 		if g == c {
 			t.Error("expected outputs not to equal")

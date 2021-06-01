@@ -1,0 +1,9 @@
+@emulatorCustodyAccount = 0x01cf0e2f2f715450
+@tokenName = fusd
+
+#######################################################################
+# EMULATOR (ensure .env is set accordingly - ACCESS_API_HOST etc)
+
+### Setup FUSD on emulator for custody account
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/{{ tokenName }} HTTP/1.1
+content-type: application/json
