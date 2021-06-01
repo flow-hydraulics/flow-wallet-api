@@ -153,7 +153,7 @@ func TestAccountServices(t *testing.T) {
 	service := accounts.NewService(accountStore, km, fc, wp)
 
 	t.Run("sync create", func(t *testing.T) {
-		account, err := service.CreateSync(context.Background())
+		_, account, err := service.Create(context.Background(), true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -164,7 +164,7 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("async create", func(t *testing.T) {
-		job, err := service.CreateAsync()
+		job, _, err := service.Create(context.Background(), false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -197,9 +197,9 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("async create thrice", func(t *testing.T) {
-		_, err1 := service.CreateAsync() // Goes immediately to processing
-		_, err2 := service.CreateAsync() // Queues - queue now full
-		_, err3 := service.CreateAsync() // Should not fit
+		_, _, err1 := service.Create(context.Background(), false) // Goes immediately to processing
+		_, _, err2 := service.Create(context.Background(), false) // Queues - queue now full
+		_, _, err3 := service.Create(context.Background(), false) // Should not fit
 		if err1 != nil {
 			t.Error(err1)
 		}
@@ -723,7 +723,7 @@ func TestTokenServices(t *testing.T) {
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
-		account, err := accountService.CreateSync(context.Background())
+		_, account, err := accountService.Create(context.Background(), true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -760,7 +760,7 @@ func TestTokenServices(t *testing.T) {
 
 	t.Run("account can not make a transaction without funds", func(t *testing.T) {
 		// Create an account
-		account, err := accountService.CreateSync(context.Background())
+		_, account, err := accountService.Create(context.Background(), true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -820,7 +820,7 @@ func TestTokenHandlers(t *testing.T) {
 	router := mux.NewRouter()
 	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", h.CreateWithdrawal()).Methods(http.MethodPost)
 
-	account, err := accountService.CreateSync(context.Background())
+	_, account, err := accountService.Create(context.Background(), true)
 	if err != nil {
 		t.Fatal(err)
 	}

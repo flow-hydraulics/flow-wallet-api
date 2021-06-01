@@ -43,76 +43,37 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // Create calls account.New to generate a new account.
 // It receives a new account with a corresponding private key or resource ID
 // and stores both in datastore.
-func (s *Service) create(ctx context.Context) (*Account, error) {
-	account, key, err := New(ctx, s.fc, s.km)
-	if err != nil {
-		return nil, err
-	}
+// It returns a job, the new account and a possible error.
+func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error) {
+	var account *Account
 
-	// Convert the key to storable form (encrypt it)
-	accountKey, err := s.km.Save(key)
-	if err != nil {
-		return nil, err
-	}
-
-	// Store account and key
-	account.Keys = []keys.Storable{accountKey}
-	err = s.db.InsertAccount(&account)
-	if err != nil {
-		return nil, err
-	}
-
-	return &account, nil
-}
-
-// CreateSync calls service.create asynchronously.
-// It creates a job but waits for its completion. This allows synchronous
-// request/response while still using job queueing to allow only one admin key.
-// It returns the new account.
-func (s *Service) CreateSync(ctx context.Context) (*Account, error) {
-	var result *Account
-	var jobErr error
-	var createErr error
-	var done bool = false
-
-	_, jobErr = s.wp.AddJob(func() (string, error) {
-		result, createErr = s.create(context.Background())
-		done = true
-		if createErr != nil {
-			return "", createErr
-		}
-		return result.Address, nil
-	})
-
-	if jobErr != nil {
-		_, isJErr := jobErr.(*errors.JobQueueFull)
-		if isJErr {
-			jobErr = &errors.RequestError{
-				StatusCode: http.StatusServiceUnavailable,
-				Err:        fmt.Errorf("max capacity reached, try again later"),
-			}
-		}
-		return nil, jobErr
-	}
-
-	// Wait for the job to have finished
-	for !done {
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	return result, createErr
-}
-
-// CreateAsync calls service.create asynchronously.
-// It creates a job and returns it. This allows us to respond with a job id
-// which the client can use to poll for the results later.
-func (s *Service) CreateAsync() (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
-		account, err := s.create(context.Background())
+		c := ctx
+		if !sync {
+			c = context.Background()
+		}
+
+		a, key, err := New(c, s.fc, s.km)
 		if err != nil {
 			return "", err
 		}
-		return account.Address, nil
+
+		// Convert the key to storable form (encrypt it)
+		accountKey, err := s.km.Save(key)
+		if err != nil {
+			return "", err
+		}
+
+		// Store account and key
+		a.Keys = []keys.Storable{accountKey}
+		err = s.db.InsertAccount(&a)
+		if err != nil {
+			return "", err
+		}
+
+		account = &a
+
+		return a.Address, nil
 	})
 
 	if err != nil {
@@ -123,10 +84,20 @@ func (s *Service) CreateAsync() (*jobs.Job, error) {
 				Err:        fmt.Errorf("max capacity reached, try again later"),
 			}
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
-	return job, nil
+	if sync {
+		// Wait for the job to have finished
+		for job.Status == jobs.Accepted {
+			time.Sleep(10 * time.Millisecond)
+		}
+		if job.Status == jobs.Error {
+			return nil, nil, fmt.Errorf(job.Result)
+		}
+	}
+
+	return job, account, nil
 }
 
 // Details returns a specific account.
