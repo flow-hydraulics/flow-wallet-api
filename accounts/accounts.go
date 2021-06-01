@@ -73,8 +73,14 @@ func New(
 		transactions.General,
 		auth, auth, []keys.Authorizer{auth},
 	)
+	if err != nil {
+		return
+	}
 
-	t.SendAndWait(ctx, fc)
+	err = t.SendAndWait(ctx, fc)
+	if err != nil {
+		return
+	}
 
 	// Grab the new address from transaction events
 	var newAddress flow.Address
