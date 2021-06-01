@@ -62,20 +62,13 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	// Decide whether to serve sync or async, default async
+	sync := r.Header.Get(SYNC_HEADER) != ""
+	job, t, err := s.service.Create(r.Context(), sync, vars["address"], b.Code, b.Arguments, transactions.Raw)
 	var res interface{}
-	if us := r.Header.Get(SYNC_HEADER); us != "" {
-		res, err = s.service.CreateSync(
-			r.Context(),
-			vars["address"],
-			b.Code, b.Arguments,
-			transactions.Raw,
-		)
+	if sync {
+		res = t
 	} else {
-		res, err = s.service.CreateAsync(
-			vars["address"],
-			b.Code, b.Arguments,
-			transactions.Raw,
-		)
+		res = job
 	}
 
 	if err != nil {

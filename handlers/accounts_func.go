@@ -32,8 +32,6 @@ func (s *Accounts) ListFunc(rw http.ResponseWriter, r *http.Request) {
 // Create creates a new account asynchronously.
 // It returns a Job JSON representation.
 func (s *Accounts) CreateFunc(rw http.ResponseWriter, r *http.Request) {
-	var err error
-
 	// Decide whether to serve sync or async, default async
 	sync := r.Header.Get(SYNC_HEADER) != ""
 	job, acc, err := s.service.Create(r.Context(), sync)

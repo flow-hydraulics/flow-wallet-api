@@ -2,7 +2,6 @@ package tokens
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/transactions"
@@ -23,15 +22,17 @@ func (s *Service) CreateFtWithdrawalSync(ctx context.Context, tokenName, sender,
 	if err != nil {
 		return &transactions.EmptyTransaction, err
 	}
-	return s.ts.CreateSync(ctx, sender, code, args, transactions.FtWithdrawal)
+	_, t, err := s.ts.Create(ctx, true, sender, code, args, transactions.FtWithdrawal)
+	return t, err
 }
 
-func (s *Service) CreateFtWithdrawalAsync(tokenName, sender, recipient, amount string) (*jobs.Job, error) {
+func (s *Service) CreateFtWithdrawalAsync(ctx context.Context, tokenName, sender, recipient, amount string) (*jobs.Job, error) {
 	code, args, err := parseFtWithdrawal(tokenName, recipient, amount, s.cfg.ChainId)
 	if err != nil {
 		return &jobs.Job{}, err
 	}
-	return s.ts.CreateAsync(sender, code, args, transactions.FtWithdrawal)
+	j, _, err := s.ts.Create(ctx, false, sender, code, args, transactions.FtWithdrawal)
+	return j, err
 }
 
 func (s *Service) SetupFtForAccountSync(ctx context.Context, tokenName, address string) (*transactions.Transaction, error) {
@@ -39,14 +40,15 @@ func (s *Service) SetupFtForAccountSync(ctx context.Context, tokenName, address 
 	if err != nil {
 		return &transactions.EmptyTransaction, err
 	}
-	return s.ts.CreateSync(ctx, address, code, args, transactions.FtWithdrawal)
+	_, t, err := s.ts.Create(ctx, true, address, code, args, transactions.FtWithdrawal)
+	return t, err
 }
 
-func (s *Service) SetupFtForAccountAsync(tokenName, address string) (*jobs.Job, error) {
+func (s *Service) SetupFtForAccountAsync(ctx context.Context, tokenName, address string) (*jobs.Job, error) {
 	code, args, err := parseFtSetup(tokenName, s.cfg.ChainId)
 	if err != nil {
 		return &jobs.Job{}, err
 	}
-	fmt.Println(code, args)
-	return s.ts.CreateAsync(address, code, args, transactions.FtWithdrawal)
+	j, _, err := s.ts.Create(ctx, false, address, code, args, transactions.FtWithdrawal)
+	return j, err
 }

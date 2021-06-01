@@ -39,7 +39,7 @@ func (s *FungibleTokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Re
 	if sh := r.Header.Get(SYNC_HEADER); sh != "" {
 		res, err = s.service.CreateFtWithdrawalSync(r.Context(), token, sender, b.Recipient, b.Amount)
 	} else {
-		res, err = s.service.CreateFtWithdrawalAsync(token, sender, b.Recipient, b.Amount)
+		res, err = s.service.CreateFtWithdrawalAsync(r.Context(), token, sender, b.Recipient, b.Amount)
 	}
 
 	if err != nil {
@@ -62,7 +62,7 @@ func (s *FungibleTokens) SetupFunc(rw http.ResponseWriter, r *http.Request) {
 	if sh := r.Header.Get(SYNC_HEADER); sh != "" {
 		res, err = s.service.SetupFtForAccountSync(r.Context(), token, account)
 	} else {
-		res, err = s.service.SetupFtForAccountAsync(token, account)
+		res, err = s.service.SetupFtForAccountAsync(r.Context(), token, account)
 	}
 
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
@@ -44,19 +43,21 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // It receives a new account with a corresponding private key or resource ID
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
-func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error) {
+func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, error) {
 	var account *Account
 
 	job, err := s.wp.AddJob(func() (string, error) {
-		c := ctx
+		ctx := c
 		if !sync {
-			c = context.Background()
+			ctx = context.Background()
 		}
 
-		a, key, err := New(c, s.fc, s.km)
+		a, key, err := New(ctx, s.fc, s.km)
 		if err != nil {
 			return "", err
 		}
+
+		account = &a
 
 		// Convert the key to storable form (encrypt it)
 		accountKey, err := s.km.Save(key)
@@ -70,8 +71,6 @@ func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, e
 		if err != nil {
 			return "", err
 		}
-
-		account = &a
 
 		return a.Address, nil
 	})
@@ -87,17 +86,9 @@ func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, e
 		return nil, nil, err
 	}
 
-	if sync {
-		// Wait for the job to have finished
-		for job.Status == jobs.Accepted {
-			time.Sleep(10 * time.Millisecond)
-		}
-		if job.Status == jobs.Error {
-			return nil, nil, fmt.Errorf(job.Result)
-		}
-	}
+	err = job.Wait(sync)
 
-	return job, account, nil
+	return job, account, err
 }
 
 // Details returns a specific account.
