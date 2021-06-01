@@ -17,38 +17,18 @@ func NewService(ts *transactions.Service) *Service {
 	return &Service{ts, cfg}
 }
 
-func (s *Service) CreateFtWithdrawalSync(ctx context.Context, tokenName, sender, recipient, amount string) (*transactions.Transaction, error) {
+func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, tokenName, sender, recipient, amount string) (*jobs.Job, *transactions.Transaction, error) {
 	code, args, err := parseFtWithdrawal(tokenName, recipient, amount, s.cfg.ChainId)
 	if err != nil {
-		return &transactions.EmptyTransaction, err
+		return nil, nil, err
 	}
-	_, t, err := s.ts.Create(ctx, true, sender, code, args, transactions.FtWithdrawal)
-	return t, err
+	return s.ts.Create(ctx, sync, sender, code, args, transactions.FtWithdrawal)
 }
 
-func (s *Service) CreateFtWithdrawalAsync(ctx context.Context, tokenName, sender, recipient, amount string) (*jobs.Job, error) {
-	code, args, err := parseFtWithdrawal(tokenName, recipient, amount, s.cfg.ChainId)
-	if err != nil {
-		return &jobs.Job{}, err
-	}
-	j, _, err := s.ts.Create(ctx, false, sender, code, args, transactions.FtWithdrawal)
-	return j, err
-}
-
-func (s *Service) SetupFtForAccountSync(ctx context.Context, tokenName, address string) (*transactions.Transaction, error) {
+func (s *Service) SetupFtForAccount(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	code, args, err := parseFtSetup(tokenName, s.cfg.ChainId)
 	if err != nil {
-		return &transactions.EmptyTransaction, err
+		return nil, nil, err
 	}
-	_, t, err := s.ts.Create(ctx, true, address, code, args, transactions.FtWithdrawal)
-	return t, err
-}
-
-func (s *Service) SetupFtForAccountAsync(ctx context.Context, tokenName, address string) (*jobs.Job, error) {
-	code, args, err := parseFtSetup(tokenName, s.cfg.ChainId)
-	if err != nil {
-		return &jobs.Job{}, err
-	}
-	j, _, err := s.ts.Create(ctx, false, address, code, args, transactions.FtWithdrawal)
-	return j, err
+	return s.ts.Create(ctx, sync, address, code, args, transactions.FtWithdrawal)
 }

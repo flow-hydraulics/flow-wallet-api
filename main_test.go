@@ -729,8 +729,9 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Fund the account from service account
-		_, err = service.CreateFtWithdrawalSync(
+		_, _, err = service.CreateFtWithdrawal(
 			context.Background(),
+			true,
 			"flow-token",
 			os.Getenv("ADMIN_ADDRESS"),
 			account.Address,
@@ -741,8 +742,9 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tx, err := service.CreateFtWithdrawalSync(
+		_, tx, err := service.CreateFtWithdrawal(
 			context.Background(),
+			true,
 			"flow-token",
 			account.Address,
 			os.Getenv("ADMIN_ADDRESS"),
@@ -765,8 +767,9 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tx, err := service.CreateFtWithdrawalSync(
+		_, tx, err := service.CreateFtWithdrawal(
 			context.Background(),
+			true,
 			"flow-token",
 			account.Address,
 			os.Getenv("ADMIN_ADDRESS"),
