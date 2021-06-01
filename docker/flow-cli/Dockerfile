@@ -1,5 +1,5 @@
 FROM alpine:latest
-ARG VERSION=0.20.2
+ARG VERSION=0.21.0
 ARG UNAME=appuser
 ARG GNAME=appgroup
 ARG UID=1000
