@@ -1,0 +1,5 @@
+@jobId = 00000000-0000-0000-0000-000000000000
+
+### Get job status
+GET http://localhost:3000/v1/jobs/{{ jobId }} HTTP/1.1
+content-type: application/json

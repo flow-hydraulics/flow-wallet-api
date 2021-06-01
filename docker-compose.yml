@@ -2,20 +2,20 @@ version: "3.9"
 services:
   db:
     image: postgres:13-alpine
-    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
       POSTGRES_PASSWORD: postgres
 
   emulator:
-    build:
-      context: ./docker/flow-cli
-    restart: unless-stopped
+    container_name: flow-emulator
+    image: flow-cli:0.21.0
+    command: emulator -v
     ports:
       - "3569:3569"
       - "8080:8080"
-    command: emulator -v
+    volumes:
+      - "./:/app"
     environment:
       - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256

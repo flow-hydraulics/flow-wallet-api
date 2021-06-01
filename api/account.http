@@ -1,3 +1,5 @@
+@accountAddress = 0x0000000000000000
+
 ### Get a list of accounts
 GET http://localhost:3000/v1/accounts?limit=0&offset=0 HTTP/1.1
 content-type: application/json
@@ -15,10 +17,5 @@ use-sync: what-ever-non-empty
 
 
 ### Get account details
-GET http://localhost:3000/v1/accounts/0xaaaabbbbccccdddd HTTP/1.1
-content-type: application/json
-
-
-### Get job status
-GET http://localhost:3000/v1/jobs/00000000-0000-0000-0000-000000000000 HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{ accountAddress }} HTTP/1.1
 content-type: application/json
