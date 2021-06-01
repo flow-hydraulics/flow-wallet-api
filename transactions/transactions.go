@@ -93,7 +93,10 @@ func New(
 		if err != nil {
 			return &EmptyTransaction, err
 		}
-		tx.AddArgument(c)
+		err = tx.AddArgument(c)
+		if err != nil {
+			return &EmptyTransaction, err
+		}
 	}
 
 	// Add authorizers

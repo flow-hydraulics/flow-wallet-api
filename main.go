@@ -38,7 +38,10 @@ type Config struct {
 }
 
 func main() {
-	godotenv.Load(".env")
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Println("WARNING: Could not load environment variables from file; ", err)
+	}
 
 	var (
 		flgVersion   bool
@@ -87,7 +90,13 @@ func runServer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer fc.Close()
+	defer func() {
+		log.Println("Closing Flow Client..")
+		err := fc.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	// Database
 	db, err := gorm.New()
@@ -209,5 +218,8 @@ func runServer() {
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
-	srv.Shutdown(ctx)
+	err = srv.Shutdown(ctx)
+	if err != nil {
+		log.Fatal("Error in server shutdown; ", err)
+	}
 }
