@@ -118,7 +118,7 @@ func New(
 	}
 
 	return &Transaction{
-		PayerAddress: payer.Address.Hex(),
+		PayerAddress: flow_helpers.FormatAddress(payer.Address),
 		Script: Script{
 			Code:      code,
 			Arguments: args,

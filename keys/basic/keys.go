@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/encryption"
 	"github.com/eqlabs/flow-wallet-service/keys/google"
@@ -107,7 +108,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 		k = s.adminAccountKey
 	} else {
 		// Get the "least recently used" key for this address
-		sk, err := s.db.AccountKey(fmt.Sprintf("0x%s", address.Hex()))
+		sk, err := s.db.AccountKey(flow_helpers.FormatAddress(address))
 		if err != nil {
 			return keys.Authorizer{}, err
 		}

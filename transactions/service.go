@@ -157,7 +157,7 @@ func (s *Service) List(address string, limit, offset int) ([]Transaction, error)
 
 	o := datastore.ParseListOptions(limit, offset)
 
-	return s.db.Transactions(address, o)
+	return s.db.Transactions(flow_helpers.HexString(address), o)
 }
 
 // Details returns a specific transaction.
@@ -175,7 +175,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	}
 
 	// Get from datastore
-	result, err = s.db.Transaction(address, transactionId)
+	result, err = s.db.Transaction(flow_helpers.HexString(address), transactionId)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
