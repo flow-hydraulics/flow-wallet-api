@@ -9,12 +9,11 @@ import (
 )
 
 func parseFtWithdrawal(
-	chainId flow.ChainID,
+	tokenName,
 	recipientAddress,
-	amount,
-	tokenName string,
-	contractAddresses ...string,
-) (string, []transactions.Argument, error) {
+	amount string,
+	chainId flow.ChainID,
+	contractAddresses ...string) (string, []transactions.Argument, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(recipientAddress, chainId)
 	if err != nil {
@@ -22,8 +21,8 @@ func parseFtWithdrawal(
 	}
 
 	c := templates.ParseGenericFungibleTransfer(
-		chainId,
 		tokenName,
+		chainId,
 		contractAddresses...,
 	)
 
@@ -38,4 +37,16 @@ func parseFtWithdrawal(
 	aa[1] = cadence.NewAddress(flow.HexToAddress(recipientAddress))
 
 	return c, aa, nil
+}
+
+func parseFtSetup(
+	tokenName string,
+	chainId flow.ChainID,
+	contractAddresses ...string) (string, []transactions.Argument, error) {
+	c := templates.ParseGenericFungibleSetup(
+		tokenName,
+		chainId,
+		contractAddresses...,
+	)
+	return c, []transactions.Argument{}, nil
 }

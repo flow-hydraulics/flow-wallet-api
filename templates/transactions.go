@@ -26,6 +26,34 @@ transaction(amount: UFix64, recipient: Address) {
 }
 `
 
+const GenericFungibleSetup = `
+import FungibleToken from FUNGIBLE_TOKEN_ADDRESS
+import TokenName from TOKEN_NAME_ADDRESS
+
+transaction {
+  prepare(signer: AuthAccount) {
+
+    let existingVault = signer.borrow<&TokenName.Vault>(from: /storage/tokenNameVault)
+
+    if (existingVault != nil) {
+        return
+    }
+
+    signer.save(<-TokenName.createEmptyVault(), to: /storage/tokenNameVault)
+
+    signer.link<&TokenName.Vault{FungibleToken.Receiver}>(
+      /public/tokenNameReceiver,
+      target: /storage/tokenNameVault
+    )
+
+    signer.link<&TokenName.Vault{FungibleToken.Balance}>(
+      /public/tokenNameBalance,
+      target: /storage/tokenNameVault
+    )
+  }
+}
+`
+
 const CreateAccount = `
 transaction(publicKeys: [String]) {
 	prepare(signer: AuthAccount) {
@@ -86,6 +114,34 @@ transaction(amount: UFix64, recipient: Address) {
       ?? panic("failed to borrow reference to recipient vault")
 
     receiverRef.deposit(from: <-self.sentVault)
+  }
+}
+`
+
+const SetupFUSD = `
+import FungibleToken from FUNGIBLE_TOKEN_ADDRESS
+import FUSD from FUSD_ADDRESS
+
+transaction {
+  prepare(signer: AuthAccount) {
+
+    let existingVault = signer.borrow<&FUSD.Vault>(from: /storage/fusdVault)
+
+    if (existingVault != nil) {
+        return
+    }
+
+    signer.save(<-FUSD.createEmptyVault(), to: /storage/fusdVault)
+
+    signer.link<&FUSD.Vault{FungibleToken.Receiver}>(
+      /public/fusdReceiver,
+      target: /storage/fusdVault
+    )
+
+    signer.link<&FUSD.Vault{FungibleToken.Balance}>(
+      /public/fusdBalance,
+      target: /storage/fusdVault
+    )
   }
 }
 `

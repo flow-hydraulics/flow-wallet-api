@@ -2,7 +2,6 @@ version: "3.9"
 services:
   db:
     image: postgres:13-alpine
-    restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: postgres
 
@@ -10,7 +9,6 @@ services:
     build:
       context: .
       dockerfile: ./docker/wallet/Dockerfile
-    restart: unless-stopped
     ports:
       - "3000:3000"
     env_file:

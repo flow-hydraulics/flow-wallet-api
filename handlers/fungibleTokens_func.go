@@ -35,16 +35,36 @@ func (s *FungibleTokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Re
 	token := vars["tokenName"]
 
 	// Decide whether to serve sync or async, default async
+	sync := r.Header.Get(SYNC_HEADER) != ""
+	job, t, err := s.service.CreateFtWithdrawal(r.Context(), sync, token, sender, b.Recipient, b.Amount)
 	var res interface{}
-	if sh := r.Header.Get(SYNC_HEADER); sh != "" {
-		res, err = s.service.CreateFtWithdrawalSync(
-			r.Context(),
-			token, sender, b.Recipient, b.Amount,
-		)
+	if sync {
+		res = t
 	} else {
-		res, err = s.service.CreateFtWithdrawalAsync(
-			token, sender, b.Recipient, b.Amount,
-		)
+		res = job
+	}
+
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusCreated, res)
+}
+
+func (s *FungibleTokens) SetupFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	account := vars["address"]
+	token := vars["tokenName"]
+
+	// Decide whether to serve sync or async, default async
+	sync := r.Header.Get(SYNC_HEADER) != ""
+	job, t, err := s.service.SetupFtForAccount(r.Context(), sync, token, account)
+	var res interface{}
+	if sync {
+		res = t
+	} else {
+		res = job
 	}
 
 	if err != nil {

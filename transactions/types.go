@@ -7,8 +7,13 @@ type Type int
 
 const (
 	Unknown Type = iota
-	General
-	Withdrawal
+	Raw
+	FtSetup
+	FtDeposit
+	FtWithdrawal
+	NftSetup
+	NftDeposit
+	NftWithdrawal
 )
 
 func (s Type) MarshalText() ([]byte, error) {
@@ -25,8 +30,18 @@ func StatusFromText(text string) Type {
 	default:
 		return Unknown
 	case "general":
-		return General
-	case "withdrawal":
-		return Withdrawal
+		return Raw
+	case "ftsetup":
+		return FtSetup
+	case "ftdeposit":
+		return FtDeposit
+	case "ftwithdrawal":
+		return FtWithdrawal
+	case "nftsetup":
+		return NftSetup
+	case "nftdeposit":
+		return NftDeposit
+	case "nftwithdrawal":
+		return NftWithdrawal
 	}
 }

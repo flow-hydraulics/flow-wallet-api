@@ -47,16 +47,12 @@ func parseName(name string) [3]string {
 	}
 }
 
-func ParseCode(chainId flow.ChainID, template string) string {
+func ParseCode(template string, chainId flow.ChainID) string {
 	r := replacers[chainId]
 	return r.Replace(template)
 }
 
-func ParseGenericFungibleTransfer(
-	chainId flow.ChainID,
-	tokenName string,
-	addresses ...string,
-) string {
+func ParseGenericFungibleTemplate(t, tokenName string, chainId flow.ChainID, addresses ...string) string {
 	p := parseName(tokenName)
 	camel := p[0]
 	snake := p[1]
@@ -68,7 +64,7 @@ func ParseGenericFungibleTransfer(
 		"tokenName", lower,
 	)
 
-	t := r.Replace(GenericFungibleTransfer)
+	t = r.Replace(t)
 
 	// Replace token address
 	if len(addresses) >= 1 && addresses[0] != "" {
@@ -86,5 +82,23 @@ func ParseGenericFungibleTransfer(
 		t = r.Replace(t)
 	}
 
-	return ParseCode(chainId, t)
+	return ParseCode(t, chainId)
+}
+
+func ParseGenericFungibleTransfer(tokenName string, chainId flow.ChainID, addresses ...string) string {
+	return ParseGenericFungibleTemplate(
+		GenericFungibleTransfer,
+		tokenName,
+		chainId,
+		addresses...,
+	)
+}
+
+func ParseGenericFungibleSetup(tokenName string, chainId flow.ChainID, addresses ...string) string {
+	return ParseGenericFungibleTemplate(
+		GenericFungibleSetup,
+		tokenName,
+		chainId,
+		addresses...,
+	)
 }

@@ -70,7 +70,7 @@ func New(
 		id,
 		templates.CreateAccount,
 		aa,
-		transactions.General,
+		transactions.Raw,
 		auth, auth, []keys.Authorizer{auth},
 	)
 	if err != nil {

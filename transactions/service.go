@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
@@ -37,100 +36,67 @@ func NewService(
 	return &Service{db, km, fc, wp, cfg}
 }
 
-func (s *Service) create(ctx context.Context, address, code string, args []Argument, tType Type) (*Transaction, error) {
-	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
-		return &EmptyTransaction, err
-	}
+func (s *Service) Create(c context.Context, sync bool, address, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error) {
+	var transaction *Transaction
 
-	id, err := flow_helpers.LatestBlockId(ctx, s.Fc)
-	if err != nil {
-		return &EmptyTransaction, err
-	}
-
-	a, err := s.Km.UserAuthorizer(ctx, flow.HexToAddress(address))
-	if err != nil {
-		return &EmptyTransaction, err
-	}
-
-	var aa []keys.Authorizer
-
-	// Check if we need to add this account as an authorizer
-	if strings.Contains(code, ": AuthAccount") {
-		aa = append(aa, a)
-	}
-
-	t, err := New(id, code, args, tType, a, a, aa)
-	if err != nil {
-		return &EmptyTransaction, err
-	}
-
-	// Send the transaction
-	err = t.Send(ctx, s.Fc)
-	if err != nil {
-		return t, err
-	}
-
-	// Insert to datastore
-	err = s.db.InsertTransaction(t)
-	if err != nil {
-		return t, err
-	}
-
-	// Wait for the transaction to be sealed
-	err = t.Wait(ctx, s.Fc)
-	if err != nil {
-		return t, err
-	}
-
-	// Update in datastore
-	err = s.db.UpdateTransaction(t)
-
-	return t, err
-}
-
-func (s *Service) CreateSync(ctx context.Context, address, code string, args []Argument, tType Type) (*Transaction, error) {
-	var result *Transaction
-	var jobErr error
-	var createErr error
-	var done bool = false
-
-	_, jobErr = s.wp.AddJob(func() (string, error) {
-		result, createErr = s.create(context.Background(), address, code, args, tType)
-		done = true
-		if createErr != nil {
-			return "", createErr
-		}
-		return result.TransactionId, nil
-	})
-
-	if jobErr != nil {
-		_, isJErr := jobErr.(*errors.JobQueueFull)
-		if isJErr {
-			jobErr = &errors.RequestError{
-				StatusCode: http.StatusServiceUnavailable,
-				Err:        fmt.Errorf("max capacity reached, try again later"),
-			}
-		}
-		return nil, jobErr
-	}
-
-	// Wait for the job to have finished
-	for !done {
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	return result, createErr
-}
-
-func (s *Service) CreateAsync(address, code string, args []Argument, tType Type) (*jobs.Job, error) {
 	job, err := s.wp.AddJob(func() (string, error) {
-		tx, err := s.create(context.Background(), address, code, args, tType)
+		ctx := c
+		if !sync {
+			ctx = context.Background()
+		}
+
+		// Check if the input is a valid address
+		err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 		if err != nil {
 			return "", err
 		}
-		return tx.TransactionId, nil
+
+		id, err := flow_helpers.LatestBlockId(ctx, s.Fc)
+		if err != nil {
+			return "", err
+		}
+
+		a, err := s.Km.UserAuthorizer(ctx, flow.HexToAddress(address))
+		if err != nil {
+			return "", err
+		}
+
+		var aa []keys.Authorizer
+
+		// Check if we need to add this account as an authorizer
+		if strings.Contains(code, ": AuthAccount") {
+			aa = append(aa, a)
+		}
+
+		t, err := New(id, code, args, tType, a, a, aa)
+		if err != nil {
+			return "", err
+		}
+
+		transaction = t
+
+		// Send the transaction
+		err = t.Send(ctx, s.Fc)
+		if err != nil {
+			return "", err
+		}
+
+		// Insert to datastore
+		err = s.db.InsertTransaction(t)
+		if err != nil {
+			return "", err
+		}
+
+		// Wait for the transaction to be sealed
+		err = t.Wait(ctx, s.Fc)
+		if err != nil {
+			return "", err
+		}
+
+		// Update in datastore
+		err = s.db.UpdateTransaction(t)
+
+		return t.TransactionId, err
 	})
 
 	if err != nil {
@@ -141,10 +107,12 @@ func (s *Service) CreateAsync(address, code string, args []Argument, tType Type)
 				Err:        fmt.Errorf("max capacity reached, try again later"),
 			}
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
-	return job, nil
+	err = job.Wait(sync)
+
+	return job, transaction, err
 }
 
 // List returns all transactions in the datastore for a given account.
