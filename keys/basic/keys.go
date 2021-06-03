@@ -47,10 +47,10 @@ func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 	}
 }
 
-func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.Wrapped, error) {
+func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, keys.Private, error) {
 	switch s.cfg.DefaultKeyType {
 	default:
-		return keys.Wrapped{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyType)
+		return nil, keys.Private{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyType)
 	case keys.ACCOUNT_KEY_TYPE_LOCAL:
 		return local.Generate(
 			keyIndex, weight,
@@ -61,7 +61,7 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (keys.W
 	}
 }
 
-func (s *KeyManager) GenerateDefault(ctx context.Context) (keys.Wrapped, error) {
+func (s *KeyManager) GenerateDefault(ctx context.Context) (*flow.AccountKey, keys.Private, error) {
 	return s.Generate(ctx, s.cfg.DefaultKeyIndex, s.cfg.DefaultKeyWeight)
 }
 

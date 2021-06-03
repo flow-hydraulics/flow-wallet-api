@@ -51,14 +51,10 @@ func New(
 	}
 
 	// Generate a new key pair
-	wrapped, err := km.GenerateDefault(ctx)
+	accountKey, newPrivateKey, err := km.GenerateDefault(ctx)
 	if err != nil {
 		return
 	}
-
-	// Destruct the wrapped key
-	accountKey := wrapped.AccountKey
-	newPrivateKey = wrapped.PrivateKey
 
 	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
 	b := templates.NewBuilderFromTx(tx)
