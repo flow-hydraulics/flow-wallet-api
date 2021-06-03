@@ -3,16 +3,13 @@ package accounts
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/templates"
-	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/eqlabs/flow-wallet-service/transactions"
-	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -63,20 +60,10 @@ func New(
 	accountKey := wrapped.AccountKey
 	newPrivateKey = wrapped.PrivateKey
 
-	aa := []templates.Argument{
-		cadence.NewArray([]cadence.Value{
-			cadence.NewString(hex.EncodeToString(accountKey.Encode())),
-		})}
+	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
+	b := templates.NewBuilderFromTx(tx)
 
-	b, err := templates.NewBuilderFromRaw(templates.Raw{
-		Code:      template_strings.CreateAccount,
-		Arguments: aa,
-	})
-	if err != nil {
-		return
-	}
-
-	t, err := transactions.New(id, b, transactions.General, auth, auth, []keys.Authorizer{auth})
+	t, err := transactions.New(id, b, transactions.General, auth, auth, nil)
 	if err != nil {
 		return
 	}
