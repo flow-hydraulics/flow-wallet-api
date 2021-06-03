@@ -15,6 +15,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	flow_templates "github.com/onflow/flow-go-sdk/templates"
 	"gorm.io/gorm"
 )
 
@@ -67,7 +68,7 @@ func New(
 			cadence.NewString(hex.EncodeToString(accountKey.Encode())),
 		})}
 
-	b, err := templates.NewTransactionBuilder(templates.Raw{
+	b, err := templates.NewBuilderFromRaw(templates.Raw{
 		Code:      template_strings.CreateAccount,
 		Arguments: aa,
 	})
@@ -104,4 +105,50 @@ func New(
 	newAccount.Address = flow_helpers.FormatAddress(newAddress)
 
 	return
+}
+
+func AddContract(
+	ctx context.Context,
+	fc *client.Client,
+	km keys.Manager,
+	accountAddress string,
+	contract templates.Contract) (*transactions.Transaction, error) {
+	flowAddr := flow.HexToAddress(accountAddress)
+
+	// Get admin account authorizer
+	adminAuth, err := km.AdminAuthorizer(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get user account authorizer
+	userAuth, err := km.UserAuthorizer(ctx, flowAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get latest blocks id as reference id
+	id, err := flow_helpers.LatestBlockId(ctx, fc)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := flow_templates.AddAccountContract(
+		flowAddr,
+		flow_templates.Contract(contract),
+	)
+
+	b := templates.NewBuilderFromTx(tx)
+
+	t, err := transactions.New(id, b, transactions.General, userAuth, adminAuth, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = t.SendAndWait(ctx, fc)
+	if err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }

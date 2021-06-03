@@ -14,7 +14,7 @@ type TransactionBuilder struct {
 	Tx *flow.Transaction
 }
 
-func NewTransactionBuilder(raw Raw) (*TransactionBuilder, error) {
+func NewBuilderFromRaw(raw Raw) (*TransactionBuilder, error) {
 	t := flow.NewTransaction()
 	t.SetScript([]byte(raw.Code))
 
@@ -29,6 +29,10 @@ func NewTransactionBuilder(raw Raw) (*TransactionBuilder, error) {
 	}
 
 	return b, nil
+}
+
+func NewBuilderFromTx(tx *flow.Transaction) *TransactionBuilder {
+	return &TransactionBuilder{Tx: tx}
 }
 
 func (b *TransactionBuilder) AddArgument(a Argument) error {

@@ -9,6 +9,11 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
+type Contract struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
+}
+
 type chainReplacers map[flow.ChainID]*strings.Replacer
 type chainAddresses map[flow.ChainID]string
 type templateVariables map[string]chainAddresses

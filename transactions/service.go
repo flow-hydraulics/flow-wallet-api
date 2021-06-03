@@ -69,7 +69,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 			aa = append(aa, a)
 		}
 
-		b, err := templates.NewTransactionBuilder(raw)
+		b, err := templates.NewBuilderFromRaw(raw)
 		if err != nil {
 			return "", err
 		}
