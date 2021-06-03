@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/iancoleman/strcase"
 	"github.com/onflow/flow-go-sdk"
 )
@@ -47,12 +48,12 @@ func parseName(name string) [3]string {
 	}
 }
 
-func ParseCode(template string, chainId flow.ChainID) string {
+func Code(template string, chainId flow.ChainID) string {
 	r := replacers[chainId]
 	return r.Replace(template)
 }
 
-func ParseGenericFungibleTemplate(t, tokenName string, chainId flow.ChainID, addresses ...string) string {
+func GenericFungibleTemplateCode(t, tokenName string, chainId flow.ChainID, addresses ...string) string {
 	p := parseName(tokenName)
 	camel := p[0]
 	snake := p[1]
@@ -82,21 +83,21 @@ func ParseGenericFungibleTemplate(t, tokenName string, chainId flow.ChainID, add
 		t = r.Replace(t)
 	}
 
-	return ParseCode(t, chainId)
+	return Code(t, chainId)
 }
 
-func ParseGenericFungibleTransfer(tokenName string, chainId flow.ChainID, addresses ...string) string {
-	return ParseGenericFungibleTemplate(
-		GenericFungibleTransfer,
+func GenericFungibleTransferCode(tokenName string, chainId flow.ChainID, addresses ...string) string {
+	return GenericFungibleTemplateCode(
+		template_strings.GenericFungibleTransfer,
 		tokenName,
 		chainId,
 		addresses...,
 	)
 }
 
-func ParseGenericFungibleSetup(tokenName string, chainId flow.ChainID, addresses ...string) string {
-	return ParseGenericFungibleTemplate(
-		GenericFungibleSetup,
+func GenericFungibleSetupCode(tokenName string, chainId flow.ChainID, addresses ...string) string {
+	return GenericFungibleTemplateCode(
+		template_strings.GenericFungibleSetup,
 		tokenName,
 		chainId,
 		addresses...,

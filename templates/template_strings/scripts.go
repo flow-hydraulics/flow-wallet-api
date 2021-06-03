@@ -1,4 +1,4 @@
-package templates
+package template_strings
 
 const GetFlowBalance = `
 import FungibleToken from FUNGIBLE_TOKEN_ADDRESS

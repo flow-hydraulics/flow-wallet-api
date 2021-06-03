@@ -11,6 +11,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -36,7 +37,7 @@ func NewService(
 	return &Service{db, km, fc, wp, cfg}
 }
 
-func (s *Service) Create(c context.Context, sync bool, address, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error) {
+func (s *Service) Create(c context.Context, sync bool, address string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
 	var transaction *Transaction
 
 	job, err := s.wp.AddJob(func() (string, error) {
@@ -64,11 +65,16 @@ func (s *Service) Create(c context.Context, sync bool, address, code string, arg
 		var aa []keys.Authorizer
 
 		// Check if we need to add this account as an authorizer
-		if strings.Contains(code, ": AuthAccount") {
+		if strings.Contains(raw.Code, ": AuthAccount") {
 			aa = append(aa, a)
 		}
 
-		t, err := New(id, code, args, tType, a, a, aa)
+		b, err := templates.NewTransactionBuilder(raw)
+		if err != nil {
+			return "", err
+		}
+
+		t, err := New(id, b, tType, a, a, aa)
 		if err != nil {
 			return "", err
 		}
@@ -157,11 +163,11 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 }
 
 // Execute a script
-func (s *Service) ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error) {
+func (s *Service) ExecuteScript(ctx context.Context, raw templates.Raw) (cadence.Value, error) {
 	value, err := s.Fc.ExecuteScriptAtLatestBlock(
 		ctx,
-		[]byte(code),
-		MustDecodeArgs(args),
+		[]byte(raw.Code),
+		templates.MustDecodeArgs(raw.Arguments),
 	)
 
 	if err != nil {

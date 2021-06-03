@@ -1,4 +1,4 @@
-package templates
+package template_strings
 
 const GenericFungibleTransfer = `
 import FungibleToken from FUNGIBLE_TOKEN_ADDRESS

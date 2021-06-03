@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
 )
@@ -48,7 +49,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var b CreateTransactionRequest
+	var b templates.Raw
 
 	// Try to decode the request body into the struct.
 	err = json.NewDecoder(r.Body).Decode(&b)
@@ -63,7 +64,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Decide whether to serve sync or async, default async
 	sync := r.Header.Get(SYNC_HEADER) != ""
-	job, t, err := s.service.Create(r.Context(), sync, vars["address"], b.Code, b.Arguments, transactions.Raw)
+	job, t, err := s.service.Create(r.Context(), sync, vars["address"], b, transactions.General)
 	var res interface{}
 	if sync {
 		res = t
@@ -104,7 +105,7 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var b CreateTransactionRequest
+	var b templates.Raw
 
 	// Try to decode the request body into the struct.
 	err = json.NewDecoder(r.Body).Decode(&b)
@@ -117,7 +118,7 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	res, err := s.service.ExecuteScript(r.Context(), b.Code, b.Arguments)
+	res, err := s.service.ExecuteScript(r.Context(), b)
 
 	if err != nil {
 		handleError(rw, s.log, err)

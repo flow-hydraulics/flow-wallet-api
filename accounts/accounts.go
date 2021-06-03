@@ -10,6 +10,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
@@ -61,18 +62,20 @@ func New(
 	accountKey := wrapped.AccountKey
 	newPrivateKey = wrapped.PrivateKey
 
-	aa := []transactions.Argument{
+	aa := []templates.Argument{
 		cadence.NewArray([]cadence.Value{
 			cadence.NewString(hex.EncodeToString(accountKey.Encode())),
 		})}
 
-	t, err := transactions.New(
-		id,
-		templates.CreateAccount,
-		aa,
-		transactions.Raw,
-		auth, auth, []keys.Authorizer{auth},
-	)
+	b, err := templates.NewTransactionBuilder(templates.Raw{
+		Code:      template_strings.CreateAccount,
+		Arguments: aa,
+	})
+	if err != nil {
+		return
+	}
+
+	t, err := transactions.New(id, b, transactions.General, auth, auth, []keys.Authorizer{auth})
 	if err != nil {
 		return
 	}

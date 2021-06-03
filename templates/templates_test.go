@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/onflow/flow-go-sdk"
 )
 
@@ -31,13 +32,13 @@ func TestParseName(t *testing.T) {
 
 func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
+		g := GenericFungibleTransferCode(
 			"FlowToken",
 			flow.Emulator,
 			"", "",
 		)
 
-		c := ParseCode(TransferFlow, flow.Emulator)
+		c := Code(template_strings.TransferFlow, flow.Emulator)
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -45,13 +46,13 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FlowToken with non-standard addresses", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
+		g := GenericFungibleTransferCode(
 			"FlowToken",
 			flow.Emulator,
 			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
-		c := ParseCode(TransferFlow, flow.Emulator)
+		c := Code(template_strings.TransferFlow, flow.Emulator)
 
 		if g == c {
 			t.Error("expected outputs not to equal")
@@ -67,13 +68,13 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FUSD", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
+		g := GenericFungibleTransferCode(
 			"FUSD",
 			flow.Emulator,
 			"", "",
 		)
 
-		c := ParseCode(TransferFUSD, flow.Emulator)
+		c := Code(template_strings.TransferFUSD, flow.Emulator)
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -81,13 +82,13 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FUSD with non-standard addresses", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
+		g := GenericFungibleTransferCode(
 			"FUSD",
 			flow.Emulator,
 			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
-		c := ParseCode(TransferFlow, flow.Emulator)
+		c := Code(template_strings.TransferFlow, flow.Emulator)
 
 		if g == c {
 			t.Error("expected outputs not to equal")
