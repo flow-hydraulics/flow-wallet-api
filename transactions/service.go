@@ -20,8 +20,8 @@ import (
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
 	db  Store
-	Km  keys.Manager
-	Fc  *client.Client
+	km  keys.Manager
+	fc  *client.Client
 	wp  *jobs.WorkerPool
 	cfg Config
 }
@@ -52,12 +52,12 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 			return "", err
 		}
 
-		id, err := flow_helpers.LatestBlockId(ctx, s.Fc)
+		id, err := flow_helpers.LatestBlockId(ctx, s.fc)
 		if err != nil {
 			return "", err
 		}
 
-		a, err := s.Km.UserAuthorizer(ctx, flow.HexToAddress(address))
+		a, err := s.km.UserAuthorizer(ctx, flow.HexToAddress(address))
 		if err != nil {
 			return "", err
 		}
@@ -82,7 +82,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		transaction = t
 
 		// Send the transaction
-		err = t.Send(ctx, s.Fc)
+		err = t.Send(ctx, s.fc)
 		if err != nil {
 			return "", err
 		}
@@ -94,7 +94,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		// Wait for the transaction to be sealed
-		err = t.Wait(ctx, s.Fc)
+		err = t.Wait(ctx, s.fc)
 		if err != nil {
 			return "", err
 		}
@@ -164,7 +164,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 
 // Execute a script
 func (s *Service) ExecuteScript(ctx context.Context, raw templates.Raw) (cadence.Value, error) {
-	value, err := s.Fc.ExecuteScriptAtLatestBlock(
+	value, err := s.fc.ExecuteScriptAtLatestBlock(
 		ctx,
 		[]byte(raw.Code),
 		templates.MustDecodeArgs(raw.Arguments),

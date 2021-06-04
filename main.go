@@ -122,7 +122,7 @@ func runServer() {
 	jobsService := jobs.NewService(jobStore)
 	accountService := accounts.NewService(accountStore, km, fc, wp)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	tokenService := tokens.NewService(transactionService)
+	tokenService := tokens.NewService(km, fc, transactionService)
 
 	debugService := debug.Service{
 		RepoUrl:   "https://github.com/eqlabs/flow-wallet-service",

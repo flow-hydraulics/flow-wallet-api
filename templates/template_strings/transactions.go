@@ -1,5 +1,13 @@
 package template_strings
 
+const AddAccountContractWithAdmin = `
+transaction(name: String, code: String) {
+	prepare(signer: AuthAccount) {
+		signer.contracts.add(name: name, code: code.decodeHex(), adminAccount: signer)
+	}
+}
+`
+
 const GenericFungibleTransfer = `
 import FungibleToken from FUNGIBLE_TOKEN_ADDRESS
 import TokenName from TOKEN_NAME_ADDRESS

@@ -9,7 +9,9 @@ import (
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -90,19 +92,21 @@ func New(
 	return
 }
 
+// AddContract is mainly used for testing purposes
 func AddContract(
 	ctx context.Context,
 	fc *client.Client,
 	km keys.Manager,
 	accountAddress string,
-	contract templates.Contract) (*transactions.Transaction, error) {
-	flowAddr := flow.HexToAddress(accountAddress)
+	contract flow_templates.Contract) (*transactions.Transaction, error) {
 
 	// Get admin account authorizer
 	adminAuth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	flowAddr := flow.HexToAddress(accountAddress)
 
 	// Get user account authorizer
 	userAuth, err := km.UserAuthorizer(ctx, flowAddr)
@@ -116,12 +120,20 @@ func AddContract(
 		return nil, err
 	}
 
-	tx := flow_templates.AddAccountContract(
-		flowAddr,
-		flow_templates.Contract(contract),
-	)
+	raw := templates.Raw{
+		Code: template_strings.AddAccountContractWithAdmin,
+		Arguments: []templates.Argument{
+			cadence.NewString(contract.Name),
+			cadence.NewString(contract.SourceHex()),
+		},
+	}
 
-	b := templates.NewBuilderFromTx(tx)
+	b, err := templates.NewBuilderFromRaw(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Tx.AddAuthorizer(adminAuth.Address)
 
 	t, err := transactions.New(id, b, transactions.General, userAuth, adminAuth, nil)
 	if err != nil {
