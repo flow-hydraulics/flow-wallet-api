@@ -59,7 +59,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, tokenName, 
 	return s.ts.Create(ctx, sync, sender, raw, transactions.FtWithdrawal)
 }
 
-func (s *Service) SetupFtForAccount(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *Service) SetupFtForAccount(ctx context.Context, sync bool, tokenName, address string, tokenAddress string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -67,7 +67,7 @@ func (s *Service) SetupFtForAccount(ctx context.Context, sync bool, tokenName, a
 	}
 
 	raw := templates.Raw{
-		Code: templates.FungibleSetupCode(templates.NewToken(tokenName), s.cfg.ChainId),
+		Code: templates.FungibleSetupCode(templates.NewToken(tokenName), s.cfg.ChainId, tokenAddress),
 	}
 
 	return s.ts.Create(ctx, sync, address, raw, transactions.FtSetup)

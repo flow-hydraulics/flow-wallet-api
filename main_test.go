@@ -801,7 +801,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = service.SetupFtForAccount(ctx, true, tokenName, cfg.AdminAddress)
+		_, _, err = service.SetupFtForAccount(ctx, true, tokenName, cfg.AdminAddress, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -813,7 +813,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the new account to be able to handle FUSD
-		_, setupTx, err := service.SetupFtForAccount(ctx, true, tokenName, account.Address)
+		_, setupTx, err := service.SetupFtForAccount(ctx, true, tokenName, account.Address, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -828,6 +828,25 @@ func TestTokenServices(t *testing.T) {
 			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
 				t.Fatal(err)
 			}
+		}
+
+	})
+
+	t.Run(("try to setup a non-existent token"), func(t *testing.T) {
+		tokenName := "some-non-existent-token"
+
+		ctx := context.Background()
+
+		// Create an account
+		_, account, err := accountService.Create(ctx, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Setup the new account to be able to handle the non-existent token
+		_, _, err = service.SetupFtForAccount(ctx, true, tokenName, account.Address, "0x1234")
+		if err == nil || !strings.Contains(err.Error(), "cannot find declaration") {
+			t.Fatal("expected an error")
 		}
 
 	})
@@ -868,6 +887,7 @@ func TestTokenHandlers(t *testing.T) {
 	h := handlers.NewFungibleTokens(logger, service)
 
 	router := mux.NewRouter()
+	router.Handle("/{address}/fungible-tokens/{tokenName}", h.Setup()).Methods(http.MethodPost)
 	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", h.CreateWithdrawal()).Methods(http.MethodPost)
 
 	_, account, err := accountService.Create(context.Background(), true)
@@ -875,6 +895,7 @@ func TestTokenHandlers(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Create withdrawals
 	token := "flow-token"
 	createWithdrawalSteps := []httpTestStep{
 		{
@@ -922,4 +943,59 @@ func TestTokenHandlers(t *testing.T) {
 		})
 	}
 
+	// Setup tokens
+
+	// Make sure FUSD is deployed
+	_, _, err = service.DeployTokenContractForAccount(context.Background(), true, "fusd", cfg.AdminAddress)
+	if err != nil {
+		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
+			t.Fatal(err)
+		}
+	}
+
+	setupTokenSteps := []httpTestStep{
+		{
+			name:        "Setup FUSD valid async",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			expected:    `"jobId":".+"`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Setup FUSD valid sync",
+			sync:        true,
+			method:      http.MethodPost,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			expected:    `"transactionId":".+"`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Setup FUSD custom valid address",
+			sync:        true,
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"token-address":"%s"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			expected:    `"transactionId":".+"`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Setup FUSD custom invalid address",
+			sync:        true,
+			method:      http.MethodPost,
+			body:        strings.NewReader(`{"token-address":"0x1234"}`),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			expected:    `.*cannot find declaration.*`,
+			status:      http.StatusBadRequest,
+		},
+	}
+
+	for _, s := range setupTokenSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
 }

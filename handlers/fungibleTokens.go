@@ -17,6 +17,10 @@ type FTWithdrawalRequest struct {
 	Amount    string `json:"amount"`
 }
 
+type FTSetupRequest struct {
+	TokenAddress string `json:"token-address"`
+}
+
 func NewFungibleTokens(l *log.Logger, service *tokens.Service) *FungibleTokens {
 	return &FungibleTokens{l, service}
 }
