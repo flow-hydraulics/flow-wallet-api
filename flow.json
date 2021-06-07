@@ -13,8 +13,7 @@
         "emulator": "ee82856bf20e2aa6"
       }
     },
-    "FUSD": "./cadence/contracts/FUSD.cdc",
-    "TestToken": "./cadence/contracts/TestToken.cdc"
+    "FUSD": "./cadence/contracts/FUSD.cdc"
   },
   "networks": {
     "emulator": "127.0.0.1:3569",
@@ -29,7 +28,7 @@
   },
   "deployments": {
     "emulator": {
-      "emulator-account": ["FUSD", "TestToken"]
+      "emulator-account": ["FUSD"]
     }
   }
 }

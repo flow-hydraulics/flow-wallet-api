@@ -478,9 +478,20 @@ func TestTransactionHandlers(t *testing.T) {
 			sync:        true,
 		},
 		{
+			name:        "create nil body sync",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        nil,
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			expected:    "empty body",
+			status:      http.StatusBadRequest,
+			sync:        true,
+		},
+		{
 			name:        "create empty body sync",
 			method:      http.MethodPost,
 			contentType: "application/json",
+			body:        strings.NewReader(""),
 			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    "empty body",
 			status:      http.StatusBadRequest,
@@ -734,7 +745,7 @@ func TestTokenServices(t *testing.T) {
 		_, _, err = service.CreateFtWithdrawal(
 			context.Background(),
 			true,
-			"flow-token",
+			templates.NewToken("flow-token", ""),
 			cfg.AdminAddress,
 			account.Address,
 			"1.0",
@@ -747,7 +758,7 @@ func TestTokenServices(t *testing.T) {
 		_, tx, err := service.CreateFtWithdrawal(
 			context.Background(),
 			true,
-			"flow-token",
+			templates.NewToken("flow-token", ""),
 			account.Address,
 			cfg.AdminAddress,
 			"1.0",
@@ -772,7 +783,7 @@ func TestTokenServices(t *testing.T) {
 		_, tx, err := service.CreateFtWithdrawal(
 			context.Background(),
 			true,
-			"flow-token",
+			templates.NewToken("flow-token", ""),
 			account.Address,
 			cfg.AdminAddress,
 			"1.0",
@@ -801,7 +812,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = service.SetupFtForAccount(ctx, true, tokenName, cfg.AdminAddress, "")
+		_, _, err = service.SetupFtForAccount(ctx, true, templates.NewToken(tokenName, ""), cfg.AdminAddress)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -813,7 +824,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the new account to be able to handle FUSD
-		_, setupTx, err := service.SetupFtForAccount(ctx, true, tokenName, account.Address, "")
+		_, setupTx, err := service.SetupFtForAccount(ctx, true, templates.NewToken(tokenName, ""), account.Address)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -823,7 +834,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Create a withdrawal, should error as we can not mint FUSD right now
-		_, _, err = service.CreateFtWithdrawal(ctx, true, tokenName, cfg.AdminAddress, account.Address, "1.0")
+		_, _, err = service.CreateFtWithdrawal(ctx, true, templates.NewToken(tokenName, ""), cfg.AdminAddress, account.Address, "1.0")
 		if err != nil {
 			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
 				t.Fatal(err)
@@ -844,7 +855,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the new account to be able to handle the non-existent token
-		_, _, err = service.SetupFtForAccount(ctx, true, tokenName, account.Address, "0x1234")
+		_, _, err = service.SetupFtForAccount(ctx, true, templates.NewToken(tokenName, "0x1234"), account.Address)
 		if err == nil || !strings.Contains(err.Error(), "cannot find declaration") {
 			t.Fatal("expected an error")
 		}
@@ -957,6 +968,7 @@ func TestTokenHandlers(t *testing.T) {
 		{
 			name:        "Setup FUSD valid async",
 			method:      http.MethodPost,
+			body:        strings.NewReader(""),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
 			expected:    `"jobId":".+"`,
@@ -966,6 +978,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "Setup FUSD valid sync",
 			sync:        true,
 			method:      http.MethodPost,
+			body:        strings.NewReader(""),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
 			expected:    `"transactionId":".+"`,
@@ -975,7 +988,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "Setup FUSD custom valid address",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"token-address":"%s"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"tokenAddress":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
 			expected:    `"transactionId":".+"`,
@@ -985,7 +998,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "Setup FUSD custom invalid address",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(`{"token-address":"0x1234"}`),
+			body:        strings.NewReader(`{"tokenAddress":"0x1234"}`),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
 			expected:    `.*cannot find declaration.*`,

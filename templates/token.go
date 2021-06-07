@@ -10,11 +10,12 @@ import (
 )
 
 type Token struct {
-	Name string
+	Name    string `json:"tokenName"`
+	Address string `json:"tokenAddress"`
 }
 
-func NewToken(name string) Token {
-	return Token{Name: name}
+func NewToken(name, address string) Token {
+	return Token{Name: name, Address: address}
 }
 
 func (t *Token) ParseName() [3]string {
@@ -32,7 +33,7 @@ func (t *Token) ParseName() [3]string {
 	}
 }
 
-func fungibleTemplateCode(tmpl_str string, token Token, chainId flow.ChainID, addresses ...string) string {
+func fungibleTemplateCode(tmpl_str string, token Token, chainId flow.ChainID) string {
 	p := token.ParseName()
 	camel := p[0]
 	snake := p[1]
@@ -47,17 +48,9 @@ func fungibleTemplateCode(tmpl_str string, token Token, chainId flow.ChainID, ad
 	tmpl_str = r.Replace(tmpl_str)
 
 	// Replace token address
-	if len(addresses) >= 1 && addresses[0] != "" {
+	if token.Address != "" {
 		r := strings.NewReplacer(
-			fmt.Sprintf("%s_ADDRESS", snake), addresses[0],
-		)
-		tmpl_str = r.Replace(tmpl_str)
-	}
-
-	// Replace fungible token contract address
-	if len(addresses) >= 2 && addresses[1] != "" {
-		r := strings.NewReplacer(
-			"FUNGIBLE_TOKEN_ADDRESS", addresses[1],
+			fmt.Sprintf("%s_ADDRESS", snake), token.Address,
 		)
 		tmpl_str = r.Replace(tmpl_str)
 	}
@@ -65,20 +58,26 @@ func fungibleTemplateCode(tmpl_str string, token Token, chainId flow.ChainID, ad
 	return Code(&Template{Source: tmpl_str}, chainId)
 }
 
-func FungibleTransferCode(token Token, chainId flow.ChainID, addresses ...string) string {
+func FungibleTransferCode(token Token, chainId flow.ChainID) string {
 	return fungibleTemplateCode(
 		template_strings.GenericFungibleTransfer,
 		token,
 		chainId,
-		addresses...,
 	)
 }
 
-func FungibleSetupCode(token Token, chainId flow.ChainID, addresses ...string) string {
+func FungibleSetupCode(token Token, chainId flow.ChainID) string {
 	return fungibleTemplateCode(
 		template_strings.GenericFungibleSetup,
 		token,
 		chainId,
-		addresses...,
+	)
+}
+
+func FungibleBalanceCode(token Token, chainId flow.ChainID) string {
+	return fungibleTemplateCode(
+		template_strings.GenericFungibleBalance,
+		token,
+		chainId,
 	)
 }

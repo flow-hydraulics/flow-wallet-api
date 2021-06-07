@@ -38,7 +38,7 @@ func (s *Transactions) ListFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	var err error
 
-	if r.Body == nil {
+	if r.Body == nil || r.Body == http.NoBody {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("empty body"),
@@ -96,7 +96,7 @@ func (s *Transactions) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request) {
 	var err error
 
-	if r.Body == nil {
+	if r.Body == nil || r.Body == http.NoBody {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("empty body"),

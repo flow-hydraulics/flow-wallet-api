@@ -31,7 +31,7 @@ func NewService(
 	return &Service{km, fc, ts, cfg}
 }
 
-func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, tokenName, sender, recipient, amount string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, token templates.Token, sender, recipient, amount string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId)
 	if err != nil {
@@ -49,7 +49,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, tokenName, 
 	}
 
 	raw := templates.Raw{
-		Code: templates.FungibleTransferCode(templates.NewToken(tokenName), s.cfg.ChainId),
+		Code: templates.FungibleTransferCode(token, s.cfg.ChainId),
 		Arguments: []templates.Argument{
 			_amount,
 			cadence.NewAddress(flow.HexToAddress(recipient)),
@@ -59,7 +59,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, tokenName, 
 	return s.ts.Create(ctx, sync, sender, raw, transactions.FtWithdrawal)
 }
 
-func (s *Service) SetupFtForAccount(ctx context.Context, sync bool, tokenName, address string, tokenAddress string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *Service) SetupFtForAccount(ctx context.Context, sync bool, token templates.Token, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -67,10 +67,32 @@ func (s *Service) SetupFtForAccount(ctx context.Context, sync bool, tokenName, a
 	}
 
 	raw := templates.Raw{
-		Code: templates.FungibleSetupCode(templates.NewToken(tokenName), s.cfg.ChainId, tokenAddress),
+		Code: templates.FungibleSetupCode(token, s.cfg.ChainId),
 	}
 
 	return s.ts.Create(ctx, sync, address, raw, transactions.FtSetup)
+}
+
+func (s *Service) Details(ctx context.Context, token templates.Token, address string) (TokenDetails, error) {
+	// Check if the input is a valid address
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return TokenDetails{}, err
+	}
+
+	r := templates.Raw{
+		Code: templates.FungibleBalanceCode(token, s.cfg.ChainId),
+		Arguments: []templates.Argument{
+			cadence.NewAddress(flow.HexToAddress(address)),
+		},
+	}
+
+	b, err := s.ts.ExecuteScript(ctx, r)
+	if err != nil {
+		return TokenDetails{}, err
+	}
+
+	return TokenDetails{Name: token.ParseName()[0], Balance: b.String()}, nil
 }
 
 // DeployTokenContractForAccount is mainly used for testing purposes.
