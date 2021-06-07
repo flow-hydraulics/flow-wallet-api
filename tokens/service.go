@@ -33,7 +33,12 @@ func NewService(
 
 func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, tokenName, sender, recipient, amount string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
+	err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
 	if err != nil {
 		return nil, nil, err
 	}
