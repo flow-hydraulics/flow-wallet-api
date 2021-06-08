@@ -37,11 +37,13 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, token templ
 	if err != nil {
 		return nil, nil, err
 	}
+	sender = flow_helpers.HexString(sender)
 
 	err = flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
 	if err != nil {
 		return nil, nil, err
 	}
+	recipient = flow_helpers.HexString(recipient)
 
 	_amount, err := cadence.NewUFix64(amount)
 	if err != nil {
@@ -65,6 +67,7 @@ func (s *Service) Details(ctx context.Context, token templates.Token, address st
 	if err != nil {
 		return TokenDetails{}, err
 	}
+	address = flow_helpers.HexString(address)
 
 	r := templates.Raw{
 		Code: templates.FungibleBalanceCode(token, s.cfg.ChainId),
@@ -78,7 +81,7 @@ func (s *Service) Details(ctx context.Context, token templates.Token, address st
 		return TokenDetails{}, err
 	}
 
-	return TokenDetails{Name: token.ParseName()[0], Balance: b.String()}, nil
+	return TokenDetails{Name: token.CanonName(), Balance: b.String()}, nil
 }
 
 // DeployTokenContractForAccount is mainly used for testing purposes.
@@ -88,8 +91,9 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, sync bool, 
 	if err != nil {
 		return nil, nil, err
 	}
+	address = flow_helpers.HexString(address)
 
-	n := (&templates.Token{Name: tokenName}).ParseName()[0]
+	n := (&templates.Token{Name: tokenName}).CanonName()
 	t_str, err := template_strings.GetByName(n)
 	if err != nil {
 		return nil, nil, err

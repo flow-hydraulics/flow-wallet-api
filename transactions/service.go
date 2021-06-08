@@ -51,6 +51,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		if err != nil {
 			return "", err
 		}
+		address = flow_helpers.HexString(address)
 
 		id, err := flow_helpers.LatestBlockId(ctx, s.fc)
 		if err != nil {
@@ -128,10 +129,11 @@ func (s *Service) List(address string, limit, offset int) ([]Transaction, error)
 	if err != nil {
 		return []Transaction{}, err
 	}
+	address = flow_helpers.HexString(address)
 
 	o := datastore.ParseListOptions(limit, offset)
 
-	return s.db.Transactions(flow_helpers.HexString(address), o)
+	return s.db.Transactions(address, o)
 }
 
 // Details returns a specific transaction.
@@ -141,6 +143,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	if err != nil {
 		return
 	}
+	address = flow_helpers.HexString(address)
 
 	// Check if the input is a valid transaction id
 	err = flow_helpers.ValidateTransactionId(transactionId)
@@ -149,7 +152,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	}
 
 	// Get from datastore
-	result, err = s.db.Transaction(flow_helpers.HexString(address), transactionId)
+	result, err = s.db.Transaction(address, transactionId)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
