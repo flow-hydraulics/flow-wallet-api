@@ -120,8 +120,8 @@ func runServer() {
 
 	// Services
 	jobsService := jobs.NewService(jobStore)
-	accountService := accounts.NewService(accountStore, km, fc, wp)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(km, fc, transactionService)
 
 	debugService := debug.Service{
@@ -133,9 +133,9 @@ func runServer() {
 	// HTTP handling
 
 	jobsHandler := handlers.NewJobs(ls, jobsService)
-	accountsHandler := handlers.NewAccounts(ls, accountService)
-	transactions := handlers.NewTransactions(ls, transactionService)
-	fungibleTokens := handlers.NewFungibleTokens(ls, tokenService)
+	accountHandler := handlers.NewAccounts(ls, accountService)
+	transactionHandler := handlers.NewTransactions(ls, transactionService)
+	fungibleTokenHandler := handlers.NewFungibleTokens(ls, tokenService)
 
 	r := mux.NewRouter()
 
@@ -151,31 +151,32 @@ func runServer() {
 
 	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()
-	ra.Handle("", accountsHandler.List()).Methods(http.MethodGet)              // list
-	ra.Handle("", accountsHandler.Create()).Methods(http.MethodPost)           // create
-	ra.Handle("/{address}", accountsHandler.Details()).Methods(http.MethodGet) // details
+	ra.Handle("", accountHandler.List()).Methods(http.MethodGet)              // list
+	ra.Handle("", accountHandler.Create()).Methods(http.MethodPost)           // create
+	ra.Handle("/{address}", accountHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account raw transactions
 	if !flgDisableRawTx {
 		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
-		rt.Handle("", transactions.List()).Methods(http.MethodGet)                    // list
-		rt.Handle("", transactions.Create()).Methods(http.MethodPost)                 // create
-		rt.Handle("/{transactionId}", transactions.Details()).Methods(http.MethodGet) // details
+		rt.Handle("", transactionHandler.List()).Methods(http.MethodGet)                    // list
+		rt.Handle("", transactionHandler.Create()).Methods(http.MethodPost)                 // create
+		rt.Handle("/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
 	} else {
 		ls.Println("raw transactions disabled")
 	}
 
 	// Scripts
-	rv.Handle("/scripts", transactions.ExecuteScript()).Methods(http.MethodPost) // create
+	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost) // create
 
 	// Fungible tokens
 	if !flgDisableFt {
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
-		rft.Handle("/{tokenName}", fungibleTokens.Details()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}", fungibleTokens.Setup()).Methods(http.MethodPost)
+		rft.Handle("", accountHandler.AccountFungibleTokens()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}", fungibleTokenHandler.Details()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}", accountHandler.SetupFungibleToken()).Methods(http.MethodPost)
 		// rft.Handle("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/withdrawals", fungibleTokens.CreateWithdrawal()).Methods(http.MethodPost)
+		rft.Handle("/{tokenName}/withdrawals", fungibleTokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
 		// rft.Handle("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods(http.MethodGet)
 	}
 

@@ -44,7 +44,7 @@ transaction {
     let existingVault = signer.borrow<&TokenName.Vault>(from: /storage/tokenNameVault)
 
     if (existingVault != nil) {
-        return
+        panic("vault exists")
     }
 
     signer.save(<-TokenName.createEmptyVault(), to: /storage/tokenNameVault)

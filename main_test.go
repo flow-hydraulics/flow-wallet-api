@@ -152,7 +152,7 @@ func TestAccountServices(t *testing.T) {
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	service := accounts.NewService(accountStore, km, fc, wp)
+	service := accounts.NewService(accountStore, km, fc, wp, nil)
 
 	t.Run("sync create", func(t *testing.T) {
 		_, account, err := service.Create(context.Background(), true)
@@ -241,7 +241,7 @@ func TestAccountHandlers(t *testing.T) {
 	wp.AddWorker(1)
 
 	store := accounts.NewGormStore(db)
-	service := accounts.NewService(store, km, fc, wp)
+	service := accounts.NewService(store, km, fc, wp, nil)
 	h := handlers.NewAccounts(logger, service)
 
 	router := mux.NewRouter()
@@ -730,8 +730,8 @@ func TestTokenServices(t *testing.T) {
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	accountService := accounts.NewService(accountStore, km, fc, wp)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
 	service := tokens.NewService(km, fc, transactionService)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
@@ -812,9 +812,11 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = service.SetupFtForAccount(ctx, true, templates.NewToken(tokenName, ""), cfg.AdminAddress)
+		_, _, err = accountService.SetupFungibleToken(ctx, true, templates.NewToken(tokenName, ""), cfg.AdminAddress)
 		if err != nil {
-			t.Fatal(err)
+			if !strings.Contains(err.Error(), "vault exists") {
+				t.Fatal(err)
+			}
 		}
 
 		// Create an account
@@ -824,7 +826,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the new account to be able to handle FUSD
-		_, setupTx, err := service.SetupFtForAccount(ctx, true, templates.NewToken(tokenName, ""), account.Address)
+		_, setupTx, err := accountService.SetupFungibleToken(ctx, true, templates.NewToken(tokenName, ""), account.Address)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -855,7 +857,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the new account to be able to handle the non-existent token
-		_, _, err = service.SetupFtForAccount(ctx, true, templates.NewToken(tokenName, "0x1234"), account.Address)
+		_, _, err = accountService.SetupFungibleToken(ctx, true, templates.NewToken(tokenName, "0x1234"), account.Address)
 		if err == nil || !strings.Contains(err.Error(), "cannot find declaration") {
 			t.Fatal("expected an error")
 		}
@@ -891,15 +893,18 @@ func TestTokenHandlers(t *testing.T) {
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	accountService := accounts.NewService(accountStore, km, fc, wp)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
 	service := tokens.NewService(km, fc, transactionService)
 
-	h := handlers.NewFungibleTokens(logger, service)
+	tokenHandlers := handlers.NewFungibleTokens(logger, service)
+	accountHandlers := handlers.NewAccounts(logger, accountService)
 
 	router := mux.NewRouter()
-	router.Handle("/{address}/fungible-tokens/{tokenName}", h.Setup()).Methods(http.MethodPost)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", h.CreateWithdrawal()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens", accountHandlers.AccountFungibleTokens()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", accountHandlers.SetupFungibleToken()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandlers.Details()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.CreateWithdrawal()).Methods(http.MethodPost)
 
 	_, account, err := accountService.Create(context.Background(), true)
 	if err != nil {
@@ -964,13 +969,23 @@ func TestTokenHandlers(t *testing.T) {
 		}
 	}
 
+	// Create a few accounts
+	aa := make([]*accounts.Account, 4)
+	for i := 0; i < 4; i++ {
+		_, a, err := accountService.Create(context.Background(), true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		aa[i] = a
+	}
+
 	setupTokenSteps := []httpTestStep{
 		{
 			name:        "Setup FUSD valid async",
 			method:      http.MethodPost,
 			body:        strings.NewReader(""),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[0].Address, "fusd"),
 			expected:    `"jobId":".+"`,
 			status:      http.StatusCreated,
 		},
@@ -980,7 +995,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(""),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "fusd"),
 			expected:    `"transactionId":".+"`,
 			status:      http.StatusCreated,
 		},
@@ -990,7 +1005,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"tokenAddress":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[2].Address, "fusd"),
 			expected:    `"transactionId":".+"`,
 			status:      http.StatusCreated,
 		},
@@ -1000,13 +1015,57 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(`{"tokenAddress":"0x1234"}`),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s", account.Address, "fusd"),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[3].Address, "fusd"),
 			expected:    `.*cannot find declaration.*`,
 			status:      http.StatusBadRequest,
 		},
 	}
 
 	for _, s := range setupTokenSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	// Token details
+	detailtsSteps := []httpTestStep{
+		{
+			name:        "FlowToken details",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "flow-token"),
+			expected:    `.*"name":"FlowToken","balance":".+".*`,
+			status:      http.StatusOK,
+		},
+		{
+			name:        "FUSD details",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "fusd"),
+			expected:    `.*"name":"FUSD\","balance":".+".*`,
+			status:      http.StatusOK,
+		},
+	}
+
+	for _, s := range detailtsSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	// Token list
+	listSteps := []httpTestStep{
+		{
+			name:        "list account fungible tokens",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens", aa[1].Address),
+			expected:    `.*{"name":"FUSD"}.*{"name":"FlowToken"}.*`,
+			status:      http.StatusOK,
+		},
+	}
+
+	for _, s := range listSteps {
 		t.Run(s.name, func(t *testing.T) {
 			handleStepRequest(s, router, t)
 		})

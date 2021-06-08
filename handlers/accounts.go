@@ -31,3 +31,12 @@ func (s *Accounts) Create() http.Handler {
 func (s *Accounts) Details() http.Handler {
 	return http.HandlerFunc(s.DetailsFunc)
 }
+
+func (s *Accounts) SetupFungibleToken() http.Handler {
+	h := http.HandlerFunc(s.SetupFungibleTokenFunc)
+	return UseJson(h)
+}
+
+func (s *Accounts) AccountFungibleTokens() http.Handler {
+	return http.HandlerFunc(s.AccountFungibleTokensFunc)
+}

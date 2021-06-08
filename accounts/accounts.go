@@ -22,9 +22,19 @@ import (
 type Account struct {
 	Address   string          `json:"address" gorm:"primaryKey"`
 	Keys      []keys.Storable `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Tokens    []AccountToken  `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	CreatedAt time.Time       `json:"createdAt" `
 	UpdatedAt time.Time       `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt  `json:"-" gorm:"index"`
+}
+
+type AccountToken struct {
+	ID             int            `json:"-" gorm:"primaryKey"`
+	AccountAddress string         `json:"-" gorm:"index"`
+	Name           string         `json:"name"`
+	CreatedAt      time.Time      `json:"-"`
+	UpdatedAt      time.Time      `json:"-"`
+	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // New creates a new account on the Flow blockchain.

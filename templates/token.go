@@ -18,6 +18,10 @@ func NewToken(name, address string) Token {
 	return Token{Name: name, Address: address}
 }
 
+func (t *Token) CanonName() string {
+	return t.ParseName()[0]
+}
+
 func (t *Token) ParseName() [3]string {
 	// TODO: how to handle these kind of cases?
 	if strcase.ToScreamingSnake(t.Name) == "FUSD" {
