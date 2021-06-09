@@ -6,21 +6,13 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"gorm.io/gorm"
 )
 
-// https://docs.onflow.org/cadence/json-cadence-spec/
-type Argument interface{}
-
-type Script struct {
-	Code      string     `json:"-" gorm:"-"`
-	Arguments []Argument `json:"-" gorm:"-"`
-}
-
 type Transaction struct {
-	Script
 	ID              int                     `json:"-" gorm:"primaryKey"`
 	PayerAddress    string                  `json:"-" gorm:"index"`
 	TransactionId   string                  `json:"transactionId" gorm:"index"`
@@ -32,23 +24,45 @@ type Transaction struct {
 	flowTx          *flow.Transaction       `json:"-" gorm:"-"`
 }
 
-var EmptyArguments []Argument = []Argument{}
-var EmptyTransaction Transaction = Transaction{}
+func New(
+	referenceBlockID flow.Identifier,
+	builder *templates.TransactionBuilder,
+	tType Type,
+	proposer, payer keys.Authorizer,
+	authorizers []keys.Authorizer) (*Transaction, error) {
 
-// Send the transaction to the network and wait for seal
-func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client) error {
-	err := t.Send(ctx, fc)
-	if err != nil {
-		return err
+	// TODO: Gas limit?
+	builder.Tx.
+		SetReferenceBlockID(referenceBlockID).
+		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
+		SetPayer(payer.Address)
+
+	// Add authorizers
+	for _, a := range authorizers {
+		builder.Tx.AddAuthorizer(a.Address)
 	}
 
-	// Wait for the transaction to be sealed
-	err = t.Wait(ctx, fc)
-	if err != nil {
-		return err
+	// Authorizers sign the payload
+	// TODO: support multiple keys per account?
+	for _, a := range authorizers {
+		err := builder.Tx.SignPayload(a.Address, a.Key.Index, a.Signer)
+		if err != nil {
+			return &Transaction{}, err
+		}
 	}
 
-	return err
+	// Payer signs the envelope
+	// TODO: support multiple keys per account?
+	err := builder.Tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer)
+	if err != nil {
+		return &Transaction{}, err
+	}
+
+	return &Transaction{
+		PayerAddress:    flow_helpers.FormatAddress(payer.Address),
+		TransactionType: tType,
+		flowTx:          builder.Tx,
+	}, nil
 }
 
 // Send the transaction to the network
@@ -71,62 +85,18 @@ func (t *Transaction) Wait(ctx context.Context, fc *client.Client) error {
 	return nil
 }
 
-func New(
-	referenceBlockID flow.Identifier,
-	code string,
-	args []Argument,
-	tType Type,
-	proposer, payer keys.Authorizer,
-	authorizers []keys.Authorizer) (*Transaction, error) {
-
-	// Create Flow transaction
-	// TODO: Gas limit?
-	tx := flow.NewTransaction().
-		SetScript([]byte(code)).
-		SetReferenceBlockID(referenceBlockID).
-		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
-		SetPayer(payer.Address)
-
-	// Add arguments
-	for _, a := range args {
-		c, err := AsCadence(&a)
-		if err != nil {
-			return &EmptyTransaction, err
-		}
-		err = tx.AddArgument(c)
-		if err != nil {
-			return &EmptyTransaction, err
-		}
-	}
-
-	// Add authorizers
-	for _, a := range authorizers {
-		tx.AddAuthorizer(a.Address)
-	}
-
-	// Authorizers sign the payload
-	// TODO: support multiple keys per account?
-	for _, a := range authorizers {
-		err := tx.SignPayload(a.Address, a.Key.Index, a.Signer)
-		if err != nil {
-			return &EmptyTransaction, err
-		}
-	}
-
-	// Payer signs the envelope
-	// TODO: support multiple keys per account?
-	err := tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer)
+// Send the transaction to the network and wait for seal
+func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client) error {
+	err := t.Send(ctx, fc)
 	if err != nil {
-		return &EmptyTransaction, err
+		return err
 	}
 
-	return &Transaction{
-		PayerAddress: flow_helpers.FormatAddress(payer.Address),
-		Script: Script{
-			Code:      code,
-			Arguments: args,
-		},
-		TransactionType: tType,
-		flowTx:          tx,
-	}, nil
+	// Wait for the transaction to be sealed
+	err = t.Wait(ctx, fc)
+	if err != nil {
+		return err
+	}
+
+	return err
 }

@@ -1,4 +1,4 @@
-package transactions
+package templates
 
 import (
 	"encoding/json"

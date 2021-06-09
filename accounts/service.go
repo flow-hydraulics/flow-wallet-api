@@ -10,6 +10,8 @@ import (
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
@@ -19,6 +21,7 @@ type Service struct {
 	km  keys.Manager
 	fc  *client.Client
 	wp  *jobs.WorkerPool
+	ts  *transactions.Service
 	cfg Config
 }
 
@@ -28,9 +31,10 @@ func NewService(
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
+	ts *transactions.Service,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{db, km, fc, wp, cfg}
+	return &Service{db, km, fc, wp, ts, cfg}
 }
 
 // List returns all accounts in the datastore.
@@ -72,6 +76,14 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			return "", err
 		}
 
+		// Store an AccountToken named FlowToken for the account as it is automatically
+		// enabled on all accounts
+		// Intentionally ignore error
+		s.db.InsertAccountToken(&AccountToken{
+			AccountAddress: a.Address,
+			Name:           "FlowToken",
+		})
+
 		return a.Address, nil
 	})
 
@@ -98,9 +110,10 @@ func (s *Service) Details(address string) (result Account, err error) {
 	if err != nil {
 		return
 	}
+	address = flow_helpers.HexString(address)
 
 	// Get from datastore
-	result, err = s.db.Account(flow_helpers.HexString(address))
+	result, err = s.db.Account(address)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
@@ -110,4 +123,47 @@ func (s *Service) Details(address string) (result Account, err error) {
 	}
 
 	return
+}
+
+func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, token templates.Token, address string) (*jobs.Job, *transactions.Transaction, error) {
+	// Check if the input is a valid address
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	address = flow_helpers.HexString(address)
+
+	raw := templates.Raw{
+		Code: templates.FungibleSetupCode(token, s.cfg.ChainId),
+	}
+
+	job, tx, err := s.ts.Create(ctx, sync, address, raw, transactions.FtSetup)
+
+	// Handle adding token to account in database
+	go func() {
+		err := job.Wait(true)
+		if err != nil {
+			return
+		}
+		// Intentionally ignore error
+		s.db.InsertAccountToken(&AccountToken{
+			AccountAddress: address,
+			Name:           token.CanonName(),
+		})
+	}()
+
+	return job, tx, err
+}
+
+func (s *Service) AccountFungibleTokens(address string) ([]AccountToken, error) {
+	// Check if the input is a valid address
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	address = flow_helpers.HexString(address)
+
+	return s.db.AccountTokens(address)
 }

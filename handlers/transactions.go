@@ -12,11 +12,6 @@ type Transactions struct {
 	service *transactions.Service
 }
 
-type CreateTransactionRequest struct {
-	Code      string                  `json:"code"`
-	Arguments []transactions.Argument `json:"arguments"`
-}
-
 // NewTransactions initiates a new transactions server.
 func NewTransactions(l *log.Logger, service *transactions.Service) *Transactions {
 	return &Transactions{l, service}

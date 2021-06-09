@@ -1,9 +1,28 @@
 @emulatorCustodyAccount = 0x01cf0e2f2f715450
-@tokenName = fusd
 
-#######################################################################
-# EMULATOR (ensure .env is set accordingly - ACCESS_API_HOST etc)
+### Get accounts tokens
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens HTTP/1.1
+content-type: application/json
 
 ### Setup FUSD on emulator for custody account
-POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/{{ tokenName }} HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd HTTP/1.1
+content-type: application/json
+
+### Create a FlowToken withdrawal from admin to custody account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/flow-token/withdrawals HTTP/1.1
+content-type: application/json
+
+{
+  "recipient":"{{emulatorCustodyAccount}}",
+  "amount":"1.0"
+}
+
+
+### Get FlowToken details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token HTTP/1.1
+content-type: application/json
+
+
+### Get FUSD token details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/Fusd HTTP/1.1
 content-type: application/json

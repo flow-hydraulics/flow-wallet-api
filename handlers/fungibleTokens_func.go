@@ -6,40 +6,39 @@ import (
 	"net/http"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/gorilla/mux"
 )
 
 func (s *FungibleTokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
-	if r.Body == nil {
-		handleError(rw, s.log, &errors.RequestError{
-			StatusCode: http.StatusBadRequest,
-			Err:        fmt.Errorf("empty body"),
-		})
-		return
-	}
+	vars := mux.Vars(r)
+	sender := vars["address"]
+	tN := vars["tokenName"]
 
 	var b FTWithdrawalRequest
 
-	// Try to decode the request body into the struct.
-	err := json.NewDecoder(r.Body).Decode(&b)
-	if err != nil {
-		handleError(rw, s.log, &errors.RequestError{
-			StatusCode: http.StatusBadRequest,
-			Err:        fmt.Errorf("invalid body"),
-		})
+	if r.Body == nil || r.Body == http.NoBody {
+		err := &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("empty body")}
+		handleError(rw, s.log, err)
 		return
 	}
 
-	vars := mux.Vars(r)
-	sender := vars["address"]
-	token := vars["tokenName"]
+	// Try to decode the request body.
+	err := json.NewDecoder(r.Body).Decode(&b)
+	if err != nil {
+		err = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
+		handleError(rw, s.log, err)
+		return
+	}
+
+	b.Name = tN
 
 	// Decide whether to serve sync or async, default async
 	sync := r.Header.Get(SYNC_HEADER) != ""
-	job, t, err := s.service.CreateFtWithdrawal(r.Context(), sync, token, sender, b.Recipient, b.Amount)
+	job, tx, err := s.service.CreateFtWithdrawal(r.Context(), sync, b.Token, sender, b.Recipient, b.Amount)
 	var res interface{}
 	if sync {
-		res = t
+		res = tx
 	} else {
 		res = job
 	}
@@ -52,25 +51,23 @@ func (s *FungibleTokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Re
 	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
-func (s *FungibleTokens) SetupFunc(rw http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	account := vars["address"]
-	token := vars["tokenName"]
+func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
+	r.ParseForm() // Ignore the error as tokenAddress is not required
 
-	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SYNC_HEADER) != ""
-	job, t, err := s.service.SetupFtForAccount(r.Context(), sync, token, account)
-	var res interface{}
-	if sync {
-		res = t
-	} else {
-		res = job
-	}
+	vars := mux.Vars(r)
+
+	a := vars["address"]
+	tN := vars["tokenName"]
+	tA := r.Form.Get("tokenAddress")
+
+	t := templates.NewToken(tN, tA)
+
+	res, err := s.service.Details(r.Context(), t, a)
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
 	}
 
-	handleJsonResponse(rw, http.StatusCreated, res)
+	handleJsonResponse(rw, http.StatusOK, res)
 }

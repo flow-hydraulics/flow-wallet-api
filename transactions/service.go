@@ -11,6 +11,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -19,8 +20,8 @@ import (
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
 	db  Store
-	Km  keys.Manager
-	Fc  *client.Client
+	km  keys.Manager
+	fc  *client.Client
 	wp  *jobs.WorkerPool
 	cfg Config
 }
@@ -36,7 +37,7 @@ func NewService(
 	return &Service{db, km, fc, wp, cfg}
 }
 
-func (s *Service) Create(c context.Context, sync bool, address, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error) {
+func (s *Service) Create(c context.Context, sync bool, address string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
 	var transaction *Transaction
 
 	job, err := s.wp.AddJob(func() (string, error) {
@@ -50,13 +51,14 @@ func (s *Service) Create(c context.Context, sync bool, address, code string, arg
 		if err != nil {
 			return "", err
 		}
+		address = flow_helpers.HexString(address)
 
-		id, err := flow_helpers.LatestBlockId(ctx, s.Fc)
+		id, err := flow_helpers.LatestBlockId(ctx, s.fc)
 		if err != nil {
 			return "", err
 		}
 
-		a, err := s.Km.UserAuthorizer(ctx, flow.HexToAddress(address))
+		a, err := s.km.UserAuthorizer(ctx, flow.HexToAddress(address))
 		if err != nil {
 			return "", err
 		}
@@ -64,11 +66,16 @@ func (s *Service) Create(c context.Context, sync bool, address, code string, arg
 		var aa []keys.Authorizer
 
 		// Check if we need to add this account as an authorizer
-		if strings.Contains(code, ": AuthAccount") {
+		if strings.Contains(raw.Code, ": AuthAccount") {
 			aa = append(aa, a)
 		}
 
-		t, err := New(id, code, args, tType, a, a, aa)
+		b, err := templates.NewBuilderFromRaw(raw)
+		if err != nil {
+			return "", err
+		}
+
+		t, err := New(id, b, tType, a, a, aa)
 		if err != nil {
 			return "", err
 		}
@@ -76,7 +83,7 @@ func (s *Service) Create(c context.Context, sync bool, address, code string, arg
 		transaction = t
 
 		// Send the transaction
-		err = t.Send(ctx, s.Fc)
+		err = t.Send(ctx, s.fc)
 		if err != nil {
 			return "", err
 		}
@@ -88,7 +95,7 @@ func (s *Service) Create(c context.Context, sync bool, address, code string, arg
 		}
 
 		// Wait for the transaction to be sealed
-		err = t.Wait(ctx, s.Fc)
+		err = t.Wait(ctx, s.fc)
 		if err != nil {
 			return "", err
 		}
@@ -122,10 +129,11 @@ func (s *Service) List(address string, limit, offset int) ([]Transaction, error)
 	if err != nil {
 		return []Transaction{}, err
 	}
+	address = flow_helpers.HexString(address)
 
 	o := datastore.ParseListOptions(limit, offset)
 
-	return s.db.Transactions(flow_helpers.HexString(address), o)
+	return s.db.Transactions(address, o)
 }
 
 // Details returns a specific transaction.
@@ -135,6 +143,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	if err != nil {
 		return
 	}
+	address = flow_helpers.HexString(address)
 
 	// Check if the input is a valid transaction id
 	err = flow_helpers.ValidateTransactionId(transactionId)
@@ -143,7 +152,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	}
 
 	// Get from datastore
-	result, err = s.db.Transaction(flow_helpers.HexString(address), transactionId)
+	result, err = s.db.Transaction(address, transactionId)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
@@ -157,11 +166,11 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 }
 
 // Execute a script
-func (s *Service) ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error) {
-	value, err := s.Fc.ExecuteScriptAtLatestBlock(
+func (s *Service) ExecuteScript(ctx context.Context, raw templates.Raw) (cadence.Value, error) {
+	value, err := s.fc.ExecuteScriptAtLatestBlock(
 		ctx,
-		[]byte(code),
-		MustDecodeArgs(args),
+		[]byte(raw.Code),
+		templates.MustDecodeArgs(raw.Arguments),
 	)
 
 	if err != nil {

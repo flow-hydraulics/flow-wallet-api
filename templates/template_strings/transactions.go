@@ -1,4 +1,12 @@
-package templates
+package template_strings
+
+const AddAccountContractWithAdmin = `
+transaction(name: String, code: String) {
+	prepare(signer: AuthAccount) {
+		signer.contracts.add(name: name, code: code.decodeHex(), adminAccount: signer)
+	}
+}
+`
 
 const GenericFungibleTransfer = `
 import FungibleToken from FUNGIBLE_TOKEN_ADDRESS
@@ -36,7 +44,7 @@ transaction {
     let existingVault = signer.borrow<&TokenName.Vault>(from: /storage/tokenNameVault)
 
     if (existingVault != nil) {
-        return
+        panic("vault exists")
     }
 
     signer.save(<-TokenName.createEmptyVault(), to: /storage/tokenNameVault)

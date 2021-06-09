@@ -3,17 +3,18 @@ package accounts
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	flow_templates "github.com/onflow/flow-go-sdk/templates"
 	"gorm.io/gorm"
 )
 
@@ -21,9 +22,19 @@ import (
 type Account struct {
 	Address   string          `json:"address" gorm:"primaryKey"`
 	Keys      []keys.Storable `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Tokens    []AccountToken  `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	CreatedAt time.Time       `json:"createdAt" `
 	UpdatedAt time.Time       `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt  `json:"-" gorm:"index"`
+}
+
+type AccountToken struct {
+	ID             int            `json:"-" gorm:"primaryKey"`
+	AccountAddress string         `json:"-" gorm:"index"`
+	Name           string         `json:"name"`
+	CreatedAt      time.Time      `json:"-"`
+	UpdatedAt      time.Time      `json:"-"`
+	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // New creates a new account on the Flow blockchain.
@@ -52,27 +63,15 @@ func New(
 	}
 
 	// Generate a new key pair
-	wrapped, err := km.GenerateDefault(ctx)
+	accountKey, newPrivateKey, err := km.GenerateDefault(ctx)
 	if err != nil {
 		return
 	}
 
-	// Destruct the wrapped key
-	accountKey := wrapped.AccountKey
-	newPrivateKey = wrapped.PrivateKey
+	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
+	b := templates.NewBuilderFromTx(tx)
 
-	aa := []transactions.Argument{
-		cadence.NewArray([]cadence.Value{
-			cadence.NewString(hex.EncodeToString(accountKey.Encode())),
-		})}
-
-	t, err := transactions.New(
-		id,
-		templates.CreateAccount,
-		aa,
-		transactions.Raw,
-		auth, auth, []keys.Authorizer{auth},
-	)
+	t, err := transactions.New(id, b, transactions.General, auth, auth, nil)
 	if err != nil {
 		return
 	}
@@ -101,4 +100,60 @@ func New(
 	newAccount.Address = flow_helpers.FormatAddress(newAddress)
 
 	return
+}
+
+// AddContract is mainly used for testing purposes
+func AddContract(
+	ctx context.Context,
+	fc *client.Client,
+	km keys.Manager,
+	accountAddress string,
+	contract flow_templates.Contract) (*transactions.Transaction, error) {
+
+	// Get admin account authorizer
+	adminAuth, err := km.AdminAuthorizer(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	flowAddr := flow.HexToAddress(accountAddress)
+
+	// Get user account authorizer
+	userAuth, err := km.UserAuthorizer(ctx, flowAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get latest blocks id as reference id
+	id, err := flow_helpers.LatestBlockId(ctx, fc)
+	if err != nil {
+		return nil, err
+	}
+
+	raw := templates.Raw{
+		Code: template_strings.AddAccountContractWithAdmin,
+		Arguments: []templates.Argument{
+			cadence.NewString(contract.Name),
+			cadence.NewString(contract.SourceHex()),
+		},
+	}
+
+	b, err := templates.NewBuilderFromRaw(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Tx.AddAuthorizer(adminAuth.Address)
+
+	t, err := transactions.New(id, b, transactions.General, userAuth, adminAuth, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = t.SendAndWait(ctx, fc)
+	if err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }

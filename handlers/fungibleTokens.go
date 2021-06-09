@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 )
 
@@ -13,6 +14,7 @@ type FungibleTokens struct {
 }
 
 type FTWithdrawalRequest struct {
+	templates.Token
 	Recipient string `json:"recipient"`
 	Amount    string `json:"amount"`
 }
@@ -26,7 +28,7 @@ func (s *FungibleTokens) CreateWithdrawal() http.Handler {
 	return UseJson(h)
 }
 
-func (s *FungibleTokens) Setup() http.Handler {
-	h := http.HandlerFunc(s.SetupFunc)
+func (s *FungibleTokens) Details() http.Handler {
+	h := http.HandlerFunc(s.DetailsFunc)
 	return UseJson(h)
 }

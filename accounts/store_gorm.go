@@ -11,7 +11,7 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&Account{}, &keys.Storable{})
+	db.AutoMigrate(&Account{}, &AccountToken{}, &keys.Storable{})
 	return &GormStore{db}
 }
 
@@ -31,4 +31,17 @@ func (s *GormStore) Account(address string) (a Account, err error) {
 
 func (s *GormStore) InsertAccount(a *Account) error {
 	return s.db.Create(a).Error
+}
+
+func (s *GormStore) AccountTokens(address string) (att []AccountToken, err error) {
+	// TODO: unique by name and token addres
+	err = s.db.
+		Where(&AccountToken{AccountAddress: address}).
+		Order("name asc").
+		Find(&att).Error
+	return
+}
+
+func (s *GormStore) InsertAccountToken(at *AccountToken) error {
+	return s.db.Create(at).Error
 }

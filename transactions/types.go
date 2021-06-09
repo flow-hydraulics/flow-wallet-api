@@ -7,7 +7,7 @@ type Type int
 
 const (
 	Unknown Type = iota
-	Raw
+	General
 	FtSetup
 	FtDeposit
 	FtWithdrawal
@@ -30,7 +30,7 @@ func StatusFromText(text string) Type {
 	default:
 		return Unknown
 	case "general":
-		return Raw
+		return General
 	case "ftsetup":
 		return FtSetup
 	case "ftdeposit":

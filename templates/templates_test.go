@@ -4,26 +4,27 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/onflow/flow-go-sdk"
 )
 
 func TestParseName(t *testing.T) {
-	n := parseName("FUSD")
+	n := (&Token{Name: "FUSD"}).ParseName()
 	if n != [3]string{"FUSD", "FUSD", "fusd"} {
 		t.Error("invalid output for FUSD")
 	}
 
-	n = parseName("fusd")
+	n = (&Token{Name: "fusd"}).ParseName()
 	if n != [3]string{"FUSD", "FUSD", "fusd"} {
 		t.Error("invalid output for fusd")
 	}
 
-	n = parseName("FlowToken")
+	n = (&Token{Name: "FlowToken"}).ParseName()
 	if n != [3]string{"FlowToken", "FLOW_TOKEN", "flowToken"} {
 		t.Error("invalid output for FlowToken")
 	}
 
-	n = parseName("flow-token")
+	n = (&Token{Name: "flow-token"}).ParseName()
 	if n != [3]string{"FlowToken", "FLOW_TOKEN", "flowToken"} {
 		t.Error("invalid output for flow-token")
 	}
@@ -31,13 +32,12 @@ func TestParseName(t *testing.T) {
 
 func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
-			"FlowToken",
+		g := FungibleTransferCode(
+			Token{Name: "FlowToken"},
 			flow.Emulator,
-			"", "",
 		)
 
-		c := ParseCode(TransferFlow, flow.Emulator)
+		c := Code(&Template{Source: template_strings.TransferFlow}, flow.Emulator)
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -45,20 +45,15 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FlowToken with non-standard addresses", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
-			"FlowToken",
+		g := FungibleTransferCode(
+			Token{Name: "FlowToken", Address: "some_other_tokenaddress"},
 			flow.Emulator,
-			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
-		c := ParseCode(TransferFlow, flow.Emulator)
+		c := Code(&Template{Source: template_strings.TransferFlow}, flow.Emulator)
 
 		if g == c {
 			t.Error("expected outputs not to equal")
-		}
-
-		if i := strings.Index(g, "import FungibleToken from some_other_baseaddress"); i == -1 {
-			t.Error("expected to find non-standard baseaddress")
 		}
 
 		if i := strings.Index(g, "import FlowToken from some_other_tokenaddress"); i == -1 {
@@ -67,13 +62,12 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FUSD", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
-			"FUSD",
+		g := FungibleTransferCode(
+			Token{Name: "FUSD"},
 			flow.Emulator,
-			"", "",
 		)
 
-		c := ParseCode(TransferFUSD, flow.Emulator)
+		c := Code(&Template{template_strings.TransferFUSD}, flow.Emulator)
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -81,20 +75,15 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FUSD with non-standard addresses", func(t *testing.T) {
-		g := ParseGenericFungibleTransfer(
-			"FUSD",
+		g := FungibleTransferCode(
+			Token{Name: "FUSD", Address: "some_other_tokenaddress"},
 			flow.Emulator,
-			"some_other_tokenaddress", "some_other_baseaddress",
 		)
 
-		c := ParseCode(TransferFlow, flow.Emulator)
+		c := Code(&Template{template_strings.TransferFUSD}, flow.Emulator)
 
 		if g == c {
 			t.Error("expected outputs not to equal")
-		}
-
-		if i := strings.Index(g, "import FungibleToken from some_other_baseaddress"); i == -1 {
-			t.Error("expected to find non-standard baseaddress")
 		}
 
 		if i := strings.Index(g, "import FUSD from some_other_tokenaddress"); i == -1 {

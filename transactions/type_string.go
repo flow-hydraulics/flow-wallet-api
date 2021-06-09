@@ -9,7 +9,7 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[Unknown-0]
-	_ = x[Raw-1]
+	_ = x[General-1]
 	_ = x[FtSetup-2]
 	_ = x[FtDeposit-3]
 	_ = x[FtWithdrawal-4]
@@ -18,9 +18,9 @@ func _() {
 	_ = x[NftWithdrawal-7]
 }
 
-const _Type_name = "UnknownRawFtSetupFtDepositFtWithdrawalNftSetupNftDepositNftWithdrawal"
+const _Type_name = "UnknownGeneralFtSetupFtDepositFtWithdrawalNftSetupNftDepositNftWithdrawal"
 
-var _Type_index = [...]uint8{0, 7, 10, 17, 26, 38, 46, 56, 69}
+var _Type_index = [...]uint8{0, 7, 14, 21, 30, 42, 50, 60, 73}
 
 func (i Type) String() string {
 	if i < 0 || i >= Type(len(_Type_index)-1) {
