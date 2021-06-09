@@ -76,13 +76,13 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			return "", err
 		}
 
-		// Store FlowToken as one AccountToken as it is automatically enabled
-		// on all accounts
-		at := &AccountToken{
+		// Store an AccountToken named FlowToken for the account as it is automatically
+		// enabled on all accounts
+		// Intentionally ignore error
+		s.db.InsertAccountToken(&AccountToken{
 			AccountAddress: a.Address,
 			Name:           "FlowToken",
-		}
-		s.db.InsertAccountToken(at) // Intentionally ignore error
+		})
 
 		return a.Address, nil
 	})
@@ -146,6 +146,7 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, token templ
 		if err != nil {
 			return
 		}
+		// Intentionally ignore error
 		s.db.InsertAccountToken(&AccountToken{
 			AccountAddress: address,
 			Name:           token.CanonName(),

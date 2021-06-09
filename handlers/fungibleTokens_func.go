@@ -52,7 +52,8 @@ func (s *FungibleTokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Re
 }
 
 func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	r.ParseForm() // Ignore the error as tokenAddress is not required
+
 	vars := mux.Vars(r)
 
 	a := vars["address"]
