@@ -14,9 +14,10 @@ func NewGormStore(db *gorm.DB) *GormStore {
 	return &GormStore{db}
 }
 
-func (s *GormStore) Transactions(address string, o datastore.ListOptions) (tt []Transaction, err error) {
+func (s *GormStore) Transactions(tType Type, address string, o datastore.ListOptions) (tt []Transaction, err error) {
+	q := &Transaction{PayerAddress: address, TransactionType: tType}
 	err = s.db.
-		Where(&Transaction{PayerAddress: address}).
+		Where(q).
 		Order("created_at desc").
 		Limit(o.Limit).
 		Offset(o.Offset).
@@ -24,8 +25,9 @@ func (s *GormStore) Transactions(address string, o datastore.ListOptions) (tt []
 	return
 }
 
-func (s *GormStore) Transaction(address, txId string) (t Transaction, err error) {
-	err = s.db.Where(&Transaction{PayerAddress: address, TransactionId: txId}).First(&t).Error
+func (s *GormStore) Transaction(tType Type, address, txId string) (t Transaction, err error) {
+	q := &Transaction{PayerAddress: address, TransactionType: tType, TransactionId: txId}
+	err = s.db.Where(q).First(&t).Error
 	return
 }
 

@@ -77,7 +77,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 
 		t, err := New(id, b, tType, a, a, aa)
 		if err != nil {
-			return "", err
+			return t.TransactionId, err
 		}
 
 		transaction = t
@@ -85,19 +85,19 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		// Send the transaction
 		err = t.Send(ctx, s.fc)
 		if err != nil {
-			return "", err
+			return t.TransactionId, err
 		}
 
 		// Insert to datastore
 		err = s.db.InsertTransaction(t)
 		if err != nil {
-			return "", err
+			return t.TransactionId, err
 		}
 
 		// Wait for the transaction to be sealed
 		err = t.Wait(ctx, s.fc)
 		if err != nil {
-			return "", err
+			return t.TransactionId, err
 		}
 
 		// Update in datastore
@@ -123,7 +123,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 }
 
 // List returns all transactions in the datastore for a given account.
-func (s *Service) List(address string, limit, offset int) ([]Transaction, error) {
+func (s *Service) List(tType Type, address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -133,11 +133,11 @@ func (s *Service) List(address string, limit, offset int) ([]Transaction, error)
 
 	o := datastore.ParseListOptions(limit, offset)
 
-	return s.db.Transactions(address, o)
+	return s.db.Transactions(tType, address, o)
 }
 
 // Details returns a specific transaction.
-func (s *Service) Details(address, transactionId string) (result Transaction, err error) {
+func (s *Service) Details(tType Type, address, transactionId string) (result Transaction, err error) {
 	// Check if the input is a valid address
 	err = flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -152,7 +152,7 @@ func (s *Service) Details(address, transactionId string) (result Transaction, er
 	}
 
 	// Get from datastore
-	result, err = s.db.Transaction(address, transactionId)
+	result, err = s.db.Transaction(tType, address, transactionId)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{

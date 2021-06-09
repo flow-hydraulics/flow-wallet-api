@@ -7,6 +7,12 @@ services:
     environment:
       POSTGRES_PASSWORD: postgres
 
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+
   emulator:
     container_name: flow-emulator
     image: flow-cli:0.21.0

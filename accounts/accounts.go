@@ -37,6 +37,8 @@ type AccountToken struct {
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
+// TODO: Add AccountTokens to admin account on startup (FlowToken for now)
+
 // New creates a new account on the Flow blockchain.
 // It uses the provided admin account to pay for the creation.
 // It generates a new privatekey and returns it (local key)

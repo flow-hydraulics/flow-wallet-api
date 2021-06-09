@@ -13,10 +13,9 @@ import (
 )
 
 type Transaction struct {
-	ID              int                     `json:"-" gorm:"primaryKey"`
-	PayerAddress    string                  `json:"-" gorm:"index"`
-	TransactionId   string                  `json:"transactionId" gorm:"index"`
+	TransactionId   string                  `json:"transactionId" gorm:"primaryKey"`
 	TransactionType Type                    `json:"transactionType" gorm:"index"`
+	PayerAddress    string                  `json:"-" gorm:"index"`
 	CreatedAt       time.Time               `json:"createdAt"`
 	UpdatedAt       time.Time               `json:"updatedAt"`
 	DeletedAt       gorm.DeletedAt          `json:"-" gorm:"index"`
