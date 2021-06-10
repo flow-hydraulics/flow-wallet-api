@@ -83,7 +83,7 @@ The Docker Compose sample configurations
 in this repository show how to configure this application when
 running as a Docker container.
 
-### Emulator (Local Development)
+### Emulator
 
 > This example shows how to connect the Docker container
 > to an instance of the [Flow Emulator](https://docs.onflow.org/emulator).
