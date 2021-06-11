@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
 )
@@ -20,8 +21,13 @@ func handleError(rw http.ResponseWriter, logger *log.Logger, err error) {
 	// Check if the error was an errors.RequestError
 	reqErr, isReqErr := err.(*errors.RequestError)
 	if isReqErr {
-		// Send error message to client
 		http.Error(rw, reqErr.Error(), reqErr.StatusCode)
+		return
+	}
+
+	// Check for "record not found" database error
+	if strings.Contains(err.Error(), "record not found") {
+		http.Error(rw, "record not found", http.StatusNotFound)
 		return
 	}
 

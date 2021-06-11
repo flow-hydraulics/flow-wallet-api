@@ -23,12 +23,22 @@ func NewFungibleTokens(l *log.Logger, service *tokens.Service) *FungibleTokens {
 	return &FungibleTokens{l, service}
 }
 
-func (s *FungibleTokens) CreateWithdrawal() http.Handler {
-	h := http.HandlerFunc(s.CreateWithdrawalFunc)
+func (s *FungibleTokens) Details() http.Handler {
+	h := http.HandlerFunc(s.DetailsFunc)
 	return UseJson(h)
 }
 
-func (s *FungibleTokens) Details() http.Handler {
-	h := http.HandlerFunc(s.DetailsFunc)
+func (s *FungibleTokens) CreateFtWithdrawal() http.Handler {
+	h := http.HandlerFunc(s.CreateFtWithdrawalFunc)
+	return UseJson(h)
+}
+
+func (s *FungibleTokens) ListFtWithdrawals() http.Handler {
+	h := http.HandlerFunc(s.ListFtWithdrawalsFunc)
+	return UseJson(h)
+}
+
+func (s *FungibleTokens) GetFtWithdrawal() http.Handler {
+	h := http.HandlerFunc(s.GetFtWithdrawalFunc)
 	return UseJson(h)
 }

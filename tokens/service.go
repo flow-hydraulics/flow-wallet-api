@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"context"
+	"sync"
 
 	"github.com/eqlabs/flow-wallet-service/accounts"
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
@@ -17,6 +18,7 @@ import (
 )
 
 type Service struct {
+	db  Store
 	km  keys.Manager
 	fc  *client.Client
 	ts  *transactions.Service
@@ -24,41 +26,12 @@ type Service struct {
 }
 
 func NewService(
+	db Store,
 	km keys.Manager,
 	fc *client.Client,
 	ts *transactions.Service) *Service {
 	cfg := ParseConfig()
-	return &Service{km, fc, ts, cfg}
-}
-
-func (s *Service) CreateFtWithdrawal(ctx context.Context, sync bool, token templates.Token, sender, recipient, amount string) (*jobs.Job, *transactions.Transaction, error) {
-	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId)
-	if err != nil {
-		return nil, nil, err
-	}
-	sender = flow_helpers.HexString(sender)
-
-	err = flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
-	if err != nil {
-		return nil, nil, err
-	}
-	recipient = flow_helpers.HexString(recipient)
-
-	_amount, err := cadence.NewUFix64(amount)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	raw := templates.Raw{
-		Code: templates.FungibleTransferCode(token, s.cfg.ChainId),
-		Arguments: []templates.Argument{
-			_amount,
-			cadence.NewAddress(flow.HexToAddress(recipient)),
-		},
-	}
-
-	return s.ts.Create(ctx, sync, sender, raw, transactions.FtWithdrawal)
+	return &Service{db, km, fc, ts, cfg}
 }
 
 func (s *Service) Details(ctx context.Context, token templates.Token, address string) (TokenDetails, error) {
@@ -84,8 +57,97 @@ func (s *Service) Details(ctx context.Context, token templates.Token, address st
 	return TokenDetails{Name: token.CanonName(), Balance: b.String()}, nil
 }
 
+func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, token templates.Token, sender, recipient, amount string) (*jobs.Job, *FungibleTokenTransfer, error) {
+	// Check if the sender is a valid address
+	err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId)
+	if err != nil {
+		return nil, nil, err
+	}
+	// Make sure correct format is used
+	sender = flow_helpers.HexString(sender)
+
+	// Check if the recipient is a valid address
+	err = flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
+	if err != nil {
+		return nil, nil, err
+	}
+	// Make sure correct format is used
+	recipient = flow_helpers.HexString(recipient)
+
+	// Convert amount to a cadence value
+	c_amount, err := cadence.NewUFix64(amount)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Raw transfer template
+	raw := templates.Raw{
+		Code: templates.FungibleTransferCode(token, s.cfg.ChainId),
+		Arguments: []templates.Argument{
+			c_amount,
+			cadence.NewAddress(flow.HexToAddress(recipient)),
+		},
+	}
+
+	// Create the transaction
+	job, _, err := s.ts.Create(ctx, runSync, sender, raw, transactions.FtWithdrawal)
+
+	// Initialise the transfer object
+	t := &FungibleTokenTransfer{
+		RecipientAddress: recipient,
+		Amount:           amount,
+		TokenName:        token.CanonName(),
+	}
+
+	// Handle database update
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		job.Wait(true) // Ignore the error
+		t.TransactionId = job.Result
+		s.db.InsertFungibleTokenTransfer(t) // TODO: handle error
+	}()
+
+	if runSync {
+		wg.Wait()
+	}
+
+	return job, t, err
+}
+
+func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]FungibleTokenTransfer, error) {
+	// Check if the input is a valid address
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	address = flow_helpers.HexString(address)
+
+	return s.db.FungibleTokenWithdrawals(address, token.CanonName())
+}
+
+func (s *Service) GetFtWithdrawal(address string, token templates.Token, transactionId string) (FungibleTokenTransfer, error) {
+	// Check if the input is a valid address
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return FungibleTokenTransfer{}, err
+	}
+	address = flow_helpers.HexString(address)
+
+	// Check if the input is a valid transaction id
+	err = flow_helpers.ValidateTransactionId(transactionId)
+	if err != nil {
+		return FungibleTokenTransfer{}, err
+	}
+
+	return s.db.FungibleTokenWithdrawal(address, token.CanonName(), transactionId)
+}
+
 // DeployTokenContractForAccount is mainly used for testing purposes.
-func (s *Service) DeployTokenContractForAccount(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {

@@ -135,6 +135,7 @@ func (w *Worker) tryEnqueue(job *Job) bool {
 
 func (w *Worker) process(job *Job) {
 	result, err := job.Do()
+	job.Result = result
 	if err != nil {
 		if w.pool.log != nil {
 			w.pool.log.Printf("[Job %s] Error while processing job: %s\n", job.ID, err)
@@ -148,7 +149,6 @@ func (w *Worker) process(job *Job) {
 		return
 	}
 	job.Status = Complete
-	job.Result = result
 	err = w.pool.db.UpdateJob(job)
 	if err != nil {
 		w.pool.log.Println("WARNING: Could not update DB entry for Job", job.ID)

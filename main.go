@@ -44,12 +44,10 @@ func main() {
 	}
 
 	var (
-		flgVersion   bool
-		flgRunServer bool
+		flgVersion bool
 	)
 
 	flag.BoolVar(&flgVersion, "version", false, "if true, print version and exit")
-	flag.BoolVar(&flgRunServer, "server", true, "run the server")
 	flag.Parse()
 
 	if flgVersion {
@@ -57,10 +55,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	if flgRunServer {
-		runServer()
-		os.Exit(0)
-	}
+	runServer()
+	os.Exit(0)
 }
 
 func runServer() {
@@ -109,6 +105,7 @@ func runServer() {
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
+	tokenStore := tokens.NewGormStore(db)
 
 	// Create a worker pool
 	wp := jobs.NewWorkerPool(lj, jobStore)
@@ -122,7 +119,7 @@ func runServer() {
 	jobsService := jobs.NewService(jobStore)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(km, fc, transactionService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService)
 
 	debugService := debug.Service{
 		RepoUrl:   "https://github.com/eqlabs/flow-wallet-service",
@@ -175,9 +172,9 @@ func runServer() {
 		rft.Handle("", accountHandler.AccountFungibleTokens()).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}", fungibleTokenHandler.Details()).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}", accountHandler.SetupFungibleToken()).Methods(http.MethodPost)
-		// rft.Handle("/{tokenName}/withdrawals", fungibleTokens.ListWithdrawals).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/withdrawals", fungibleTokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
-		// rft.Handle("/{tokenName}/withdrawals/{transactionId}", fungibleTokens.WithdrawalDetails).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/withdrawals", fungibleTokenHandler.ListFtWithdrawals()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/withdrawals", fungibleTokenHandler.CreateFtWithdrawal()).Methods(http.MethodPost)
+		rft.Handle("/{tokenName}/withdrawals/{transactionId}", fungibleTokenHandler.GetFtWithdrawal()).Methods(http.MethodGet)
 	}
 
 	// TODO: nfts

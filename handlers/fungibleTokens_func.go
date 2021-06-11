@@ -10,7 +10,28 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *FungibleTokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
+func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
+	r.ParseForm() // Ignore the error as tokenAddress is not required
+
+	vars := mux.Vars(r)
+
+	a := vars["address"]
+	tN := vars["tokenName"]
+	tA := r.Form.Get("tokenAddress")
+
+	t := templates.NewToken(tN, tA)
+
+	res, err := s.service.Details(r.Context(), t, a)
+
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, res)
+}
+
+func (s *FungibleTokens) CreateFtWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	sender := vars["address"]
 	tN := vars["tokenName"]
@@ -51,18 +72,32 @@ func (s *FungibleTokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Re
 	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
-func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
-	r.ParseForm() // Ignore the error as tokenAddress is not required
-
+func (s *FungibleTokens) ListFtWithdrawalsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	address := vars["address"]
+	token := vars["tokenName"]
 
-	a := vars["address"]
-	tN := vars["tokenName"]
-	tA := r.Form.Get("tokenAddress")
+	t := templates.NewToken(token, "")
 
-	t := templates.NewToken(tN, tA)
+	res, err := s.service.ListFtWithdrawals(address, t)
 
-	res, err := s.service.Details(r.Context(), t, a)
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, res)
+}
+
+func (s *FungibleTokens) GetFtWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	token := vars["tokenName"]
+	txId := vars["transactionId"]
+
+	t := templates.NewToken(token, "")
+
+	res, err := s.service.GetFtWithdrawal(address, t, txId)
 
 	if err != nil {
 		handleError(rw, s.log, err)

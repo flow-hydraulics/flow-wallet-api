@@ -25,7 +25,7 @@ func (s *Transactions) ListFunc(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	res, err := s.service.List(vars["address"], limit, offset)
+	res, err := s.service.List(transactions.General, vars["address"], limit, offset)
 
 	if err != nil {
 		handleError(rw, s.log, err)
@@ -83,7 +83,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Transactions) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	res, err := s.service.Details(vars["address"], vars["transactionId"])
+	res, err := s.service.Details(transactions.General, vars["address"], vars["transactionId"])
 
 	if err != nil {
 		handleError(rw, s.log, err)

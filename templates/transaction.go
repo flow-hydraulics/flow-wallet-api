@@ -1,6 +1,12 @@
 package templates
 
-import "github.com/onflow/flow-go-sdk"
+import (
+	"fmt"
+
+	"github.com/onflow/cadence"
+	c_json "github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/flow-go-sdk"
+)
 
 type Raw struct {
 	Code      string     `json:"code" gorm:"-"`
@@ -45,4 +51,11 @@ func (b *TransactionBuilder) AddArgument(a Argument) error {
 		return err
 	}
 	return nil
+}
+
+func (b *TransactionBuilder) GetArgument(index int) (cadence.Value, error) {
+	if index < 0 || index >= len(b.Tx.Arguments) {
+		return nil, fmt.Errorf("index out of bounds")
+	}
+	return c_json.Decode(b.Tx.Arguments[index])
 }

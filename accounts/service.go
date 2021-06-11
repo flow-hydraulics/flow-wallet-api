@@ -104,25 +104,15 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 }
 
 // Details returns a specific account.
-func (s *Service) Details(address string) (result Account, err error) {
+func (s *Service) Details(address string) (Account, error) {
 	// Check if the input is a valid address
-	err = flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
-		return
+		return Account{}, err
 	}
 	address = flow_helpers.HexString(address)
 
-	// Get from datastore
-	result, err = s.db.Account(address)
-	if err != nil && err.Error() == "record not found" {
-		// Convert error to a 404 RequestError
-		err = &errors.RequestError{
-			StatusCode: http.StatusNotFound,
-			Err:        fmt.Errorf("account not found"),
-		}
-	}
-
-	return
+	return s.db.Account(address)
 }
 
 func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, token templates.Token, address string) (*jobs.Job, *transactions.Transaction, error) {

@@ -291,7 +291,7 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "details unknown address",
 			method:   http.MethodGet,
 			url:      "/0f7025fa05b578e3",
-			expected: "account not found",
+			expected: "record not found",
 			status:   http.StatusNotFound,
 		},
 		{
@@ -723,6 +723,7 @@ func TestTokenServices(t *testing.T) {
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
+	tokenStore := tokens.NewGormStore(db)
 
 	km := basic.NewKeyManager(keyStore, fc)
 
@@ -732,7 +733,7 @@ func TestTokenServices(t *testing.T) {
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	service := tokens.NewService(km, fc, transactionService)
+	service := tokens.NewService(tokenStore, km, fc, transactionService)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
@@ -755,7 +756,7 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, tx, err := service.CreateFtWithdrawal(
+		_, transfer, err := service.CreateFtWithdrawal(
 			context.Background(),
 			true,
 			templates.NewToken("flow-token", ""),
@@ -768,8 +769,8 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
-			t.Fatalf("Expected txId not to be empty")
+		if flow.HexToID(transfer.TransactionId) == flow.EmptyID {
+			t.Fatalf("Expected TransactionId not to be empty")
 		}
 	})
 
@@ -780,7 +781,7 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, tx, err := service.CreateFtWithdrawal(
+		_, transfer, err := service.CreateFtWithdrawal(
 			context.Background(),
 			true,
 			templates.NewToken("flow-token", ""),
@@ -789,8 +790,8 @@ func TestTokenServices(t *testing.T) {
 			"1.0",
 		)
 
-		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
-			t.Fatal("Expected txId not to be empty")
+		if flow.HexToID(transfer.TransactionId) == flow.EmptyID {
+			t.Fatal("Expected TransactionId not to be empty")
 		}
 
 		if err == nil {
@@ -886,6 +887,7 @@ func TestTokenHandlers(t *testing.T) {
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
+	tokenStore := tokens.NewGormStore(db)
 
 	km := basic.NewKeyManager(keyStore, fc)
 
@@ -895,7 +897,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	service := tokens.NewService(km, fc, transactionService)
+	service := tokens.NewService(tokenStore, km, fc, transactionService)
 
 	tokenHandlers := handlers.NewFungibleTokens(logger, service)
 	accountHandlers := handlers.NewAccounts(logger, accountService)
@@ -904,60 +906,9 @@ func TestTokenHandlers(t *testing.T) {
 	router.Handle("/{address}/fungible-tokens", accountHandlers.AccountFungibleTokens()).Methods(http.MethodGet)
 	router.Handle("/{address}/fungible-tokens/{tokenName}", accountHandlers.SetupFungibleToken()).Methods(http.MethodPost)
 	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandlers.Details()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.CreateWithdrawal()).Methods(http.MethodPost)
-
-	_, account, err := accountService.Create(context.Background(), true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create withdrawals
-	token := "flow-token"
-	createWithdrawalSteps := []httpTestStep{
-		{
-			name:        "CreateWithdrawal FlowToken valid async",
-			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
-			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token),
-			expected:    `"jobId":".+"`,
-			status:      http.StatusCreated,
-		},
-		{
-			name:        "CreateWithdrawal FlowToken valid sync",
-			sync:        true,
-			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
-			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token),
-			expected:    `"transactionType":"FtWithdrawal"`,
-			status:      http.StatusCreated,
-		},
-		{
-			name:        "CreateWithdrawal FlowToken invalid recipient",
-			method:      http.MethodPost,
-			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
-			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token),
-			expected:    "not a valid address",
-			status:      http.StatusBadRequest,
-		},
-		{
-			name:        "CreateWithdrawal FlowToken invalid amount",
-			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, account.Address)),
-			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token),
-			expected:    "missing decimal point",
-			status:      http.StatusBadRequest,
-		},
-	}
-
-	for _, s := range createWithdrawalSteps {
-		t.Run(s.name, func(t *testing.T) {
-			handleStepRequest(s, router, t)
-		})
-	}
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.CreateFtWithdrawal()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.ListFtWithdrawals()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandlers.GetFtWithdrawal()).Methods(http.MethodGet)
 
 	// Setup tokens
 
@@ -1016,7 +967,7 @@ func TestTokenHandlers(t *testing.T) {
 			body:        strings.NewReader(`{"tokenAddress":"0x1234"}`),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[3].Address, "fusd"),
-			expected:    `.*cannot find declaration.*`,
+			expected:    `cannot find declaration`,
 			status:      http.StatusBadRequest,
 		},
 	}
@@ -1034,7 +985,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "flow-token"),
-			expected:    `.*"name":"FlowToken","balance":".+".*`,
+			expected:    `"name":"FlowToken","balance":".+"`,
 			status:      http.StatusOK,
 		},
 		{
@@ -1042,7 +993,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "fusd"),
-			expected:    `.*"name":"FUSD\","balance":".+".*`,
+			expected:    `"name":"FUSD\","balance":".+"`,
 			status:      http.StatusOK,
 		},
 	}
@@ -1060,12 +1011,122 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens", aa[1].Address),
-			expected:    `.*{"name":"FUSD"}.*{"name":"FlowToken"}.*`,
+			expected:    `\[.*{"name":"FUSD"}.*{"name":"FlowToken"}.*\]`,
 			status:      http.StatusOK,
 		},
 	}
 
 	for _, s := range listSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	// Withdrawals
+	token := templates.NewToken("flow-token", "")
+
+	_, account, err := accountService.Create(context.Background(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, transfer, err := service.CreateFtWithdrawal(context.Background(), true, token, cfg.AdminAddress, account.Address, "1.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create withdrawals
+	createWithdrawalSteps := []httpTestStep{
+		{
+			name:        "create withdrawal valid async",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
+			expected:    `"jobId":".+"`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "create withdrawal valid sync",
+			sync:        true,
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
+			expected:    `"recipient\":".+"`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "create withdrawal invalid recipient",
+			method:      http.MethodPost,
+			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
+			expected:    "not a valid address",
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "create withdrawal invalid amount",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, account.Address)),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
+			expected:    "missing decimal point",
+			status:      http.StatusBadRequest,
+		},
+	}
+
+	for _, s := range createWithdrawalSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	// Get withdrawals
+	getWithdrawalSteps := []httpTestStep{
+		{
+			name:        "list withdrawals valid",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
+			expected:    `\[.*"transactionId":".+".*\]`,
+			status:      http.StatusOK,
+		},
+		{
+			name:        "list withdrawals empty",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", account.Address, token.Name),
+			expected:    `\[\]`,
+			status:      http.StatusOK,
+		},
+		{
+			name:        "get withdrawal details valid",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", cfg.AdminAddress, token.Name, transfer.TransactionId),
+			expected:    fmt.Sprintf(`"transactionId":"%s"`, transfer.TransactionId),
+			status:      http.StatusOK,
+		},
+		{
+			name:        "get withdrawal details invalid transaction id",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/invalid-transaction-id", cfg.AdminAddress, token.Name),
+			expected:    "not a valid transaction id",
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "get withdrawal details not found",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", account.Address, token.Name, transfer.TransactionId),
+			expected:    "record not found",
+			status:      http.StatusNotFound,
+		},
+	}
+
+	for _, s := range getWithdrawalSteps {
 		t.Run(s.name, func(t *testing.T) {
 			handleStepRequest(s, router, t)
 		})
