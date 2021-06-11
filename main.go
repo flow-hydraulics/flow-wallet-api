@@ -14,6 +14,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/accounts"
 	"github.com/eqlabs/flow-wallet-service/datastore/gorm"
 	"github.com/eqlabs/flow-wallet-service/debug"
+	"github.com/eqlabs/flow-wallet-service/events"
 	"github.com/eqlabs/flow-wallet-service/handlers"
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
@@ -200,6 +201,21 @@ func runServer() {
 		}
 	}()
 
+	l := events.NewListener(fc)
+	l.Start()
+
+	l.AddType("flow.AccountCreated")
+	l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensWithdrawn")
+	l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensDeposited")
+
+	go func() {
+		for events := range l.Events {
+			for _, e := range events {
+				fmt.Printf("Received event: %s %v\n", e.Type, e.Value.Fields)
+			}
+		}
+	}()
+
 	// Trap interupt or sigterm and gracefully shutdown the server
 	c := make(chan os.Signal, 1)
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
@@ -210,6 +226,9 @@ func runServer() {
 	sig := <-c
 
 	ls.Printf("Got signal: %s. Shutting down..\n", sig)
+
+	// Stop the event listener
+	l.Stop()
 
 	// Stop the worker pool, waits
 	wp.Stop()
