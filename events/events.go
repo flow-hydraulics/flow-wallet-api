@@ -12,7 +12,6 @@ import (
 // TODO: increase once implementation is somewhat complete
 const PERIOD = 1 * time.Second
 const CHAN_TIMEOUT = PERIOD / 2
-const CHAN_SIZE = 1
 
 type Listener struct {
 	ticker *time.Ticker
@@ -20,6 +19,10 @@ type Listener struct {
 	types  map[string]bool
 	Events chan []flow.Event
 	fc     *client.Client
+}
+
+type TimeOutError struct {
+	error
 }
 
 func NewListener(fc *client.Client) *Listener {
@@ -32,7 +35,7 @@ func NewListener(fc *client.Client) *Listener {
 	}
 }
 
-func (l *Listener) process(ctx context.Context, start, end uint64) {
+func (l *Listener) process(ctx context.Context, start, end uint64) error {
 	ee := make([]flow.Event, 0)
 
 	for t := range l.types {
@@ -42,7 +45,7 @@ func (l *Listener) process(ctx context.Context, start, end uint64) {
 			EndHeight:   end,
 		})
 		if err != nil {
-			fmt.Println("error while fetching events", err)
+			return fmt.Errorf("error while fetching events")
 		}
 		for _, b := range r {
 			ee = append(ee, b.Events...)
@@ -52,9 +55,20 @@ func (l *Listener) process(ctx context.Context, start, end uint64) {
 	select {
 	case l.Events <- ee:
 		// Sent
+		return nil
 	case <-time.After(CHAN_TIMEOUT):
 		// Timed out while waiting for channel
+		return &TimeOutError{}
 	}
+}
+
+func (l *Listener) handleError(err error) {
+	_, ok := err.(*TimeOutError)
+	if ok {
+		// Ignore timeout errors
+		return
+	}
+	fmt.Println(err)
 }
 
 func (l *Listener) AddType(t string) {
@@ -71,7 +85,7 @@ func (l *Listener) Start() {
 	}
 
 	l.ticker = time.NewTicker(PERIOD)
-	l.Events = make(chan []flow.Event, CHAN_SIZE)
+	l.Events = make(chan []flow.Event)
 
 	go func() {
 		ctx := context.Background()
@@ -90,8 +104,12 @@ func (l *Listener) Start() {
 				cur, _ = l.fc.GetLatestBlock(ctx, true)
 				end = cur.Height
 				if end > start {
-					l.process(ctx, start+1, end) // start has already been checked, add 1
-					start = end
+					err := l.process(ctx, start+1, end) // start has already been checked, add 1
+					if err != nil {
+						l.handleError(err)
+					} else {
+						start = end
+					}
 				}
 			}
 		}
