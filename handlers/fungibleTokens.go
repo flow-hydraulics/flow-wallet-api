@@ -42,3 +42,13 @@ func (s *FungibleTokens) GetFtWithdrawal() http.Handler {
 	h := http.HandlerFunc(s.GetFtWithdrawalFunc)
 	return UseJson(h)
 }
+
+func (s *FungibleTokens) ListFtDeposits() http.Handler {
+	h := http.HandlerFunc(s.ListFtDepositsFunc)
+	return UseJson(h)
+}
+
+func (s *FungibleTokens) GetFtDeposit() http.Handler {
+	h := http.HandlerFunc(s.GetFtDepositFunc)
+	return UseJson(h)
+}

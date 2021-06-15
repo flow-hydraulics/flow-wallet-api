@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -19,6 +20,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/basic"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
@@ -176,6 +178,8 @@ func runServer() {
 		rft.Handle("/{tokenName}/withdrawals", fungibleTokenHandler.ListFtWithdrawals()).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}/withdrawals", fungibleTokenHandler.CreateFtWithdrawal()).Methods(http.MethodPost)
 		rft.Handle("/{tokenName}/withdrawals/{transactionId}", fungibleTokenHandler.GetFtWithdrawal()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/deposits", fungibleTokenHandler.ListFtDeposits()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/deposits/{transactionId}", fungibleTokenHandler.GetFtDeposit()).Methods(http.MethodGet)
 	}
 
 	// TODO: nfts
@@ -204,14 +208,27 @@ func runServer() {
 	l := events.NewListener(fc)
 	l.Start()
 
-	l.AddType("flow.AccountCreated")
-	l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensWithdrawn")
+	// l.AddType("flow.AccountCreated")
+	// l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensWithdrawn")
 	l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensDeposited")
 
 	go func() {
 		for events := range l.Events {
 			for _, e := range events {
-				fmt.Printf("Received event: %s %v\n", e.Type, e.Value.Fields)
+				if strings.Contains(e.Type, "TokensDeposited") {
+					// TODO: filter out events not related to this wallet service (address not in db)
+					err := tokenService.RegisterFtDeposit(
+						e.TransactionID.Hex(),
+						templates.NewToken("TODO", ""),
+						e.Value.Fields[0].String(),
+						e.Value.Fields[1].String(),
+					)
+					if err != nil {
+						fmt.Printf("error while registering a deposit: %s\n", err)
+					}
+				}
+
+				fmt.Printf("received event: %s %v\n", e.Type, e.Value.Fields)
 			}
 		}
 	}()

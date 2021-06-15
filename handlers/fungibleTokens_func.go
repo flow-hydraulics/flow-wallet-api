@@ -106,3 +106,38 @@ func (s *FungibleTokens) GetFtWithdrawalFunc(rw http.ResponseWriter, r *http.Req
 
 	handleJsonResponse(rw, http.StatusOK, res)
 }
+
+func (s *FungibleTokens) ListFtDepositsFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	token := vars["tokenName"]
+
+	t := templates.NewToken(token, "")
+
+	res, err := s.service.ListFtDeposits(address, t)
+
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, res)
+}
+
+func (s *FungibleTokens) GetFtDepositFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	token := vars["tokenName"]
+	txId := vars["transactionId"]
+
+	t := templates.NewToken(token, "")
+
+	res, err := s.service.GetFtDeposit(address, t, txId)
+
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, res)
+}

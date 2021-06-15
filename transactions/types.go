@@ -9,8 +9,7 @@ const (
 	Unknown Type = iota
 	General
 	FtSetup
-	FtDeposit
-	FtWithdrawal
+	FtTransfer
 	NftSetup
 	NftDeposit
 	NftWithdrawal
@@ -33,10 +32,8 @@ func StatusFromText(text string) Type {
 		return General
 	case "ftsetup":
 		return FtSetup
-	case "ftdeposit":
-		return FtDeposit
-	case "ftwithdrawal":
-		return FtWithdrawal
+	case "ftransfer":
+		return FtTransfer
 	case "nftsetup":
 		return NftSetup
 	case "nftdeposit":

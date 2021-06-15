@@ -31,6 +31,14 @@ func (s *GormStore) Transaction(tType Type, address, txId string) (t Transaction
 	return
 }
 
+func (s *GormStore) GetOrCreateTransaction(txId string) (t *Transaction) {
+	s.db.
+		Where(&Transaction{TransactionId: txId}).
+		Attrs(&Transaction{TransactionType: Unknown}).
+		FirstOrCreate(&t)
+	return t
+}
+
 func (s *GormStore) InsertTransaction(t *Transaction) error {
 	return s.db.Create(t).Error
 }
