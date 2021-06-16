@@ -15,7 +15,7 @@ services:
 
   emulator:
     container_name: flow-emulator
-    image: flow-cli:0.21.0
+    image: flow-cli:latest
     command: emulator -v
     ports:
       - "3569:3569"
