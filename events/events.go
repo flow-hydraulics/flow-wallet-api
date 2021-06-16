@@ -10,8 +10,8 @@ import (
 )
 
 // TODO: increase once implementation is somewhat complete
-const PERIOD = 1 * time.Second
-const CHAN_TIMEOUT = PERIOD / 2
+const period = 1 * time.Second
+const chanTimeout = period / 2
 
 type Listener struct {
 	ticker *time.Ticker
@@ -45,7 +45,7 @@ func (l *Listener) process(ctx context.Context, start, end uint64) error {
 			EndHeight:   end,
 		})
 		if err != nil {
-			return fmt.Errorf("error while fetching events")
+			return fmt.Errorf("error while fetching events: %w", err)
 		}
 		for _, b := range r {
 			ee = append(ee, b.Events...)
