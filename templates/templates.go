@@ -35,6 +35,7 @@ func makeChainReplacers(t templateVariables) chainReplacers {
 }
 
 // Code converts a Template to string (source code).
-func Code(t *Template, chainId flow.ChainID) string {
-	return replacers[chainId].Replace(t.Source)
+func Code(t *Template) string {
+	c := parseConfig().ChainId
+	return replacers[c].Replace(t.Source)
 }

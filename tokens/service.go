@@ -40,7 +40,11 @@ func NewService(
 	return &Service{db, km, fc, ts, cfg}
 }
 
-func (s *Service) Details(ctx context.Context, token templates.Token, address string) (TokenDetails, error) {
+func (s *Service) List() []templates.Token {
+	return templates.EnabledTokens()
+}
+
+func (s *Service) Details(ctx context.Context, tokenName, address string) (TokenDetails, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -48,8 +52,13 @@ func (s *Service) Details(ctx context.Context, token templates.Token, address st
 	}
 	address = flow_helpers.HexString(address)
 
+	token, err := templates.NewToken(tokenName)
+	if err != nil {
+		return TokenDetails{}, err
+	}
+
 	r := templates.Raw{
-		Code: templates.FungibleBalanceCode(token, s.cfg.ChainId),
+		Code: templates.FungibleBalanceCode(token),
 		Arguments: []templates.Argument{
 			cadence.NewAddress(flow.HexToAddress(address)),
 		},
@@ -63,7 +72,7 @@ func (s *Service) Details(ctx context.Context, token templates.Token, address st
 	return TokenDetails{Name: token.CanonName(), Balance: b.String()}, nil
 }
 
-func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, token templates.Token, sender, recipient, amount string) (*jobs.Job, *FungibleTokenTransfer, error) {
+func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenName, sender, recipient, amount string) (*jobs.Job, *FungibleTokenTransfer, error) {
 	// Check if the sender is a valid address
 	err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId)
 	if err != nil {
@@ -80,6 +89,11 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, token te
 	// Make sure correct format is used
 	recipient = flow_helpers.HexString(recipient)
 
+	token, err := templates.NewToken(tokenName)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Convert amount to a cadence value
 	c_amount, err := cadence.NewUFix64(amount)
 	if err != nil {
@@ -88,7 +102,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, token te
 
 	// Raw transfer template
 	raw := templates.Raw{
-		Code: templates.FungibleTransferCode(token, s.cfg.ChainId),
+		Code: templates.FungibleTransferCode(token),
 		Arguments: []templates.Argument{
 			c_amount,
 			cadence.NewAddress(flow.HexToAddress(recipient)),
@@ -124,7 +138,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, token te
 	return job, t, err
 }
 
-func (s *Service) RegisterFtDeposit(transactionId string, token templates.Token, amount, recipient string) error {
+func (s *Service) RegisterFtDeposit(transactionId string, tokenName, amount, recipient string) error {
 	// Check if the recipient is a valid address
 	err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
 	if err != nil {
@@ -156,6 +170,11 @@ func (s *Service) RegisterFtDeposit(transactionId string, token templates.Token,
 		}
 	}
 
+	token, err := templates.NewToken(tokenName)
+	if err != nil {
+		return err
+	}
+
 	// Check for existing deposit, ignore error
 	t, _ := s.db.FungibleTokenDeposit(recipient, token.CanonName(), tx.TransactionId)
 	if t != nil {
@@ -174,13 +193,18 @@ func (s *Service) RegisterFtDeposit(transactionId string, token templates.Token,
 	return s.db.InsertFungibleTokenTransfer(t)
 }
 
-func (s *Service) ListFtTransfers(transferType, address string, token templates.Token) ([]*FungibleTokenTransfer, error) {
+func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*FungibleTokenTransfer, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return nil, err
 	}
 	address = flow_helpers.HexString(address)
+
+	token, err := templates.NewToken(tokenName)
+	if err != nil {
+		return nil, err
+	}
 
 	switch transferType {
 	default:
@@ -192,8 +216,8 @@ func (s *Service) ListFtTransfers(transferType, address string, token templates.
 	}
 }
 
-func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]*FungibleTokenWithdrawal, error) {
-	tt, err := s.ListFtTransfers(transferTypeWithdrawal, address, token)
+func (s *Service) ListFtWithdrawals(address, tokenName string) ([]*FungibleTokenWithdrawal, error) {
+	tt, err := s.ListFtTransfers(transferTypeWithdrawal, address, tokenName)
 	if err != nil {
 		return nil, err
 	}
@@ -204,8 +228,8 @@ func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]*F
 	return res, nil
 }
 
-func (s *Service) ListFtDeposits(address string, token templates.Token) ([]*FungibleTokenDeposit, error) {
-	tt, err := s.ListFtTransfers(transferTypeDeposit, address, token)
+func (s *Service) ListFtDeposits(address, tokenName string) ([]*FungibleTokenDeposit, error) {
+	tt, err := s.ListFtTransfers(transferTypeDeposit, address, tokenName)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +240,7 @@ func (s *Service) ListFtDeposits(address string, token templates.Token) ([]*Fung
 	return res, nil
 }
 
-func (s *Service) GetFtTransfer(transferType, address string, token templates.Token, transactionId string) (*FungibleTokenTransfer, error) {
+func (s *Service) GetFtTransfer(transferType, address, tokenName, transactionId string) (*FungibleTokenTransfer, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -226,6 +250,11 @@ func (s *Service) GetFtTransfer(transferType, address string, token templates.To
 
 	// Check if the input is a valid transaction id
 	err = flow_helpers.ValidateTransactionId(transactionId)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := templates.NewToken(tokenName)
 	if err != nil {
 		return nil, err
 	}
@@ -240,16 +269,16 @@ func (s *Service) GetFtTransfer(transferType, address string, token templates.To
 	}
 }
 
-func (s *Service) GetFtWithdrawal(address string, token templates.Token, transactionId string) (*FungibleTokenWithdrawal, error) {
-	t, err := s.GetFtTransfer(transferTypeWithdrawal, address, token, transactionId)
+func (s *Service) GetFtWithdrawal(address, tokenName, transactionId string) (*FungibleTokenWithdrawal, error) {
+	t, err := s.GetFtTransfer(transferTypeWithdrawal, address, tokenName, transactionId)
 	if err != nil {
 		return nil, err
 	}
 	return t.Withdrawal(), nil
 }
 
-func (s *Service) GetFtDeposit(address string, token templates.Token, transactionId string) (*FungibleTokenDeposit, error) {
-	t, err := s.GetFtTransfer(transferTypeDeposit, address, token, transactionId)
+func (s *Service) GetFtDeposit(address, tokenName, transactionId string) (*FungibleTokenDeposit, error) {
+	t, err := s.GetFtTransfer(transferTypeDeposit, address, tokenName, transactionId)
 	if err != nil {
 		return nil, err
 	}
@@ -265,13 +294,19 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync boo
 	}
 	address = flow_helpers.HexString(address)
 
-	n := (&templates.Token{Name: tokenName}).CanonName()
+	token, err := templates.NewToken(tokenName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	n := token.CanonName()
+
 	t_str, err := template_strings.GetByName(n)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	src := templates.Code(&templates.Template{Source: t_str}, s.cfg.ChainId)
+	src := templates.Code(&templates.Template{Source: t_str})
 
 	c := flow_templates.Contract{Name: n, Source: src}
 

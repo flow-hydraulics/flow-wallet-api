@@ -20,7 +20,6 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/basic"
-	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
@@ -139,6 +138,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		BuildTime: buildTime,
 	}
 
+	accountService.InitAdminAccount()
+
 	// HTTP handling
 
 	jobsHandler := handlers.NewJobs(ls, jobsService)
@@ -179,6 +180,9 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// Fungible tokens
 	if !disableFt {
+		// List enabled tokens
+		rv.Handle("/fungible-tokens", fungibleTokenHandler.List()).Methods(http.MethodGet)
+
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
 		rft.Handle("", accountHandler.AccountFungibleTokens()).Methods(http.MethodGet)
@@ -241,7 +245,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 						// TODO: filter out events not related to this wallet service (address not in db)
 						err := tokenService.RegisterFtDeposit(
 							e.TransactionID.Hex(),
-							templates.NewToken("TODO", ""),
+							"TODO",
 							e.Value.Fields[0].String(),
 							e.Value.Fields[1].String(),
 						)

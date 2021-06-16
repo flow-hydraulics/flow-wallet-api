@@ -30,14 +30,13 @@ type Account struct {
 
 type AccountToken struct {
 	ID             int            `json:"-" gorm:"primaryKey"`
-	AccountAddress string         `json:"-" gorm:"index"`
-	Name           string         `json:"name"`
+	AccountAddress string         `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenAddress   string         `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenName      string         `json:"name" gorm:"uniqueIndex:addressname;index;not null"`
 	CreatedAt      time.Time      `json:"-"`
 	UpdatedAt      time.Time      `json:"-"`
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
-
-// TODO: Add AccountTokens to admin account on startup (FlowToken for now)
 
 // New creates a new account on the Flow blockchain.
 // It uses the provided admin account to pay for the creation.
