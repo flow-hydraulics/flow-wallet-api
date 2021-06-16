@@ -73,12 +73,11 @@ func New(
 	b := templates.NewBuilderFromTx(tx)
 
 	t := transactions.Transaction{}
-	if err = transactions.New(&t, id, b, transactions.General, auth, auth, nil); err != nil {
+	if err := transactions.New(&t, id, b, transactions.General, auth, auth, nil); err != nil {
 		return err
 	}
 
-	err = t.SendAndWait(ctx, fc)
-	if err != nil {
+	if err := t.SendAndWait(ctx, fc); err != nil {
 		return err
 	}
 
@@ -94,13 +93,12 @@ func New(
 
 	// Check that we actually got a new address
 	if newAddress == flow.EmptyAddress {
-		err = fmt.Errorf("something went wrong when waiting for address")
-		return err
+		return fmt.Errorf("something went wrong when waiting for address")
 	}
 
 	a.Address = flow_helpers.FormatAddress(newAddress)
 
-	return err
+	return nil
 }
 
 // AddContract is mainly used for testing purposes
@@ -147,12 +145,11 @@ func AddContract(
 	b.Tx.AddAuthorizer(adminAuth.Address)
 
 	t := transactions.Transaction{}
-	if err = transactions.New(&t, id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
+	if err := transactions.New(&t, id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
 		return nil, err
 	}
 
-	err = t.SendAndWait(ctx, fc)
-	if err != nil {
+	if err := t.SendAndWait(ctx, fc); err != nil {
 		return nil, err
 	}
 

@@ -91,8 +91,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 
 		// Store account and key
 		a.Keys = []keys.Storable{accountKey}
-		err = s.db.InsertAccount(&a)
-		if err != nil {
+		if err := s.db.InsertAccount(&a); err != nil {
 			return "", err
 		}
 
@@ -129,8 +128,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 // Details returns a specific account.
 func (s *Service) Details(address string) (Account, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return Account{}, err
 	}
 	address = flow_helpers.HexString(address)
@@ -140,8 +138,7 @@ func (s *Service) Details(address string) (Account, error) {
 
 func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return nil, nil, err
 	}
 
@@ -160,8 +157,7 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 
 	// Handle adding token to account in database
 	go func() {
-		err := job.Wait(true)
-		if err != nil && !strings.Contains(err.Error(), "vault exists") {
+		if err := job.Wait(true); err != nil && !strings.Contains(err.Error(), "vault exists") {
 			return
 		}
 
@@ -181,8 +177,7 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 
 func (s *Service) AccountFungibleTokens(address string) ([]AccountToken, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return nil, err
 	}
 

@@ -45,16 +45,14 @@ func New(
 	// Authorizers sign the payload
 	// TODO: support multiple keys per account?
 	for _, a := range authorizers {
-		err := builder.Tx.SignPayload(a.Address, a.Key.Index, a.Signer)
-		if err != nil {
+		if err := builder.Tx.SignPayload(a.Address, a.Key.Index, a.Signer); err != nil {
 			return err
 		}
 	}
 
 	// Payer signs the envelope
 	// TODO: support multiple keys per account?
-	err := builder.Tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer)
-	if err != nil {
+	if err := builder.Tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
 		return err
 	}
 
@@ -87,16 +85,14 @@ func (t *Transaction) Wait(ctx context.Context, fc *client.Client) error {
 
 // Send the transaction to the network and wait for seal
 func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client) error {
-	err := t.Send(ctx, fc)
-	if err != nil {
+	if err := t.Send(ctx, fc); err != nil {
 		return err
 	}
 
 	// Wait for the transaction to be sealed
-	err = t.Wait(ctx, fc)
-	if err != nil {
+	if err := t.Wait(ctx, fc); err != nil {
 		return err
 	}
 
-	return err
+	return nil
 }

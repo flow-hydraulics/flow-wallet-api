@@ -9,8 +9,7 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	err := godotenv.Load("../.env.test")
-	if err != nil {
+	if err := godotenv.Load("../.env.test"); err != nil {
 		t.Fatal(err)
 	}
 

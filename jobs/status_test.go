@@ -63,8 +63,7 @@ func TestStatus(t *testing.T) {
 		// UnMarshalling
 		t.Run(c.name+" unmarshal", func(t *testing.T) {
 			var s Status
-			err := json.Unmarshal([]byte(c.json), &s)
-			if err != nil {
+			if err := json.Unmarshal([]byte(c.json), &s); err != nil {
 				t.Error(err)
 			}
 			if s != c.status {

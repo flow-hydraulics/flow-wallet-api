@@ -47,8 +47,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		// Check if the input is a valid address
-		err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-		if err != nil {
+		if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 			return "", err
 		}
 		address = flow_helpers.HexString(address)
@@ -75,25 +74,23 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 			return "", err
 		}
 
-		if err = New(t, id, b, tType, a, a, aa); err != nil {
+		if err := New(t, id, b, tType, a, a, aa); err != nil {
 			return t.TransactionId, err
 		}
 
 		// Send the transaction
-		err = t.Send(ctx, s.fc)
-		if err != nil {
+
+		if err := t.Send(ctx, s.fc); err != nil {
 			return t.TransactionId, err
 		}
 
 		// Insert to datastore
-		err = s.db.InsertTransaction(t)
-		if err != nil {
+		if err := s.db.InsertTransaction(t); err != nil {
 			return t.TransactionId, err
 		}
 
 		// Wait for the transaction to be sealed
-		err = t.Wait(ctx, s.fc)
-		if err != nil {
+		if err := t.Wait(ctx, s.fc); err != nil {
 			return t.TransactionId, err
 		}
 
@@ -122,8 +119,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 // List returns all transactions in the datastore for a given account.
 func (s *Service) List(tType Type, address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return []Transaction{}, err
 	}
 	address = flow_helpers.HexString(address)
@@ -136,15 +132,13 @@ func (s *Service) List(tType Type, address string, limit, offset int) ([]Transac
 // Details returns a specific transaction.
 func (s *Service) Details(tType Type, address, transactionId string) (result Transaction, err error) {
 	// Check if the input is a valid address
-	err = flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err = flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return
 	}
 	address = flow_helpers.HexString(address)
 
 	// Check if the input is a valid transaction id
-	err = flow_helpers.ValidateTransactionId(transactionId)
-	if err != nil {
+	if err = flow_helpers.ValidateTransactionId(transactionId); err != nil {
 		return
 	}
 

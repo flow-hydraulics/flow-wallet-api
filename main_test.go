@@ -105,19 +105,19 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 }
 
 func TestMain(m *testing.M) {
-	err := godotenv.Load(".env.test")
-	if err != nil {
+
+	if err := godotenv.Load(".env.test"); err != nil {
 		log.Println("WARNING: Could not load environment variables from file; ", err)
 	}
 
-	if err = os.Setenv("DATABASE_DSN", testDbDSN); err != nil {
+	if err := os.Setenv("DATABASE_DSN", testDbDSN); err != nil {
 		panic(err)
 	}
-	if err = os.Setenv("DATABASE_TYPE", testDbType); err != nil {
+	if err := os.Setenv("DATABASE_TYPE", testDbType); err != nil {
 		panic(err)
 	}
 
-	if err = env.Parse(&cfg); err != nil {
+	if err := env.Parse(&cfg); err != nil {
 		panic(err)
 	}
 

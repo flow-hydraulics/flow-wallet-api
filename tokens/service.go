@@ -46,8 +46,7 @@ func (s *Service) List() []templates.Token {
 
 func (s *Service) Details(ctx context.Context, tokenName, address string) (TokenDetails, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return TokenDetails{}, err
 	}
 	address = flow_helpers.HexString(address)
@@ -74,16 +73,14 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (Token
 
 func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenName, sender, recipient, amount string) (*jobs.Job, *FungibleTokenTransfer, error) {
 	// Check if the sender is a valid address
-	err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId); err != nil {
 		return nil, nil, err
 	}
 	// Make sure correct format is used
 	sender = flow_helpers.HexString(sender)
 
 	// Check if the recipient is a valid address
-	err = flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId); err != nil {
 		return nil, nil, err
 	}
 	// Make sure correct format is used
@@ -132,7 +129,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 			return
 		}
 		t.TransactionId = tx.TransactionId
-		if err = s.db.InsertFungibleTokenTransfer(t); err != nil {
+		if err := s.db.InsertFungibleTokenTransfer(t); err != nil {
 			fmt.Printf("error while inserting token transfer: %s\n", err)
 		}
 	}()
@@ -146,16 +143,14 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 
 func (s *Service) RegisterFtDeposit(transactionId string, tokenName, amount, recipient string) error {
 	// Check if the recipient is a valid address
-	err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId); err != nil {
 		return err
 	}
 	// Make sure correct format is used
 	recipient = flow_helpers.HexString(recipient)
 
 	// Check if the transaction id is valid
-	err = flow_helpers.ValidateTransactionId(transactionId)
-	if err != nil {
+	if err := flow_helpers.ValidateTransactionId(transactionId); err != nil {
 		return err
 	}
 
@@ -170,8 +165,7 @@ func (s *Service) RegisterFtDeposit(transactionId string, tokenName, amount, rec
 			return err
 		}
 		tx.PayerAddress = flow_helpers.FormatAddress(flowTx.Payer)
-		err = s.ts.UpdateTransaction(tx)
-		if err != nil {
+		if err := s.ts.UpdateTransaction(tx); err != nil {
 			return err
 		}
 	}
@@ -201,8 +195,7 @@ func (s *Service) RegisterFtDeposit(transactionId string, tokenName, amount, rec
 
 func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*FungibleTokenTransfer, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return nil, err
 	}
 	address = flow_helpers.HexString(address)
@@ -248,15 +241,13 @@ func (s *Service) ListFtDeposits(address, tokenName string) ([]*FungibleTokenDep
 
 func (s *Service) GetFtTransfer(transferType, address, tokenName, transactionId string) (*FungibleTokenTransfer, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return nil, err
 	}
 	address = flow_helpers.HexString(address)
 
 	// Check if the input is a valid transaction id
-	err = flow_helpers.ValidateTransactionId(transactionId)
-	if err != nil {
+	if err := flow_helpers.ValidateTransactionId(transactionId); err != nil {
 		return nil, err
 	}
 
@@ -294,8 +285,7 @@ func (s *Service) GetFtDeposit(address, tokenName, transactionId string) (*Fungi
 // DeployTokenContractForAccount is mainly used for testing purposes.
 func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return nil, nil, err
 	}
 	address = flow_helpers.HexString(address)

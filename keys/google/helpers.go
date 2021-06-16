@@ -49,7 +49,7 @@ func AsymKey(ctx context.Context, parent, id string) (cloudkms.Key, error) {
 
 	// Validate key name
 	if !strings.HasPrefix(k.ResourceID(), gk.Name) {
-		err = fmt.Errorf("WARNING: created Google KMS key name does not match the expected")
+		err := fmt.Errorf("WARNING: created Google KMS key name does not match the expected")
 		return cloudkms.Key{}, err
 	}
 

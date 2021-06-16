@@ -43,8 +43,7 @@ func (s *FungibleTokens) CreateFtWithdrawalFunc(rw http.ResponseWriter, r *http.
 	}
 
 	// Try to decode the request body.
-	err := json.NewDecoder(r.Body).Decode(&b)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		err = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
 		handleError(rw, s.log, err)
 		return

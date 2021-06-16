@@ -40,8 +40,7 @@ type Config struct {
 }
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Println("WARNING: Could not load environment variables from file; ", err)
 	}
 
@@ -94,8 +93,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	}
 	defer func() {
 		ls.Println("Closing Flow Client..")
-		err := fc.Close()
-		if err != nil {
+		if err := fc.Close(); err != nil {
 			ls.Fatal(err)
 		}
 	}()
@@ -274,8 +272,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
-	err = srv.Shutdown(ctx)
-	if err != nil {
+	if err := srv.Shutdown(ctx); err != nil {
 		ls.Fatal("Error in server shutdown; ", err)
 	}
 }

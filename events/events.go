@@ -122,8 +122,8 @@ func (l *Listener) Start() *Listener {
 				cur, _ = l.fc.GetLatestBlock(ctx, true)
 				end = cur.Height
 				if end > start {
-					err := l.process(ctx, start+1, end) // start has already been checked, add 1
-					if err != nil {
+					// start has already been checked, add 1
+					if err := l.process(ctx, start+1, end); err != nil {
 						l.handleError(err)
 					} else {
 						start = end
