@@ -18,9 +18,9 @@ const (
 // Manager provides the functions needed for key management.
 type Manager interface {
 	// Generate generates a new Key using provided key index and weight.
-	Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, Private, error)
+	Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *Private, error)
 	// GenerateDefault generates a new Key using application defaults.
-	GenerateDefault(context.Context) (*flow.AccountKey, Private, error)
+	GenerateDefault(context.Context) (*flow.AccountKey, *Private, error)
 	// Save is responsible for converting an "in flight" key to a storable key.
 	Save(Private) (Storable, error)
 	// Load is responsible for converting a storable key to an "in flight" key.

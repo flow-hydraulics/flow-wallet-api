@@ -110,7 +110,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 	}
 
 	// Create the transaction
-	job, _, err := s.ts.Create(ctx, runSync, sender, raw, transactions.FtTransfer)
+	job, tx, err := s.ts.Create(ctx, runSync, sender, raw, transactions.FtTransfer)
 
 	// Initialise the transfer object
 	t := &FungibleTokenTransfer{
@@ -120,14 +120,12 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 	}
 
 	// Handle database update
-
 	var wg sync.WaitGroup
 	wg.Add(1)
-
 	go func() {
 		defer wg.Done()
 		job.Wait(true) // Ignore the error
-		t.TransactionId = job.Result
+		t.TransactionId = tx.TransactionId
 		s.db.InsertFungibleTokenTransfer(t) // TODO: handle error
 	}()
 

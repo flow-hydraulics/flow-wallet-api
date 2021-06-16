@@ -43,43 +43,43 @@ type AccountToken struct {
 // It generates a new privatekey and returns it (local key)
 // or a reference to it (Google KMS resource id).
 func New(
+	a *Account,
+	k *keys.Private,
 	ctx context.Context,
 	fc *client.Client,
 	km keys.Manager,
-) (
-	newAccount Account,
-	newPrivateKey keys.Private,
-	err error,
-) {
+) error {
 	// Get admin account authorizer
 	auth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Get latest blocks id as reference id
 	id, err := flow_helpers.LatestBlockId(ctx, fc)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Generate a new key pair
 	accountKey, newPrivateKey, err := km.GenerateDefault(ctx)
 	if err != nil {
-		return
+		return err
 	}
+
+	*k = *newPrivateKey
 
 	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
 	b := templates.NewBuilderFromTx(tx)
 
-	t, err := transactions.New(id, b, transactions.General, auth, auth, nil)
-	if err != nil {
-		return
+	t := transactions.Transaction{}
+	if err = transactions.New(&t, id, b, transactions.General, auth, auth, nil); err != nil {
+		return err
 	}
 
 	err = t.SendAndWait(ctx, fc)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Grab the new address from transaction events
@@ -95,12 +95,12 @@ func New(
 	// Check that we actually got a new address
 	if newAddress == flow.EmptyAddress {
 		err = fmt.Errorf("something went wrong when waiting for address")
-		return
+		return err
 	}
 
-	newAccount.Address = flow_helpers.FormatAddress(newAddress)
+	a.Address = flow_helpers.FormatAddress(newAddress)
 
-	return
+	return err
 }
 
 // AddContract is mainly used for testing purposes
@@ -146,8 +146,8 @@ func AddContract(
 
 	b.Tx.AddAuthorizer(adminAuth.Address)
 
-	t, err := transactions.New(id, b, transactions.General, userAuth, adminAuth, nil)
-	if err != nil {
+	t := transactions.Transaction{}
+	if err = transactions.New(&t, id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
 		return nil, err
 	}
 
@@ -156,5 +156,5 @@ func AddContract(
 		return nil, err
 	}
 
-	return t, nil
+	return &t, nil
 }

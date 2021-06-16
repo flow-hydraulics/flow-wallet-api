@@ -70,7 +70,8 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
 func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, error) {
-	var account *Account
+	a := Account{}
+	k := keys.Private{}
 
 	job, err := s.wp.AddJob(func() (string, error) {
 		ctx := c
@@ -78,15 +79,12 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			ctx = context.Background()
 		}
 
-		a, key, err := New(ctx, s.fc, s.km)
-		if err != nil {
+		if err := New(&a, &k, ctx, s.fc, s.km); err != nil {
 			return "", err
 		}
 
-		account = &a
-
 		// Convert the key to storable form (encrypt it)
-		accountKey, err := s.km.Save(key)
+		accountKey, err := s.km.Save(k)
 		if err != nil {
 			return "", err
 		}
@@ -125,7 +123,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 
 	err = job.Wait(sync)
 
-	return job, account, err
+	return job, &a, err
 }
 
 // Details returns a specific account.

@@ -14,17 +14,17 @@ func Generate(
 	keyIndex, weight int,
 	signAlgo crypto.SignatureAlgorithm,
 	hashAlgo crypto.HashAlgorithm,
-) (*flow.AccountKey, keys.Private, error) {
+) (*flow.AccountKey, *keys.Private, error) {
 	s := make([]byte, crypto.MinSeedLength)
 
 	_, err := rand.Read(s)
 	if err != nil {
-		return nil, keys.Private{}, err
+		return nil, nil, err
 	}
 
 	pk, err := crypto.GeneratePrivateKey(signAlgo, s)
 	if err != nil {
-		return nil, keys.Private{}, err
+		return nil, nil, err
 	}
 
 	f := flow.NewAccountKey().
@@ -34,7 +34,7 @@ func Generate(
 
 	f.Index = keyIndex
 
-	p := keys.Private{
+	p := &keys.Private{
 		Index:    keyIndex,
 		Type:     keys.AccountKeyTypeLocal,
 		Value:    strings.TrimPrefix(pk.String(), "0x"),

@@ -38,7 +38,7 @@ func NewService(
 }
 
 func (s *Service) Create(c context.Context, sync bool, address string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
-	var transaction *Transaction
+	t := &Transaction{}
 
 	job, err := s.wp.AddJob(func() (string, error) {
 		ctx := c
@@ -75,12 +75,9 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 			return "", err
 		}
 
-		t, err := New(id, b, tType, a, a, aa)
-		if err != nil {
+		if err = New(t, id, b, tType, a, a, aa); err != nil {
 			return t.TransactionId, err
 		}
-
-		transaction = t
 
 		// Send the transaction
 		err = t.Send(ctx, s.fc)
@@ -119,7 +116,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 
 	err = job.Wait(sync)
 
-	return job, transaction, err
+	return job, t, err
 }
 
 // List returns all transactions in the datastore for a given account.
