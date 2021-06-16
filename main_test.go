@@ -800,8 +800,8 @@ func TestTokenServices(t *testing.T) {
 			"1.0",
 		)
 
-		if flow.HexToID(transfer.TransactionId) == flow.EmptyID {
-			t.Fatal("Expected TransactionId not to be empty")
+		if flow.HexToID(transfer.TransactionId) != flow.EmptyID {
+			t.Fatal("Expected TransactionId to be empty")
 		}
 
 		if err == nil {

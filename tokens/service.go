@@ -124,9 +124,17 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		job.Wait(true) // Ignore the error
+		if err := job.Wait(true); err != nil {
+			// There was an error regarding the transaction
+			// Don't store a token transfer
+			// TODO: record the error so it can be delivered to client, job has the error
+			// but the client may not have the job id (using sync)
+			return
+		}
 		t.TransactionId = tx.TransactionId
-		s.db.InsertFungibleTokenTransfer(t) // TODO: handle error
+		if err = s.db.InsertFungibleTokenTransfer(t); err != nil {
+			fmt.Printf("error while inserting token transfer: %s\n", err)
+		}
 	}()
 
 	if runSync {
