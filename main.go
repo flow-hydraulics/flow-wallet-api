@@ -47,18 +47,18 @@ func main() {
 	}
 
 	var (
-		flgVersion           bool
-		flgDisableRawTx      bool
-		flgDisableFt         bool
-		flgDisableNft        bool
-		flgEnableChainEvents bool
+		flgVersion            bool
+		flgDisableRawTx       bool
+		flgDisableFt          bool
+		flgDisableNft         bool
+		flgDisableChainEvents bool
 	)
 
 	flag.BoolVar(&flgVersion, "version", false, "if true, print version and exit")
 	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable raw transactions api")
 	flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token api")
 	flag.BoolVar(&flgDisableNft, "disable-nft", false, "disable non-fungible token functionality")
-	flag.BoolVar(&flgEnableChainEvents, "enable-events", false, "enable chain event listener")
+	flag.BoolVar(&flgDisableChainEvents, "disable-events", true, "disable chain event listener")
 
 	flag.Parse()
 
@@ -71,13 +71,13 @@ func main() {
 		flgDisableRawTx,
 		flgDisableFt,
 		flgDisableNft,
-		flgEnableChainEvents,
+		flgDisableChainEvents,
 	)
 
 	os.Exit(0)
 }
 
-func runServer(disableRawTx, disableFt, disableNft, enableChainEvents bool) {
+func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
@@ -217,7 +217,7 @@ func runServer(disableRawTx, disableFt, disableNft, enableChainEvents bool) {
 	}()
 
 	// Chain event listener
-	if enableChainEvents {
+	if !disableChainEvents {
 		ls.Println("Starting event listener..")
 
 		l := events.
