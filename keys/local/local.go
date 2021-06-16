@@ -36,7 +36,7 @@ func Generate(
 
 	p := keys.Private{
 		Index:    keyIndex,
-		Type:     keys.ACCOUNT_KEY_TYPE_LOCAL,
+		Type:     keys.AccountKeyTypeLocal,
 		Value:    strings.TrimPrefix(pk.String(), "0x"),
 		SignAlgo: signAlgo,
 		HashAlgo: hashAlgo,

@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	DATABASE_TYPE_POSTGRESQL = "psql"
-	DATABASE_TYPE_MYSQL      = "mysql"
-	DATABASE_TYPE_SQLITE     = "sqlite"
+	dbTypePostgresql = "psql"
+	dbTypeMysql      = "mysql"
+	dbTypeSqlite     = "sqlite"
 )
 
 // Config struct for gorm data store.
@@ -35,11 +35,11 @@ func ParseConfig() (cfg Config) {
 	switch cfg.DatabaseType {
 	default:
 		panic(fmt.Sprintf("database type '%s' not supported", cfg.DatabaseType))
-	case DATABASE_TYPE_POSTGRESQL:
+	case dbTypePostgresql:
 		d = postgres.Open(cfg.DatabaseDSN)
-	case DATABASE_TYPE_MYSQL:
+	case dbTypeMysql:
 		d = mysql.Open(cfg.DatabaseDSN)
-	case DATABASE_TYPE_SQLITE:
+	case dbTypeSqlite:
 		d = sqlite.Open(cfg.DatabaseDSN)
 	}
 

@@ -10,8 +10,10 @@ import (
 )
 
 // TODO: increase once implementation is somewhat complete
-const period = 1 * time.Second
-const chanTimeout = period / 2
+const (
+	period      = 1 * time.Second
+	chanTimeout = period / 2
+)
 
 type Listener struct {
 	ticker *time.Ticker
@@ -56,7 +58,7 @@ func (l *Listener) process(ctx context.Context, start, end uint64) error {
 	case l.Events <- ee:
 		// Sent
 		return nil
-	case <-time.After(CHAN_TIMEOUT):
+	case <-time.After(chanTimeout):
 		// Timed out while waiting for channel
 		return &TimeOutError{}
 	}
@@ -84,7 +86,7 @@ func (l *Listener) Start() {
 		return
 	}
 
-	l.ticker = time.NewTicker(PERIOD)
+	l.ticker = time.NewTicker(period)
 	l.Events = make(chan []flow.Event)
 
 	go func() {

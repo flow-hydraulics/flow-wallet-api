@@ -18,8 +18,10 @@ import (
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
 )
 
-const TRANSFER_TYPE_WITHDRAWAL = "withdrawal"
-const TRANSFER_TYPE_DEPOSIT = "deposit"
+const (
+	transferTypeWithdrawal = "withdrawal"
+	transferTypeDeposit    = "deposit"
+)
 
 type Service struct {
 	db  Store
@@ -183,15 +185,15 @@ func (s *Service) ListFtTransfers(transferType, address string, token templates.
 	switch transferType {
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
-	case TRANSFER_TYPE_WITHDRAWAL:
+	case transferTypeWithdrawal:
 		return s.db.FungibleTokenWithdrawals(address, token.CanonName())
-	case TRANSFER_TYPE_DEPOSIT:
+	case transferTypeDeposit:
 		return s.db.FungibleTokenDeposits(address, token.CanonName())
 	}
 }
 
 func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]*FungibleTokenWithdrawal, error) {
-	tt, err := s.ListFtTransfers(TRANSFER_TYPE_WITHDRAWAL, address, token)
+	tt, err := s.ListFtTransfers(transferTypeWithdrawal, address, token)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +205,7 @@ func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]*F
 }
 
 func (s *Service) ListFtDeposits(address string, token templates.Token) ([]*FungibleTokenDeposit, error) {
-	tt, err := s.ListFtTransfers(TRANSFER_TYPE_DEPOSIT, address, token)
+	tt, err := s.ListFtTransfers(transferTypeDeposit, address, token)
 	if err != nil {
 		return nil, err
 	}
@@ -231,15 +233,15 @@ func (s *Service) GetFtTransfer(transferType, address string, token templates.To
 	switch transferType {
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
-	case TRANSFER_TYPE_WITHDRAWAL:
+	case transferTypeWithdrawal:
 		return s.db.FungibleTokenWithdrawal(address, token.CanonName(), transactionId)
-	case TRANSFER_TYPE_DEPOSIT:
+	case transferTypeDeposit:
 		return s.db.FungibleTokenDeposit(address, token.CanonName(), transactionId)
 	}
 }
 
 func (s *Service) GetFtWithdrawal(address string, token templates.Token, transactionId string) (*FungibleTokenWithdrawal, error) {
-	t, err := s.GetFtTransfer(TRANSFER_TYPE_WITHDRAWAL, address, token, transactionId)
+	t, err := s.GetFtTransfer(transferTypeWithdrawal, address, token, transactionId)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +249,7 @@ func (s *Service) GetFtWithdrawal(address string, token templates.Token, transac
 }
 
 func (s *Service) GetFtDeposit(address string, token templates.Token, transactionId string) (*FungibleTokenDeposit, error) {
-	t, err := s.GetFtTransfer(TRANSFER_TYPE_DEPOSIT, address, token, transactionId)
+	t, err := s.GetFtTransfer(transferTypeDeposit, address, token, transactionId)
 	if err != nil {
 		return nil, err
 	}

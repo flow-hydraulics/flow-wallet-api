@@ -34,11 +34,15 @@ import (
 	"google.golang.org/grpc"
 )
 
-const testDbDSN = "test.db"
-const testDbType = "sqlite"
+const (
+	testDbDSN  = "test.db"
+	testDbType = "sqlite"
+)
 
-var cfg testConfig
-var logger *log.Logger
+var (
+	cfg    testConfig
+	logger *log.Logger
+)
 
 type testConfig struct {
 	AccessApiHost string       `env:"ACCESS_API_HOST,required"`
@@ -77,7 +81,7 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 	}
 
 	if s.sync {
-		req.Header.Set(handlers.SYNC_HEADER, "go ahead")
+		req.Header.Set(handlers.SyncHeader, "go ahead")
 	}
 
 	rr := httptest.NewRecorder()
@@ -582,7 +586,7 @@ func TestTransactionHandlers(t *testing.T) {
 			}
 
 			if step.sync {
-				req.Header.Set(handlers.SYNC_HEADER, "go ahead")
+				req.Header.Set(handlers.SyncHeader, "go ahead")
 			}
 
 			rr := httptest.NewRecorder()

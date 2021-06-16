@@ -55,7 +55,7 @@ func (s *FungibleTokens) CreateFtWithdrawalFunc(rw http.ResponseWriter, r *http.
 	b.Name = tN
 
 	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SYNC_HEADER) != ""
+	sync := r.Header.Get(SyncHeader) != ""
 	job, tx, err := s.service.CreateFtWithdrawal(r.Context(), sync, b.Token, sender, b.Recipient, b.Amount)
 	var res interface{}
 	if sync {

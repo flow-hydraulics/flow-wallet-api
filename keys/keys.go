@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	ACCOUNT_KEY_TYPE_LOCAL      = "local"
-	ACCOUNT_KEY_TYPE_GOOGLE_KMS = "google_kms"
+	AccountKeyTypeLocal     = "local"
+	AccountKeyTypeGoogleKMS = "google_kms"
 )
 
 // Manager provides the functions needed for key management.

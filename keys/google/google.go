@@ -56,7 +56,7 @@ func Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, keys
 
 	p := keys.Private{
 		Index: keyIndex,
-		Type:  keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS,
+		Type:  keys.AccountKeyTypeGoogleKMS,
 		Value: k.ResourceID(),
 	}
 
