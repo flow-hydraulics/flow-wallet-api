@@ -51,12 +51,12 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (*flow.
 	switch s.cfg.DefaultKeyType {
 	default:
 		return nil, keys.Private{}, fmt.Errorf("keyStore.Generate() not implmented for %s", s.cfg.DefaultKeyType)
-	case keys.ACCOUNT_KEY_TYPE_LOCAL:
+	case keys.AccountKeyTypeLocal:
 		return local.Generate(
 			keyIndex, weight,
 			crypto.StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo),
 			crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo))
-	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
+	case keys.AccountKeyTypeGoogleKMS:
 		return google.Generate(ctx, keyIndex, weight)
 	}
 }
@@ -130,12 +130,12 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 	switch k.Type {
 	default:
 		return keys.Authorizer{}, fmt.Errorf("key.Type not recognised: %s", k.Type)
-	case keys.ACCOUNT_KEY_TYPE_LOCAL:
+	case keys.AccountKeyTypeLocal:
 		sig, err = local.Signer(k)
 		if err != nil {
 			return keys.Authorizer{}, err
 		}
-	case keys.ACCOUNT_KEY_TYPE_GOOGLE_KMS:
+	case keys.AccountKeyTypeGoogleKMS:
 		sig, err = google.Signer(ctx, address, k)
 		if err != nil {
 			return keys.Authorizer{}, err

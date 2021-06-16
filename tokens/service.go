@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/eqlabs/flow-wallet-service/accounts"
@@ -15,6 +16,11 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
+)
+
+const (
+	transferTypeWithdrawal = "withdrawal"
+	transferTypeDeposit    = "deposit"
 )
 
 type Service struct {
@@ -90,7 +96,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, token te
 	}
 
 	// Create the transaction
-	job, _, err := s.ts.Create(ctx, runSync, sender, raw, transactions.FtWithdrawal)
+	job, _, err := s.ts.Create(ctx, runSync, sender, raw, transactions.FtTransfer)
 
 	// Initialise the transfer object
 	t := &FungibleTokenTransfer{
@@ -118,7 +124,57 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, token te
 	return job, t, err
 }
 
-func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]FungibleTokenTransfer, error) {
+func (s *Service) RegisterFtDeposit(transactionId string, token templates.Token, amount, recipient string) error {
+	// Check if the recipient is a valid address
+	err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
+	if err != nil {
+		return err
+	}
+	// Make sure correct format is used
+	recipient = flow_helpers.HexString(recipient)
+
+	// Check if the transaction id is valid
+	err = flow_helpers.ValidateTransactionId(transactionId)
+	if err != nil {
+		return err
+	}
+
+	// Get existing transaction or create one
+	tx := s.ts.GetOrCreateTransaction(transactionId)
+	if tx.TransactionType == transactions.Unknown {
+		// Transaction was just created
+		// Deposit mostly likely did not originate in this wallet service
+		tx.TransactionType = transactions.FtTransfer
+		flowTx, err := s.fc.GetTransaction(context.Background(), flow.HexToID(tx.TransactionId))
+		if err != nil {
+			return err
+		}
+		tx.PayerAddress = flow_helpers.FormatAddress(flowTx.Payer)
+		err = s.ts.UpdateTransaction(tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check for existing deposit, ignore error
+	t, _ := s.db.FungibleTokenDeposit(recipient, token.CanonName(), tx.TransactionId)
+	if t != nil {
+		// Found an existing deposit, return
+		return nil
+	}
+
+	// Create and store a new token transfer
+	t = &FungibleTokenTransfer{
+		TransactionId:    tx.TransactionId,
+		RecipientAddress: recipient,
+		Amount:           amount,
+		TokenName:        token.CanonName(),
+	}
+
+	return s.db.InsertFungibleTokenTransfer(t)
+}
+
+func (s *Service) ListFtTransfers(transferType, address string, token templates.Token) ([]*FungibleTokenTransfer, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -126,24 +182,78 @@ func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]Fu
 	}
 	address = flow_helpers.HexString(address)
 
-	return s.db.FungibleTokenWithdrawals(address, token.CanonName())
+	switch transferType {
+	default:
+		return nil, fmt.Errorf("unknown transfer type %s", transferType)
+	case transferTypeWithdrawal:
+		return s.db.FungibleTokenWithdrawals(address, token.CanonName())
+	case transferTypeDeposit:
+		return s.db.FungibleTokenDeposits(address, token.CanonName())
+	}
 }
 
-func (s *Service) GetFtWithdrawal(address string, token templates.Token, transactionId string) (FungibleTokenTransfer, error) {
+func (s *Service) ListFtWithdrawals(address string, token templates.Token) ([]*FungibleTokenWithdrawal, error) {
+	tt, err := s.ListFtTransfers(transferTypeWithdrawal, address, token)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]*FungibleTokenWithdrawal, len(tt))
+	for i, t := range tt {
+		res[i] = t.Withdrawal()
+	}
+	return res, nil
+}
+
+func (s *Service) ListFtDeposits(address string, token templates.Token) ([]*FungibleTokenDeposit, error) {
+	tt, err := s.ListFtTransfers(transferTypeDeposit, address, token)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]*FungibleTokenDeposit, len(tt))
+	for i, t := range tt {
+		res[i] = t.Deposit()
+	}
+	return res, nil
+}
+
+func (s *Service) GetFtTransfer(transferType, address string, token templates.Token, transactionId string) (*FungibleTokenTransfer, error) {
 	// Check if the input is a valid address
 	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
-		return FungibleTokenTransfer{}, err
+		return nil, err
 	}
 	address = flow_helpers.HexString(address)
 
 	// Check if the input is a valid transaction id
 	err = flow_helpers.ValidateTransactionId(transactionId)
 	if err != nil {
-		return FungibleTokenTransfer{}, err
+		return nil, err
 	}
 
-	return s.db.FungibleTokenWithdrawal(address, token.CanonName(), transactionId)
+	switch transferType {
+	default:
+		return nil, fmt.Errorf("unknown transfer type %s", transferType)
+	case transferTypeWithdrawal:
+		return s.db.FungibleTokenWithdrawal(address, token.CanonName(), transactionId)
+	case transferTypeDeposit:
+		return s.db.FungibleTokenDeposit(address, token.CanonName(), transactionId)
+	}
+}
+
+func (s *Service) GetFtWithdrawal(address string, token templates.Token, transactionId string) (*FungibleTokenWithdrawal, error) {
+	t, err := s.GetFtTransfer(transferTypeWithdrawal, address, token, transactionId)
+	if err != nil {
+		return nil, err
+	}
+	return t.Withdrawal(), nil
+}
+
+func (s *Service) GetFtDeposit(address string, token templates.Token, transactionId string) (*FungibleTokenDeposit, error) {
+	t, err := s.GetFtTransfer(transferTypeDeposit, address, token, transactionId)
+	if err != nil {
+		return nil, err
+	}
+	return t.Deposit(), nil
 }
 
 // DeployTokenContractForAccount is mainly used for testing purposes.

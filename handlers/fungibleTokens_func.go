@@ -55,7 +55,7 @@ func (s *FungibleTokens) CreateFtWithdrawalFunc(rw http.ResponseWriter, r *http.
 	b.Name = tN
 
 	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SYNC_HEADER) != ""
+	sync := r.Header.Get(SyncHeader) != ""
 	job, tx, err := s.service.CreateFtWithdrawal(r.Context(), sync, b.Token, sender, b.Recipient, b.Amount)
 	var res interface{}
 	if sync {
@@ -98,6 +98,41 @@ func (s *FungibleTokens) GetFtWithdrawalFunc(rw http.ResponseWriter, r *http.Req
 	t := templates.NewToken(token, "")
 
 	res, err := s.service.GetFtWithdrawal(address, t, txId)
+
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, res)
+}
+
+func (s *FungibleTokens) ListFtDepositsFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	token := vars["tokenName"]
+
+	t := templates.NewToken(token, "")
+
+	res, err := s.service.ListFtDeposits(address, t)
+
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, res)
+}
+
+func (s *FungibleTokens) GetFtDepositFunc(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	address := vars["address"]
+	token := vars["tokenName"]
+	txId := vars["transactionId"]
+
+	t := templates.NewToken(token, "")
+
+	res, err := s.service.GetFtDeposit(address, t, txId)
 
 	if err != nil {
 		handleError(rw, s.log, err)

@@ -1,4 +1,4 @@
-@emulatorCustodyAccount = 0x01cf0e2f2f715450
+@emulatorCustodyAccount = 0x0000000000000000
 
 
 ### Create a FlowToken withdrawal from admin to custody account
@@ -43,6 +43,14 @@ content-type: application/json
 
 ### Get FlowToken withdrawal details for custody account
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/withdrawals/<transaction_id> HTTP/1.1
+content-type: application/json
+
+### Get FlowToken deposits for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/deposits HTTP/1.1
+content-type: application/json
+
+### Get FlowToken deposit details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/deposits/<transaction_id> HTTP/1.1
 content-type: application/json
 
 

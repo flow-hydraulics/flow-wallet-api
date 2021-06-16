@@ -179,3 +179,11 @@ func (s *Service) ExecuteScript(ctx context.Context, raw templates.Raw) (cadence
 
 	return value, err
 }
+
+func (s *Service) UpdateTransaction(t *Transaction) error {
+	return s.db.UpdateTransaction(t)
+}
+
+func (s *Service) GetOrCreateTransaction(transactionId string) *Transaction {
+	return s.db.GetOrCreateTransaction(transactionId)
+}

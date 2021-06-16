@@ -37,7 +37,7 @@ func (s *Accounts) ListFunc(rw http.ResponseWriter, r *http.Request) {
 // It returns a Job JSON representation.
 func (s *Accounts) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SYNC_HEADER) != ""
+	sync := r.Header.Get(SyncHeader) != ""
 	job, acc, err := s.service.Create(r.Context(), sync)
 	var res interface{}
 	if sync {
@@ -90,7 +90,7 @@ func (s *Accounts) SetupFungibleTokenFunc(rw http.ResponseWriter, r *http.Reques
 	t.Name = tN
 
 	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SYNC_HEADER) != ""
+	sync := r.Header.Get(SyncHeader) != ""
 	job, tx, err := s.service.SetupFungibleToken(r.Context(), sync, t, a)
 	var res interface{}
 	if sync {

@@ -1,20 +1,20 @@
 
 current_dir = $(shell pwd)
 
-cli_version = 0.21.0
-cli_image=flow-cli:${cli_version}
+cli_version = 0.22.0
+cli_image=flow-cli
 
 .PHONY: run
 up:
-	docker-compose up -d
+	FLOW_CLI_VERSION=${cli_version} docker-compose up -d
 
 .PHONY: stop
 stop:
-	docker-compose stop
+	FLOW_CLI_VERSION=${cli_version} docker-compose stop
 
 .PHONY: down
 down:
-	docker-compose down
+	FLOW_CLI_VERSION=${cli_version} docker-compose down
 
 .PHONY: test
 test:
@@ -22,11 +22,15 @@ test:
 
 .PHONY: build-cli
 build-cli:
-	docker build --build-arg VERSION=${cli_version} -t ${cli_image} ./docker/flow-cli
+	docker build \
+		--network host \
+		--build-arg VERSION=${cli_version} \
+		-t ${cli_image}:${cli_version} \
+		./docker/flow-cli
 
 .PHONY: deploy
 deploy:
-	docker run --rm -it -v "${current_dir}:/app" --net host ${cli_image} project deploy --update
+	docker run --rm -it -v "${current_dir}:/app" --net host ${cli_image}:${cli_version} project deploy --update
 
 .PHONY: shell
 shell:
