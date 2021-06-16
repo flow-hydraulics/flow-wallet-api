@@ -47,10 +47,19 @@ func main() {
 	}
 
 	var (
-		flgVersion bool
+		flgVersion           bool
+		flgDisableRawTx      bool
+		flgDisableFt         bool
+		flgDisableNft        bool
+		flgEnableChainEvents bool
 	)
 
 	flag.BoolVar(&flgVersion, "version", false, "if true, print version and exit")
+	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable raw transactions api")
+	flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token api")
+	flag.BoolVar(&flgDisableNft, "disable-nft", false, "disable non-fungible token functionality")
+	flag.BoolVar(&flgEnableChainEvents, "enable-events", false, "enable chain event listener")
+
 	flag.Parse()
 
 	if flgVersion {
@@ -58,26 +67,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	runServer()
+	runServer(
+		flgDisableRawTx,
+		flgDisableFt,
+		flgDisableNft,
+		flgEnableChainEvents,
+	)
+
 	os.Exit(0)
 }
 
-func runServer() {
+func runServer(disableRawTx, disableFt, disableNft, enableChainEvents bool) {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
 	}
-
-	var (
-		flgDisableRawTx bool
-		flgDisableFt    bool
-		// flgDisableNft    bool
-	)
-
-	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable raw transactions api")
-	flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token api")
-	// flag.BoolVar(&flgDisableNft, "disable-nft", false, "disable non-fungible token functionality")
-	flag.Parse()
 
 	// Application wide logger
 	ls := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
@@ -87,20 +91,20 @@ func runServer() {
 	// TODO: WithInsecure()?
 	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
 	if err != nil {
-		log.Fatal(err)
+		ls.Fatal(err)
 	}
 	defer func() {
-		log.Println("Closing Flow Client..")
+		ls.Println("Closing Flow Client..")
 		err := fc.Close()
 		if err != nil {
-			log.Fatal(err)
+			ls.Fatal(err)
 		}
 	}()
 
 	// Database
 	db, err := gorm.New()
 	if err != nil {
-		log.Fatal(err)
+		ls.Fatal(err)
 	}
 	defer gorm.Close(db)
 
@@ -112,6 +116,11 @@ func runServer() {
 
 	// Create a worker pool
 	wp := jobs.NewWorkerPool(lj, jobStore)
+	defer func() {
+		ls.Println("Stopping worker pool..")
+		wp.Stop()
+	}()
+
 	// TODO: make this configurable
 	wp.AddWorker(100) // Add a worker with capacity of 100
 
@@ -156,7 +165,7 @@ func runServer() {
 	ra.Handle("/{address}", accountHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account raw transactions
-	if !flgDisableRawTx {
+	if !disableRawTx {
 		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
 		rt.Handle("", transactionHandler.List()).Methods(http.MethodGet)                    // list
 		rt.Handle("", transactionHandler.Create()).Methods(http.MethodPost)                 // create
@@ -169,7 +178,7 @@ func runServer() {
 	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost) // create
 
 	// Fungible tokens
-	if !flgDisableFt {
+	if !disableFt {
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
 		rft.Handle("", accountHandler.AccountFungibleTokens()).Methods(http.MethodGet)
@@ -180,6 +189,8 @@ func runServer() {
 		rft.Handle("/{tokenName}/withdrawals/{transactionId}", fungibleTokenHandler.GetFtWithdrawal()).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}/deposits", fungibleTokenHandler.ListFtDeposits()).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}/deposits/{transactionId}", fungibleTokenHandler.GetFtDeposit()).Methods(http.MethodGet)
+	} else {
+		ls.Println("fungible tokens disabled")
 	}
 
 	// TODO: nfts
@@ -199,39 +210,51 @@ func runServer() {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		ls.Printf("Listening on port %d\n", cfg.Port)
+		ls.Printf("Server listening on port %d\n", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil {
 			ls.Println(err)
 		}
 	}()
 
-	l := events.NewListener(fc)
-	l.Start()
+	// Chain event listener
+	if enableChainEvents {
+		ls.Println("Starting event listener..")
 
-	// l.AddType("flow.AccountCreated")
-	// l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensWithdrawn")
-	l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensDeposited")
+		l := events.
+			NewListener(fc).
+			Start()
 
-	go func() {
-		for events := range l.Events {
-			for _, e := range events {
-				if strings.Contains(e.Type, "TokensDeposited") {
-					// TODO: filter out events not related to this wallet service (address not in db)
-					err := tokenService.RegisterFtDeposit(
-						e.TransactionID.Hex(),
-						templates.NewToken("TODO", ""),
-						e.Value.Fields[0].String(),
-						e.Value.Fields[1].String(),
-					)
-					if err != nil {
-						fmt.Printf("error while registering a deposit: %s\n", err)
+		defer func() {
+			ls.Println("Stopping event listener..")
+			l.Stop()
+		}()
+
+		// TODO
+		// l.AddType("flow.AccountCreated")
+		// l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensWithdrawn")
+		l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensDeposited")
+
+		go func() {
+			for events := range l.Events {
+				for _, e := range events {
+					if strings.Contains(e.Type, "TokensDeposited") {
+						// TODO: filter out events not related to this wallet service (address not in db)
+						err := tokenService.RegisterFtDeposit(
+							e.TransactionID.Hex(),
+							templates.NewToken("TODO", ""),
+							e.Value.Fields[0].String(),
+							e.Value.Fields[1].String(),
+						)
+						if err != nil {
+							ls.Printf("error while registering a deposit: %s\n", err)
+						}
 					}
-				}
 
-				fmt.Printf("received event: %s %v\n", e.Type, e.Value.Fields)
+					ls.Printf("received event: %s %v\n", e.Type, e.Value.Fields)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Trap interupt or sigterm and gracefully shutdown the server
 	c := make(chan os.Signal, 1)
@@ -244,17 +267,11 @@ func runServer() {
 
 	ls.Printf("Got signal: %s. Shutting down..\n", sig)
 
-	// Stop the event listener
-	l.Stop()
-
-	// Stop the worker pool, waits
-	wp.Stop()
-
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	err = srv.Shutdown(ctx)
 	if err != nil {
-		log.Fatal("Error in server shutdown; ", err)
+		ls.Fatal("Error in server shutdown; ", err)
 	}
 }

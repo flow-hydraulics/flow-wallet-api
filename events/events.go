@@ -81,9 +81,9 @@ func (l *Listener) RemoveType(t string) {
 	delete(l.types, t)
 }
 
-func (l *Listener) Start() {
+func (l *Listener) Start() *Listener {
 	if l.ticker != nil {
-		return
+		return l
 	}
 
 	l.ticker = time.NewTicker(period)
@@ -116,6 +116,8 @@ func (l *Listener) Start() {
 			}
 		}
 	}()
+
+	return l
 }
 
 func (l *Listener) Stop() {
