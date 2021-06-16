@@ -98,6 +98,22 @@ func (l *Listener) Start() *Listener {
 		cur, _ := l.fc.GetLatestBlock(ctx, true)
 		start = cur.Height
 
+		// TODO:
+
+		// psiemens:
+		// Rather than starting the listener from the latest block, I recommend
+		// storing the "last fetched height" in the database. This way if the server
+		// stops or falls behind the chain, it can catch up to the latest block next
+		// time it starts up.
+		//
+		// However, if the listener falls behind, it may need to catch up on many
+		// blocks at once (e.g. 1000+). The chain can only handle queries for
+		// roughly 200 blocks at a time, so you'll need to batch these requests.
+		//
+		// You could do this by enforcing a maximum value on the block difference
+		// (end - start) below. It probably makes to make this maximum a
+		// configurable value.
+
 		for {
 			select {
 			case <-l.done:
