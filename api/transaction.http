@@ -1,5 +1,5 @@
 @testnetCustodyAccount = 0x0000000000000000
-@emulatorCustodyAccount = 0x01cf0e2f2f715450
+@emulatorCustodyAccount = 0x0000000000000000
 @transferAmount = 0.05
 @jobId = 00000000-0000-0000-0000-000000000000
 
