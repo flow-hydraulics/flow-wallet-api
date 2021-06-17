@@ -18,6 +18,8 @@ A custodial wallet service for tokens on the Flow blockchain.
     DEFAULT_KEY_TYPE=local # Will store keys in your database, use "google_kms" if you have that setup
     ENCRYPTION_KEY=passphrasewhichneedstobe32bytes! # replace this with something that is 32 bytes
 
+    ENABLED_TOKENS=FlowToken:0x7e60df042a9c0868
+
 Running:
 
     docker run -d --name flow-wallet-service --env-file .env ghcr.io/eqlabs/flow-wallet-service:0.0.1
@@ -56,10 +58,21 @@ Run:
     # edit .env.test
     # feel free to use the private key in the example file as it is only for testing
     # admin address is always the same with flow emulator
-    docker-compose up -d
+    make build-cli
+    make up
+    make deploy
     go test -v ./...
 
 ## Configuration
+
+### Enabled tokens
+
+A comma separated list of fungible tokens and their corresponding addresses enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined.
+
+Examples:
+
+    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
+    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79,FUSD:0xf8d6e0586b0a20c7
 
 ### Database
 
@@ -121,6 +134,8 @@ Configure Google KMS as the key storage for `flow-wallet-service` and set the ne
     HOST=
     PORT=3000
     ACCESS_API_HOST=localhost:3569
+
+    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
 
     DATABASE_DSN=wallet.db
     DATABASE_TYPE=sqlite
