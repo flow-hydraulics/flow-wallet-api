@@ -1,4 +1,4 @@
-# Flow Wallet Service v0.0.1
+# Flow Wallet Service v0.0.2
 
 A custodial wallet service for tokens on the Flow blockchain.
 
@@ -22,7 +22,7 @@ A custodial wallet service for tokens on the Flow blockchain.
 
 Running:
 
-    docker run -d --name flow-wallet-service --env-file .env ghcr.io/eqlabs/flow-wallet-service:0.0.1
+    docker run -d --name flow-wallet-service --env-file .env ghcr.io/eqlabs/flow-wallet-service:0.0.2
 
 ## Developing
 
