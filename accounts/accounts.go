@@ -30,57 +30,55 @@ type Account struct {
 
 type AccountToken struct {
 	ID             int            `json:"-" gorm:"primaryKey"`
-	AccountAddress string         `json:"-" gorm:"index"`
-	Name           string         `json:"name"`
+	AccountAddress string         `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenAddress   string         `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenName      string         `json:"name" gorm:"uniqueIndex:addressname;index;not null"`
 	CreatedAt      time.Time      `json:"-"`
 	UpdatedAt      time.Time      `json:"-"`
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
-
-// TODO: Add AccountTokens to admin account on startup (FlowToken for now)
 
 // New creates a new account on the Flow blockchain.
 // It uses the provided admin account to pay for the creation.
 // It generates a new privatekey and returns it (local key)
 // or a reference to it (Google KMS resource id).
 func New(
+	a *Account,
+	k *keys.Private,
 	ctx context.Context,
 	fc *client.Client,
 	km keys.Manager,
-) (
-	newAccount Account,
-	newPrivateKey keys.Private,
-	err error,
-) {
+) error {
 	// Get admin account authorizer
 	auth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Get latest blocks id as reference id
 	id, err := flow_helpers.LatestBlockId(ctx, fc)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Generate a new key pair
 	accountKey, newPrivateKey, err := km.GenerateDefault(ctx)
 	if err != nil {
-		return
+		return err
 	}
+
+	*k = *newPrivateKey
 
 	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
 	b := templates.NewBuilderFromTx(tx)
 
-	t, err := transactions.New(id, b, transactions.General, auth, auth, nil)
-	if err != nil {
-		return
+	t := transactions.Transaction{}
+	if err := transactions.New(&t, id, b, transactions.General, auth, auth, nil); err != nil {
+		return err
 	}
 
-	err = t.SendAndWait(ctx, fc)
-	if err != nil {
-		return
+	if err := t.SendAndWait(ctx, fc); err != nil {
+		return err
 	}
 
 	// Grab the new address from transaction events
@@ -95,13 +93,12 @@ func New(
 
 	// Check that we actually got a new address
 	if newAddress == flow.EmptyAddress {
-		err = fmt.Errorf("something went wrong when waiting for address")
-		return
+		return fmt.Errorf("something went wrong when waiting for address")
 	}
 
-	newAccount.Address = flow_helpers.FormatAddress(newAddress)
+	a.Address = flow_helpers.FormatAddress(newAddress)
 
-	return
+	return nil
 }
 
 // AddContract is mainly used for testing purposes
@@ -147,15 +144,14 @@ func AddContract(
 
 	b.Tx.AddAuthorizer(adminAuth.Address)
 
-	t, err := transactions.New(id, b, transactions.General, userAuth, adminAuth, nil)
-	if err != nil {
+	t := transactions.Transaction{}
+	if err := transactions.New(&t, id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
 		return nil, err
 	}
 
-	err = t.SendAndWait(ctx, fc)
-	if err != nil {
+	if err := t.SendAndWait(ctx, fc); err != nil {
 		return nil, err
 	}
 
-	return t, nil
+	return &t, nil
 }

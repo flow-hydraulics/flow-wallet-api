@@ -69,33 +69,32 @@ func (p *WorkerPool) AddWorker(capacity uint) {
 
 func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
 	job := &Job{Do: do, Status: Init}
-	err := p.db.InsertJob(job)
-	if err != nil {
+	if err := p.db.InsertJob(job); err != nil {
 		return job, err
 	}
 
 	worker, err := p.AvailableWorker()
 	if err != nil {
 		job.Status = NoAvailableWorkers
-		err = p.db.UpdateJob(job)
-		if err != nil {
+		if err := p.db.UpdateJob(job); err != nil {
 			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
 	}
+
 	if !worker.tryEnqueue(job) {
 		job.Status = QueueFull
-		err = p.db.UpdateJob(job)
-		if err != nil {
+		if err := p.db.UpdateJob(job); err != nil {
 			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
 	}
+
 	job.Status = Accepted
-	err = p.db.UpdateJob(job)
-	if err != nil {
+	if err := p.db.UpdateJob(job); err != nil {
 		p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 	}
+
 	return job, nil
 }
 
@@ -142,16 +141,13 @@ func (w *Worker) process(job *Job) {
 		}
 		job.Status = Error
 		job.Error = err.Error()
-		err = w.pool.db.UpdateJob(job)
-		if err != nil {
+		if err := w.pool.db.UpdateJob(job); err != nil {
 			w.pool.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return
 	}
 	job.Status = Complete
-	err = w.pool.db.UpdateJob(job)
-	if err != nil {
+	if err := w.pool.db.UpdateJob(job); err != nil {
 		w.pool.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 	}
-
 }

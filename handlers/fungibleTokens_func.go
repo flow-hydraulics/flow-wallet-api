@@ -6,20 +6,18 @@ import (
 	"net/http"
 
 	"github.com/eqlabs/flow-wallet-service/errors"
-	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/gorilla/mux"
 )
 
-func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
-	r.ParseForm() // Ignore the error as tokenAddress is not required
+func (s *FungibleTokens) ListFunc(rw http.ResponseWriter, r *http.Request) {
+	handleJsonResponse(rw, http.StatusOK, s.service.List())
+}
 
+func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	a := vars["address"]
-	tN := vars["tokenName"]
-	tA := r.Form.Get("tokenAddress")
-
-	t := templates.NewToken(tN, tA)
+	t := vars["tokenName"]
 
 	res, err := s.service.Details(r.Context(), t, a)
 
@@ -33,8 +31,8 @@ func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 
 func (s *FungibleTokens) CreateFtWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	sender := vars["address"]
-	tN := vars["tokenName"]
+	a := vars["address"]
+	t := vars["tokenName"]
 
 	var b FTWithdrawalRequest
 
@@ -45,18 +43,15 @@ func (s *FungibleTokens) CreateFtWithdrawalFunc(rw http.ResponseWriter, r *http.
 	}
 
 	// Try to decode the request body.
-	err := json.NewDecoder(r.Body).Decode(&b)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		err = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
 		handleError(rw, s.log, err)
 		return
 	}
 
-	b.Name = tN
-
 	// Decide whether to serve sync or async, default async
 	sync := r.Header.Get(SyncHeader) != ""
-	job, tx, err := s.service.CreateFtWithdrawal(r.Context(), sync, b.Token, sender, b.Recipient, b.Amount)
+	job, tx, err := s.service.CreateFtWithdrawal(r.Context(), sync, t, a, b.Recipient, b.Amount)
 	var res interface{}
 	if sync {
 		res = tx
@@ -74,12 +69,10 @@ func (s *FungibleTokens) CreateFtWithdrawalFunc(rw http.ResponseWriter, r *http.
 
 func (s *FungibleTokens) ListFtWithdrawalsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	address := vars["address"]
-	token := vars["tokenName"]
+	a := vars["address"]
+	t := vars["tokenName"]
 
-	t := templates.NewToken(token, "")
-
-	res, err := s.service.ListFtWithdrawals(address, t)
+	res, err := s.service.ListFtWithdrawals(a, t)
 
 	if err != nil {
 		handleError(rw, s.log, err)
@@ -91,13 +84,11 @@ func (s *FungibleTokens) ListFtWithdrawalsFunc(rw http.ResponseWriter, r *http.R
 
 func (s *FungibleTokens) GetFtWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	address := vars["address"]
-	token := vars["tokenName"]
+	a := vars["address"]
+	t := vars["tokenName"]
 	txId := vars["transactionId"]
 
-	t := templates.NewToken(token, "")
-
-	res, err := s.service.GetFtWithdrawal(address, t, txId)
+	res, err := s.service.GetFtWithdrawal(a, t, txId)
 
 	if err != nil {
 		handleError(rw, s.log, err)
@@ -109,12 +100,10 @@ func (s *FungibleTokens) GetFtWithdrawalFunc(rw http.ResponseWriter, r *http.Req
 
 func (s *FungibleTokens) ListFtDepositsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	address := vars["address"]
-	token := vars["tokenName"]
+	a := vars["address"]
+	t := vars["tokenName"]
 
-	t := templates.NewToken(token, "")
-
-	res, err := s.service.ListFtDeposits(address, t)
+	res, err := s.service.ListFtDeposits(a, t)
 
 	if err != nil {
 		handleError(rw, s.log, err)
@@ -126,13 +115,11 @@ func (s *FungibleTokens) ListFtDepositsFunc(rw http.ResponseWriter, r *http.Requ
 
 func (s *FungibleTokens) GetFtDepositFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	address := vars["address"]
-	token := vars["tokenName"]
+	a := vars["address"]
+	t := vars["tokenName"]
 	txId := vars["transactionId"]
 
-	t := templates.NewToken(token, "")
-
-	res, err := s.service.GetFtDeposit(address, t, txId)
+	res, err := s.service.GetFtDeposit(a, t, txId)
 
 	if err != nil {
 		handleError(rw, s.log, err)

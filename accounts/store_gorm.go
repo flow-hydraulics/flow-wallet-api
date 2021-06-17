@@ -34,10 +34,9 @@ func (s *GormStore) InsertAccount(a *Account) error {
 }
 
 func (s *GormStore) AccountTokens(address string) (att []AccountToken, err error) {
-	// TODO: unique by name and token addres
 	err = s.db.
 		Where(&AccountToken{AccountAddress: address}).
-		Order("name asc").
+		Order("token_name asc").
 		Find(&att).Error
 	return
 }

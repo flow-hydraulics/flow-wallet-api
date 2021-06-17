@@ -17,16 +17,5 @@ func init() {
 		flow.Mainnet:  "0xf233dcee88fe0abe",
 	}
 
-	t["FLOW_TOKEN_ADDRESS"] = chainAddresses{
-		flow.Emulator: "0x0ae53cb6e3f42a79",
-		flow.Testnet:  "0x7e60df042a9c0868",
-		flow.Mainnet:  "0x1654653399040a61",
-	}
-
-	t["FUSD_ADDRESS"] = chainAddresses{
-		flow.Emulator: "0xf8d6e0586b0a20c7", // Admin account
-		flow.Testnet:  "0xe223d8a629e49c68",
-	}
-
 	replacers = makeChainReplacers(t)
 }

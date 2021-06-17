@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/eqlabs/flow-wallet-service/datastore"
 	"github.com/eqlabs/flow-wallet-service/errors"
@@ -37,6 +38,27 @@ func NewService(
 	return &Service{db, km, fc, wp, ts, cfg}
 }
 
+func (s *Service) InitAdminAccount() {
+	a, err := s.db.Account(s.cfg.AdminAccountAddress)
+	if err != nil {
+		if !strings.Contains(err.Error(), "record not found") {
+			panic(err)
+		}
+		// Admin account not in database
+		a = Account{Address: s.cfg.AdminAccountAddress}
+		s.db.InsertAccount(&a)
+	}
+
+	for _, t := range templates.EnabledTokens() {
+		at := AccountToken{
+			AccountAddress: a.Address,
+			TokenAddress:   t.Address,
+			TokenName:      t.CanonName(),
+		}
+		s.db.InsertAccountToken(&at) // Ignore errors
+	}
+}
+
 // List returns all accounts in the datastore.
 func (s *Service) List(limit, offset int) (result []Account, err error) {
 	o := datastore.ParseListOptions(limit, offset)
@@ -48,7 +70,8 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
 func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, error) {
-	var account *Account
+	a := Account{}
+	k := keys.Private{}
 
 	job, err := s.wp.AddJob(func() (string, error) {
 		ctx := c
@@ -56,33 +79,32 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			ctx = context.Background()
 		}
 
-		a, key, err := New(ctx, s.fc, s.km)
-		if err != nil {
+		if err := New(&a, &k, ctx, s.fc, s.km); err != nil {
 			return "", err
 		}
 
-		account = &a
-
 		// Convert the key to storable form (encrypt it)
-		accountKey, err := s.km.Save(key)
+		accountKey, err := s.km.Save(k)
 		if err != nil {
 			return "", err
 		}
 
 		// Store account and key
 		a.Keys = []keys.Storable{accountKey}
-		err = s.db.InsertAccount(&a)
-		if err != nil {
+		if err := s.db.InsertAccount(&a); err != nil {
 			return "", err
 		}
 
 		// Store an AccountToken named FlowToken for the account as it is automatically
 		// enabled on all accounts
-		// Intentionally ignore error
-		s.db.InsertAccountToken(&AccountToken{
-			AccountAddress: a.Address,
-			Name:           "FlowToken",
-		})
+		t, err := templates.NewToken("FlowToken")
+		if err == nil { // If err != nil, FlowToken is not enabled for some reason
+			s.db.InsertAccountToken(&AccountToken{ // Ignore errors
+				AccountAddress: a.Address,
+				TokenAddress:   t.Address,
+				TokenName:      t.CanonName(),
+			})
+		}
 
 		return a.Address, nil
 	})
@@ -100,14 +122,13 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 
 	err = job.Wait(sync)
 
-	return job, account, err
+	return job, &a, err
 }
 
 // Details returns a specific account.
 func (s *Service) Details(address string) (Account, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return Account{}, err
 	}
 	address = flow_helpers.HexString(address)
@@ -115,32 +136,40 @@ func (s *Service) Details(address string) (Account, error) {
 	return s.db.Account(address)
 }
 
-func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, token templates.Token, address string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return nil, nil, err
 	}
 
 	address = flow_helpers.HexString(address)
 
+	token, err := templates.NewToken(tokenName)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	raw := templates.Raw{
-		Code: templates.FungibleSetupCode(token, s.cfg.ChainId),
+		Code: templates.FungibleSetupCode(token),
 	}
 
 	job, tx, err := s.ts.Create(ctx, sync, address, raw, transactions.FtSetup)
 
 	// Handle adding token to account in database
 	go func() {
-		err := job.Wait(true)
-		if err != nil {
+		if err := job.Wait(true); err != nil && !strings.Contains(err.Error(), "vault exists") {
 			return
 		}
-		// Intentionally ignore error
-		s.db.InsertAccountToken(&AccountToken{
+
+		err = s.db.InsertAccountToken(&AccountToken{
 			AccountAddress: address,
-			Name:           token.CanonName(),
+			TokenAddress:   token.Address,
+			TokenName:      token.CanonName(),
 		})
+
+		if err != nil && !strings.Contains(err.Error(), "duplicate key value") {
+			fmt.Printf("error while adding account token: %s\n", err)
+		}
 	}()
 
 	return job, tx, err
@@ -148,12 +177,16 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, token templ
 
 func (s *Service) AccountFungibleTokens(address string) ([]AccountToken, error) {
 	// Check if the input is a valid address
-	err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
+	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
 		return nil, err
 	}
 
 	address = flow_helpers.HexString(address)
 
-	return s.db.AccountTokens(address)
+	tt, err := s.db.AccountTokens(address)
+	if err != nil {
+		return []AccountToken{}, err
+	}
+
+	return tt, nil
 }

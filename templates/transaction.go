@@ -28,8 +28,7 @@ func NewBuilderFromRaw(raw Raw) (*TransactionBuilder, error) {
 
 	// Add arguments
 	for _, a := range raw.Arguments {
-		err := b.AddArgument(a)
-		if err != nil {
+		if err := b.AddArgument(a); err != nil {
 			return nil, err
 		}
 	}
@@ -46,8 +45,7 @@ func (b *TransactionBuilder) AddArgument(a Argument) error {
 	if err != nil {
 		return err
 	}
-	err = b.Tx.AddArgument(c)
-	if err != nil {
+	if err := b.Tx.AddArgument(c); err != nil {
 		return err
 	}
 	return nil

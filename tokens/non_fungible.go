@@ -53,20 +53,17 @@ func SetupNFT(ctx context.Context, fc *client.Client, km keys.Manager, address f
 		AddAuthorizer(accountAuth.Address)
 
 	// Proposer signs the payload first
-	err = tx.SignPayload(accountAuth.Address, accountAuth.Key.Index, accountAuth.Signer)
-	if err != nil {
+	if err := tx.SignPayload(accountAuth.Address, accountAuth.Key.Index, accountAuth.Signer); err != nil {
 		return &flow.TransactionResult{}, err
 	}
 
 	// Sign the transaction with the service account
-	err = tx.SignEnvelope(serviceAuth.Address, serviceAuth.Key.Index, serviceAuth.Signer)
-	if err != nil {
+	if err := tx.SignEnvelope(serviceAuth.Address, serviceAuth.Key.Index, serviceAuth.Signer); err != nil {
 		return &flow.TransactionResult{}, err
 	}
 
 	// Send the transaction to the network
-	err = fc.SendTransaction(ctx, *tx)
-	if err != nil {
+	if err := fc.SendTransaction(ctx, *tx); err != nil {
 		return &flow.TransactionResult{}, err
 	}
 

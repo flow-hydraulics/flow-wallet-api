@@ -1,13 +1,9 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/eqlabs/flow-wallet-service/errors"
-	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/gorilla/mux"
 )
 
@@ -73,21 +69,7 @@ func (s *Accounts) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Accounts) SetupFungibleTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	a := vars["address"]
-	tN := vars["tokenName"]
-
-	var t templates.Token
-
-	if r.Body != http.NoBody {
-		// Try to decode the request body into the struct.
-		err := json.NewDecoder(r.Body).Decode(&t)
-		if err != nil {
-			err = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
-			handleError(rw, s.log, err)
-			return
-		}
-	}
-
-	t.Name = tN
+	t := vars["tokenName"]
 
 	// Decide whether to serve sync or async, default async
 	sync := r.Header.Get(SyncHeader) != ""

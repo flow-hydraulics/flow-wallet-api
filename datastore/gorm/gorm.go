@@ -16,8 +16,8 @@ func Close(db *gorm.DB) {
 	if err != nil {
 		panic("unable to close database")
 	}
-	err = sqlDB.Close()
-	if err != nil {
+
+	if err := sqlDB.Close(); err != nil {
 		panic("unable to close database")
 	}
 }

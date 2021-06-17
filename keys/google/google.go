@@ -19,10 +19,10 @@ type Config struct {
 	KeyRingID  string `env:"GOOGLE_KMS_KEYRING_ID"`
 }
 
-func Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, keys.Private, error) {
+func Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *keys.Private, error) {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
-		return nil, keys.Private{}, err
+		return nil, nil, err
 	}
 
 	u := uuid.New()
@@ -34,18 +34,18 @@ func Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, keys
 		fmt.Sprintf("flow-wallet-account-key-%s", u.String()),
 	)
 	if err != nil {
-		return nil, keys.Private{}, err
+		return nil, nil, err
 	}
 
 	c, err := cloudkms.NewClient(ctx)
 	if err != nil {
-		return nil, keys.Private{}, err
+		return nil, nil, err
 	}
 
 	// Get the public key (using flow-go-sdk's cloudkms.Client)
 	pub, h, err := c.GetPublicKey(ctx, k)
 	if err != nil {
-		return nil, keys.Private{}, err
+		return nil, nil, err
 	}
 
 	f := flow.NewAccountKey().
@@ -54,7 +54,7 @@ func Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, keys
 		SetWeight(weight)
 	f.Index = keyIndex
 
-	p := keys.Private{
+	p := &keys.Private{
 		Index: keyIndex,
 		Type:  keys.AccountKeyTypeGoogleKMS,
 		Value: k.ResourceID(),

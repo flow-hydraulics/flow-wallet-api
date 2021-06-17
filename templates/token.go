@@ -6,16 +6,37 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/iancoleman/strcase"
-	"github.com/onflow/flow-go-sdk"
 )
 
 type Token struct {
-	Name    string `json:"tokenName"`
-	Address string `json:"tokenAddress"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
 }
 
-func NewToken(name, address string) Token {
-	return Token{Name: name, Address: address}
+func EnabledTokens() []Token {
+	return parseConfig().enabledTokens
+}
+
+func EnabledTokenAddresses() map[string]string {
+	return parseConfig().enabledTokenAddresses
+}
+
+func EnabledTokenNames() []string {
+	enabled := EnabledTokens()
+	keys := make([]string, len(enabled))
+	for i, k := range enabled {
+		keys[i] = k.CanonName()
+	}
+	return keys
+}
+
+func NewToken(name string) (Token, error) {
+	t := Token{Name: name} // So we can compare the CanonName
+	address, ok := EnabledTokenAddresses()[t.CanonName()]
+	if !ok {
+		return Token{}, fmt.Errorf("token %s not enabled", t.CanonName())
+	}
+	return Token{Name: name, Address: address}, nil
 }
 
 func (t *Token) CanonName() string {
@@ -24,7 +45,7 @@ func (t *Token) CanonName() string {
 
 func (t *Token) ParseName() [3]string {
 	// TODO: how to handle these kind of cases?
-	if strcase.ToScreamingSnake(t.Name) == "FUSD" {
+	if strings.ToLower(t.Name) == "fusd" {
 		return [3]string{
 			"FUSD", "FUSD", "fusd",
 		}
@@ -37,7 +58,7 @@ func (t *Token) ParseName() [3]string {
 	}
 }
 
-func fungibleTemplateCode(tmpl_str string, token Token, chainId flow.ChainID) string {
+func fungibleTemplateCode(tmpl_str string, token Token) string {
 	p := token.ParseName()
 	camel := p[0]
 	snake := p[1]
@@ -59,29 +80,26 @@ func fungibleTemplateCode(tmpl_str string, token Token, chainId flow.ChainID) st
 		tmpl_str = r.Replace(tmpl_str)
 	}
 
-	return Code(&Template{Source: tmpl_str}, chainId)
+	return Code(&Template{Source: tmpl_str})
 }
 
-func FungibleTransferCode(token Token, chainId flow.ChainID) string {
+func FungibleTransferCode(token Token) string {
 	return fungibleTemplateCode(
 		template_strings.GenericFungibleTransfer,
 		token,
-		chainId,
 	)
 }
 
-func FungibleSetupCode(token Token, chainId flow.ChainID) string {
+func FungibleSetupCode(token Token) string {
 	return fungibleTemplateCode(
 		template_strings.GenericFungibleSetup,
 		token,
-		chainId,
 	)
 }
 
-func FungibleBalanceCode(token Token, chainId flow.ChainID) string {
+func FungibleBalanceCode(token Token) string {
 	return fungibleTemplateCode(
 		template_strings.GenericFungibleBalance,
 		token,
-		chainId,
 	)
 }

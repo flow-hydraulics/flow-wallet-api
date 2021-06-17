@@ -20,7 +20,6 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/basic"
-	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
@@ -41,8 +40,7 @@ type Config struct {
 }
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Println("WARNING: Could not load environment variables from file; ", err)
 	}
 
@@ -95,8 +93,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	}
 	defer func() {
 		ls.Println("Closing Flow Client..")
-		err := fc.Close()
-		if err != nil {
+		if err := fc.Close(); err != nil {
 			ls.Fatal(err)
 		}
 	}()
@@ -139,6 +136,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		BuildTime: buildTime,
 	}
 
+	accountService.InitAdminAccount()
+
 	// HTTP handling
 
 	jobsHandler := handlers.NewJobs(ls, jobsService)
@@ -179,6 +178,9 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// Fungible tokens
 	if !disableFt {
+		// List enabled tokens
+		rv.Handle("/fungible-tokens", fungibleTokenHandler.List()).Methods(http.MethodGet)
+
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
 		rft.Handle("", accountHandler.AccountFungibleTokens()).Methods(http.MethodGet)
@@ -241,7 +243,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 						// TODO: filter out events not related to this wallet service (address not in db)
 						err := tokenService.RegisterFtDeposit(
 							e.TransactionID.Hex(),
-							templates.NewToken("TODO", ""),
+							"TODO",
 							e.Value.Fields[0].String(),
 							e.Value.Fields[1].String(),
 						)
@@ -270,8 +272,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
-	err = srv.Shutdown(ctx)
-	if err != nil {
+	if err := srv.Shutdown(ctx); err != nil {
 		ls.Fatal("Error in server shutdown; ", err)
 	}
 }

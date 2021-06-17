@@ -5,8 +5,25 @@ import (
 	"testing"
 
 	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
-	"github.com/onflow/flow-go-sdk"
+	"github.com/joho/godotenv"
 )
+
+func TestConfig(t *testing.T) {
+	if err := godotenv.Load("../.env.test"); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg1 := parseConfig()
+	cfg2 := parseConfig()
+
+	if cfg1 != cfg2 {
+		t.Fatal("expected configs to point to the same address")
+	}
+
+	if cfg1.enabledTokenAddresses == nil {
+		t.Fatal("expected there to be enabled tokens")
+	}
+}
 
 func TestParseName(t *testing.T) {
 	n := (&Token{Name: "FUSD"}).ParseName()
@@ -34,10 +51,9 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
 		g := FungibleTransferCode(
 			Token{Name: "FlowToken"},
-			flow.Emulator,
 		)
 
-		c := Code(&Template{Source: template_strings.TransferFlow}, flow.Emulator)
+		c := Code(&Template{Source: template_strings.TransferFlow})
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -47,10 +63,9 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken with non-standard addresses", func(t *testing.T) {
 		g := FungibleTransferCode(
 			Token{Name: "FlowToken", Address: "some_other_tokenaddress"},
-			flow.Emulator,
 		)
 
-		c := Code(&Template{Source: template_strings.TransferFlow}, flow.Emulator)
+		c := Code(&Template{Source: template_strings.TransferFlow})
 
 		if g == c {
 			t.Error("expected outputs not to equal")
@@ -64,10 +79,9 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FUSD", func(t *testing.T) {
 		g := FungibleTransferCode(
 			Token{Name: "FUSD"},
-			flow.Emulator,
 		)
 
-		c := Code(&Template{template_strings.TransferFUSD}, flow.Emulator)
+		c := Code(&Template{template_strings.TransferFUSD})
 
 		if g != c {
 			t.Error("expected outputs to equal")
@@ -77,10 +91,9 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FUSD with non-standard addresses", func(t *testing.T) {
 		g := FungibleTransferCode(
 			Token{Name: "FUSD", Address: "some_other_tokenaddress"},
-			flow.Emulator,
 		)
 
-		c := Code(&Template{template_strings.TransferFUSD}, flow.Emulator)
+		c := Code(&Template{template_strings.TransferFUSD})
 
 		if g == c {
 			t.Error("expected outputs not to equal")

@@ -34,28 +34,25 @@ func LatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, erro
 
 // WaitForSeal blocks until either an error occurs or the transaction
 // identified by "id" gets a "TransactionStatusSealed" status.
-func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (result *flow.TransactionResult, err error) {
-	result, err = c.GetTransactionResult(ctx, id)
+func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (*flow.TransactionResult, error) {
+	result, err := c.GetTransactionResult(ctx, id)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if result.Error != nil {
-		err = result.Error
-		return
+		return nil, result.Error
 	}
 
 	for result.Status != flow.TransactionStatusSealed {
 		time.Sleep(time.Second)
 		result, err = c.GetTransactionResult(ctx, id)
-
 		if err != nil {
-			return
+			return nil, err
 		}
 
 		if result.Error != nil {
-			err = result.Error
-			return
+			return nil, result.Error
 		}
 	}
 
@@ -66,11 +63,10 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (res
 func ValidateAddress(address string, chainId flow.ChainID) error {
 	flowAddress := flow.HexToAddress(address)
 	if !flowAddress.IsValid(chainId) {
-		err := &errors.RequestError{
+		return &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("not a valid address"),
 		}
-		return err
 	}
 	return nil
 }
