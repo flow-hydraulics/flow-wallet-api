@@ -183,10 +183,5 @@ func (s *Service) AccountFungibleTokens(address string) ([]AccountToken, error) 
 
 	address = flow_helpers.HexString(address)
 
-	tt, err := s.db.AccountTokens(address)
-	if err != nil {
-		return []AccountToken{}, err
-	}
-
-	return tt, nil
+	return s.db.AccountTokens(address)
 }

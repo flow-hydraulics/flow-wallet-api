@@ -999,7 +999,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens", aa[1].Address),
-			expected:    `\[.*{"name":"FUSD"}.*{"name":"FlowToken"}.*\]`,
+			expected:    `\[.*"name":"FUSD".*"name":"FlowToken".*\]`,
 			status:      http.StatusOK,
 		},
 	}

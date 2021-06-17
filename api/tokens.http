@@ -34,11 +34,11 @@ content-type: application/json
   "amount":"1.0"
 }
 
-### Get FlowToken withdrawals for admin account
+### List FlowToken withdrawals for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/flow-token/withdrawals HTTP/1.1
 content-type: application/json
 
-### Get FUSD withdrawals for admin account
+### List FUSD withdrawals for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/fusd/withdrawals HTTP/1.1
 content-type: application/json
 
@@ -82,11 +82,11 @@ content-type: application/json
   "amount":"1.0"
 }
 
-### Get FlowToken withdrawals for custody account
+### List FlowToken withdrawals for custody account
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/withdrawals HTTP/1.1
 content-type: application/json
 
-### Get FUSD withdrawals for custody account
+### List FUSD withdrawals for custody account
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd/withdrawals HTTP/1.1
 content-type: application/json
 
