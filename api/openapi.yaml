@@ -9,6 +9,19 @@ servers:
 
 components:
   schemas:
+    debugInfo:
+      type: string
+      example: |
+        url: GET /v1/debug
+        Headers:
+          User-Agent: vscode-restclient
+          Content-Type: application/json
+          Connection: close
+
+        ver: https://github.com/eqlabs/flow-wallet-service/commit/
+        built on:
+        api version called: v1
+
     account:
       type: object
       properties:
@@ -78,6 +91,49 @@ components:
     plainValue:
       type: string
 
+    token:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FlowToken"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+
+    tokenDetails:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FlowToken"
+        balance:
+          type: string
+          example: "9999999999.99700000"
+
+    tokenWithdrawal:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        token:
+          type: string
+          example: "FlowToken"
+        recipient:
+          type: string
+          example: "0x01cf0e2f2f715450"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+
+
   parameters:
     limit:
       name: limit
@@ -121,8 +177,8 @@ components:
       required: true
       schema:
         type: string
-        enum: [FLOW, FUSD]
-        example: FLOW
+        enum: [flow-token, FUSD]
+        example: flow-token
 
     transactionId:
       name: transactionId
@@ -133,6 +189,48 @@ components:
         example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
 
 paths:
+  /debug:
+    get:
+       summary: Get debug information about the running instance.
+       responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/debugInfo"
+
+  /fungible-tokens:
+    get:
+      summary: Get all fungible tokens
+      description: Get all fungible tokens that are enabled in this instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/token"
+  /scripts:
+    post:
+      summary: Execute a script on chain
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/script"
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  -  $ref: "#/components/schemas/cadenceValue"
+                  -  $ref: "#/components/schemas/plainValue"
+
   /jobs:
     get:
       summary: List all jobs
@@ -253,20 +351,88 @@ paths:
               schema:
                 $ref: "#/components/schemas/transaction"
 
-  /scripts:
-    post:
-      summary: Execute a script on chain
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/script"
+  /accounts/{address}/fungible-tokens:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    get:
+      summary: Get account fungible tokens
+      description: Get all fungible tokens that are enabled for an account.
       responses:
         "200":
-          description: Ok
+          description: OK
           content:
             application/json:
               schema:
-                oneOf:
-                  -  $ref: "#/components/schemas/cadenceValue"
-                  -  $ref: "#/components/schemas/plainValue"
+                type: array
+                items:
+                  $ref: "#/components/schemas/token"
+
+  /accounts/{address}/fungible-tokens/{tokenName}:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    - $ref: "#/components/parameters/tokenName"
+    get:
+      summary: Get fungible tokens details for an account
+      description: Get details (balance) regarding a fungible token for an account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/tokenDetails"
+    post:
+      summary: Enable a fungible token for an account
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    - $ref: "#/components/parameters/tokenName"
+    get:
+      summary: List all withdrawals of a fungible token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/tokenWithdrawal"
+    post:
+      summary: Create a fungible token withdrawal
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    - $ref: "#/components/parameters/tokenName"
+    - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a fungible token withdrawal
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tokenWithdrawal"

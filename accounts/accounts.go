@@ -31,8 +31,8 @@ type Account struct {
 type AccountToken struct {
 	ID             int            `json:"-" gorm:"primaryKey"`
 	AccountAddress string         `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
-	TokenAddress   string         `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
 	TokenName      string         `json:"name" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenAddress   string         `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
 	CreatedAt      time.Time      `json:"-"`
 	UpdatedAt      time.Time      `json:"-"`
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
