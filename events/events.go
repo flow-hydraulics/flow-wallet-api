@@ -3,16 +3,19 @@ package events
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
 // TODO: increase once implementation is somewhat complete
 const (
-	period      = 1 * time.Second
-	chanTimeout = period / 2
+	period          = 1 * time.Second
+	chanTimeout     = period / 2
+	TokensDeposited = "TokensDeposited"
 )
 
 type Listener struct {
@@ -35,6 +38,12 @@ func NewListener(fc *client.Client) *Listener {
 		nil,
 		fc,
 	}
+}
+
+func TypeFromToken(t templates.Token, tokenEvent string) string {
+	a := strings.TrimPrefix(t.Address, "0x")
+	n := t.CanonName()
+	return fmt.Sprintf("A.%s.%s.%s", a, n, tokenEvent)
 }
 
 func (l *Listener) process(ctx context.Context, start, end uint64) error {
@@ -79,6 +88,14 @@ func (l *Listener) AddType(t string) {
 
 func (l *Listener) RemoveType(t string) {
 	delete(l.types, t)
+}
+
+func (l *Listener) ListenTokenEvent(t templates.Token, tokenEvent string) {
+	l.AddType(TypeFromToken(t, tokenEvent))
+}
+
+func (l *Listener) RemoveTokenEvent(t templates.Token, tokenEvent string) {
+	l.RemoveType(TypeFromToken(t, tokenEvent))
 }
 
 func (l *Listener) Start() *Listener {

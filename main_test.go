@@ -167,7 +167,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
+		if _, err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 	})
@@ -196,7 +196,7 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
+		if _, err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 
@@ -791,7 +791,7 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, transfer, err := service.CreateFtWithdrawal(
+		_, tx, err := service.CreateFtWithdrawal(
 			context.Background(),
 			true,
 			"flow-token",
@@ -800,8 +800,8 @@ func TestTokenServices(t *testing.T) {
 			"1.0",
 		)
 
-		if flow.HexToID(transfer.TransactionId) != flow.EmptyID {
-			t.Fatal("Expected TransactionId to be empty")
+		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
+			t.Fatal("Expected TransactionId not to be empty")
 		}
 
 		if err == nil {
@@ -1044,7 +1044,7 @@ func TestTokenHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
-			expected:    `"recipient\":".+"`,
+			expected:    `"transactionId":".+"`,
 			status:      http.StatusCreated,
 		},
 		{

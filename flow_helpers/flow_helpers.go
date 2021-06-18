@@ -16,13 +16,6 @@ import (
 
 const hexPrefix = "0x"
 
-func HexString(str string) string {
-	if strings.HasPrefix(str, hexPrefix) {
-		return str
-	}
-	return fmt.Sprintf("%s%s", hexPrefix, str)
-}
-
 // LatestBlockId retuns the flow.Identifier for the latest block in the chain.
 func LatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, error) {
 	block, err := c.GetLatestBlock(ctx, true)
@@ -59,20 +52,26 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (*fl
 	return result, nil
 }
 
-// ValidateAddress checks if the given address is valid in the current Flow network.
-func ValidateAddress(address string, chainId flow.ChainID) error {
-	flowAddress := flow.HexToAddress(address)
-	if !flowAddress.IsValid(chainId) {
-		return &errors.RequestError{
-			StatusCode: http.StatusBadRequest,
-			Err:        fmt.Errorf("not a valid address"),
-		}
+func HexString(str string) string {
+	if strings.HasPrefix(str, hexPrefix) {
+		return str
 	}
-	return nil
+	return fmt.Sprintf("%s%s", hexPrefix, str)
 }
 
 func FormatAddress(address flow.Address) string {
 	return HexString(address.Hex())
+}
+
+func ValidateAddress(address string, chainId flow.ChainID) (string, error) {
+	flowAddress := flow.HexToAddress(address)
+	if !flowAddress.IsValid(chainId) {
+		return "", &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("not a valid address"),
+		}
+	}
+	return FormatAddress(flowAddress), nil
 }
 
 func ValidateTransactionId(id string) error {

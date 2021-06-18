@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/iancoleman/strcase"
+	"github.com/onflow/flow-go-sdk"
 )
 
 type Token struct {
@@ -41,6 +43,26 @@ func NewToken(name string) (Token, error) {
 
 func (t *Token) CanonName() string {
 	return t.ParseName()[0]
+}
+
+func TokenFromEvent(e flow.Event, chainId flow.ChainID) (Token, error) {
+	// Example event:
+	// A.0ae53cb6e3f42a79.FlowToken.TokensDeposited
+	ss := strings.Split(e.Type, ".")
+	a, err := flow_helpers.ValidateAddress(ss[1], chainId)
+	if err != nil {
+		return Token{}, err
+	}
+	return Token{Name: ss[2], Address: a}, nil
+}
+
+func (t *Token) IsEnabled() bool {
+	for _, e := range EnabledTokens() {
+		if t.Name == e.Name && t.Address == e.Address {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Token) ParseName() [3]string {

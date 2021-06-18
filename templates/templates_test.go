@@ -6,6 +6,7 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/joho/godotenv"
+	"github.com/onflow/flow-go-sdk"
 )
 
 func TestConfig(t *testing.T) {
@@ -22,6 +23,22 @@ func TestConfig(t *testing.T) {
 
 	if cfg1.enabledTokenAddresses == nil {
 		t.Fatal("expected there to be enabled tokens")
+	}
+}
+
+func TestTokenFromEvent(t *testing.T) {
+	e := flow.Event{
+		Type: "A.0ae53cb6e3f42a79.FlowToken.TokensDeposited",
+	}
+	token, err := TokenFromEvent(e, flow.Emulator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if token.Address != "0x0ae53cb6e3f42a79" {
+		t.Error("invalid token address")
+	}
+	if token.Name != "FlowToken" {
+		t.Error("invalid token name")
 	}
 }
 

@@ -35,3 +35,8 @@ deploy:
 .PHONY: shell
 shell:
 	docker exec -it flow-emulator ash
+
+.PHONY: reset
+reset:
+	FLOW_CLI_VERSION=${cli_version} docker-compose down
+	FLOW_CLI_VERSION=${cli_version} docker-compose up -d
