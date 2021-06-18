@@ -58,15 +58,15 @@ func baseFromTransfer(t *FungibleTokenTransfer) FungibleTokenTransferBase {
 	}
 }
 
-func (t *FungibleTokenTransfer) Withdrawal() *FungibleTokenWithdrawal {
-	return &FungibleTokenWithdrawal{
+func (t *FungibleTokenTransfer) Withdrawal() FungibleTokenWithdrawal {
+	return FungibleTokenWithdrawal{
 		baseFromTransfer(t),
 		t.RecipientAddress,
 	}
 }
 
-func (t *FungibleTokenTransfer) Deposit() *FungibleTokenDeposit {
-	return &FungibleTokenDeposit{
+func (t *FungibleTokenTransfer) Deposit() FungibleTokenDeposit {
+	return FungibleTokenDeposit{
 		baseFromTransfer(t),
 		t.Transaction.PayerAddress,
 	}

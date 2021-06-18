@@ -20,10 +20,12 @@ import (
 	"github.com/eqlabs/flow-wallet-service/jobs"
 	"github.com/eqlabs/flow-wallet-service/keys"
 	"github.com/eqlabs/flow-wallet-service/keys/basic"
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/eqlabs/flow-wallet-service/tokens"
 	"github.com/eqlabs/flow-wallet-service/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
 )
@@ -34,14 +36,15 @@ var (
 )
 
 type Config struct {
-	Host          string `env:"HOST"`
-	Port          int    `env:"PORT" envDefault:"3000"`
-	AccessApiHost string `env:"ACCESS_API_HOST,required"`
+	Host          string       `env:"HOST"`
+	Port          int          `env:"PORT" envDefault:"3000"`
+	AccessApiHost string       `env:"ACCESS_API_HOST,required"`
+	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
-		log.Println("WARNING: Could not load environment variables from file; ", err)
+		log.Printf("Could not load environment variables from file.\n%s\nIf running inside a docker container this can be ignored.\n\n", err)
 	}
 
 	var (
@@ -56,7 +59,7 @@ func main() {
 	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable raw transactions api")
 	flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token api")
 	flag.BoolVar(&flgDisableNft, "disable-nft", false, "disable non-fungible token functionality")
-	flag.BoolVar(&flgDisableChainEvents, "disable-events", true, "disable chain event listener")
+	flag.BoolVar(&flgDisableChainEvents, "disable-events", false, "disable chain event listener")
 
 	flag.Parse()
 
@@ -222,8 +225,10 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	if !disableChainEvents {
 		ls.Println("Starting event listener..")
 
+		eventStore := events.NewGormStore(db)
+
 		l := events.
-			NewListener(fc).
+			NewListener(fc, eventStore, 100).
 			Start()
 
 		defer func() {
@@ -231,28 +236,34 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 			l.Stop()
 		}()
 
-		// TODO
-		// l.AddType("flow.AccountCreated")
-		// l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensWithdrawn")
-		l.AddType("A.0ae53cb6e3f42a79.FlowToken.TokensDeposited")
+		// Listen for enabled tokens deposit events
+		for _, t := range templates.EnabledTokens() {
+			l.ListenTokenEvent(t, events.TokensDeposited)
+		}
 
 		go func() {
-			for events := range l.Events {
-				for _, e := range events {
-					if strings.Contains(e.Type, "TokensDeposited") {
-						// TODO: filter out events not related to this wallet service (address not in db)
-						err := tokenService.RegisterFtDeposit(
-							e.TransactionID.Hex(),
-							"TODO",
-							e.Value.Fields[0].String(),
-							e.Value.Fields[1].String(),
-						)
+			for ee := range l.Events {
+				for _, e := range ee {
+					ss := strings.Split(e.Type, ".")
+					if ss[len(ss)-1] == events.TokensDeposited {
+						t, err := templates.TokenFromEvent(e, cfg.ChainId)
 						if err != nil {
+							continue
+						}
+						if !t.IsEnabled() {
+							continue
+						}
+
+						// Check if recipient is in database
+						a, err := accountService.Details(e.Value.Fields[1].String())
+						if err != nil {
+							continue
+						}
+
+						if err = tokenService.RegisterFtDeposit(t, e.TransactionID.Hex(), e.Value.Fields[0].String(), a.Address); err != nil {
 							ls.Printf("error while registering a deposit: %s\n", err)
 						}
 					}
-
-					ls.Printf("received event: %s %v\n", e.Type, e.Value.Fields)
 				}
 			}
 		}()

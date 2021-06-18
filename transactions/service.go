@@ -47,10 +47,10 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		// Check if the input is a valid address
-		if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
+		address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+		if err != nil {
 			return "", err
 		}
-		address = flow_helpers.HexString(address)
 
 		id, err := flow_helpers.LatestBlockId(ctx, s.fc)
 		if err != nil {
@@ -119,10 +119,10 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 // List returns all transactions in the datastore for a given account.
 func (s *Service) List(tType Type, address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
-	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
 		return []Transaction{}, err
 	}
-	address = flow_helpers.HexString(address)
 
 	o := datastore.ParseListOptions(limit, offset)
 
@@ -132,10 +132,10 @@ func (s *Service) List(tType Type, address string, limit, offset int) ([]Transac
 // Details returns a specific transaction.
 func (s *Service) Details(tType Type, address, transactionId string) (result Transaction, err error) {
 	// Check if the input is a valid address
-	if err = flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
+	address, err = flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
 		return
 	}
-	address = flow_helpers.HexString(address)
 
 	// Check if the input is a valid transaction id
 	if err = flow_helpers.ValidateTransactionId(transactionId); err != nil {

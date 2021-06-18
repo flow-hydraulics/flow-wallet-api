@@ -3,38 +3,56 @@ package events
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	"gorm.io/gorm"
 )
 
 // TODO: increase once implementation is somewhat complete
 const (
-	period      = 1 * time.Second
-	chanTimeout = period / 2
+	period          = 1 * time.Second
+	chanTimeout     = period / 2
+	TokensDeposited = "TokensDeposited"
 )
 
 type Listener struct {
-	ticker *time.Ticker
-	done   chan bool
-	types  map[string]bool
-	Events chan []flow.Event
-	fc     *client.Client
+	ticker  *time.Ticker
+	done    chan bool
+	types   map[string]bool
+	Events  chan []flow.Event
+	fc      *client.Client
+	db      Store
+	maxDiff uint64
+}
+
+type ListenerStatus struct {
+	gorm.Model
+	latestHeight uint64
 }
 
 type TimeOutError struct {
 	error
 }
 
-func NewListener(fc *client.Client) *Listener {
-	return &Listener{
-		nil,
-		make(chan bool),
-		make(map[string]bool),
-		nil,
-		fc,
+func NewListener(fc *client.Client, db Store, maxDiff uint64) *Listener {
+	return &Listener{nil, make(chan bool), make(map[string]bool), nil, fc, db, maxDiff}
+}
+
+func TypeFromToken(t templates.Token, tokenEvent string) string {
+	a := strings.TrimPrefix(t.Address, "0x")
+	n := t.CanonName()
+	return fmt.Sprintf("A.%s.%s.%s", a, n, tokenEvent)
+}
+
+func Min(x, y uint64) uint64 {
+	if x > y {
+		return y
 	}
+	return x
 }
 
 func (l *Listener) process(ctx context.Context, start, end uint64) error {
@@ -81,6 +99,14 @@ func (l *Listener) RemoveType(t string) {
 	delete(l.types, t)
 }
 
+func (l *Listener) ListenTokenEvent(t templates.Token, tokenEvent string) {
+	l.AddType(TypeFromToken(t, tokenEvent))
+}
+
+func (l *Listener) RemoveTokenEvent(t templates.Token, tokenEvent string) {
+	l.RemoveType(TypeFromToken(t, tokenEvent))
+}
+
 func (l *Listener) Start() *Listener {
 	if l.ticker != nil {
 		return l
@@ -94,39 +120,30 @@ func (l *Listener) Start() *Listener {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		var start, end uint64
-		cur, _ := l.fc.GetLatestBlock(ctx, true)
-		start = cur.Height
-
-		// TODO:
-
-		// psiemens:
-		// Rather than starting the listener from the latest block, I recommend
-		// storing the "last fetched height" in the database. This way if the server
-		// stops or falls behind the chain, it can catch up to the latest block next
-		// time it starts up.
-		//
-		// However, if the listener falls behind, it may need to catch up on many
-		// blocks at once (e.g. 1000+). The chain can only handle queries for
-		// roughly 200 blocks at a time, so you'll need to batch these requests.
-		//
-		// You could do this by enforcing a maximum value on the block difference
-		// (end - start) below. It probably makes to make this maximum a
-		// configurable value.
+		status, err := l.db.GetListenerStatus()
+		if err != nil {
+			panic(err)
+		}
 
 		for {
 			select {
 			case <-l.done:
 				return
 			case <-l.ticker.C:
-				cur, _ = l.fc.GetLatestBlock(ctx, true)
-				end = cur.Height
-				if end > start {
-					// start has already been checked, add 1
-					if err := l.process(ctx, start+1, end); err != nil {
+				cur, _ := l.fc.GetLatestBlock(ctx, true)
+				curHeight := cur.Height
+				if curHeight > status.latestHeight {
+					// latestHeight has already been checked, add 1
+					start := status.latestHeight + 1
+					end := Min(start+l.maxDiff, curHeight) // Limit maximum end
+					if err := l.process(ctx, start, end); err != nil {
 						l.handleError(err)
 					} else {
-						start = end
+						status.latestHeight = end
+						err := l.db.UpdateListenerStatus(status)
+						if err != nil {
+							l.handleError(err)
+						}
 					}
 				}
 			}

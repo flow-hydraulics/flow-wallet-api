@@ -128,21 +128,20 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 // Details returns a specific account.
 func (s *Service) Details(address string) (Account, error) {
 	// Check if the input is a valid address
-	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
 		return Account{}, err
 	}
-	address = flow_helpers.HexString(address)
 
 	return s.db.Account(address)
 }
 
 func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
-	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
 		return nil, nil, err
 	}
-
-	address = flow_helpers.HexString(address)
 
 	token, err := templates.NewToken(tokenName)
 	if err != nil {
@@ -177,11 +176,10 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 
 func (s *Service) AccountFungibleTokens(address string) ([]AccountToken, error) {
 	// Check if the input is a valid address
-	if err := flow_helpers.ValidateAddress(address, s.cfg.ChainId); err != nil {
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
 		return nil, err
 	}
-
-	address = flow_helpers.HexString(address)
 
 	return s.db.AccountTokens(address)
 }

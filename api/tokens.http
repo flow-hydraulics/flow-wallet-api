@@ -94,8 +94,12 @@ content-type: application/json
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/withdrawals/<transaction_id> HTTP/1.1
 content-type: application/json
 
-### Get FlowToken deposits for custody account
+### List FlowToken deposits for custody account
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/deposits HTTP/1.1
+content-type: application/json
+
+### List FUSD deposits for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd/deposits HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken deposit details for custody account
