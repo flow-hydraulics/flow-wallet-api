@@ -9,6 +9,7 @@ import (
 	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	"gorm.io/gorm"
 )
 
 // TODO: increase once implementation is somewhat complete
@@ -24,20 +25,20 @@ type Listener struct {
 	types  map[string]bool
 	Events chan []flow.Event
 	fc     *client.Client
+	db     Store
+}
+
+type ListenerStatus struct {
+	gorm.Model
+	latestHeight uint64
 }
 
 type TimeOutError struct {
 	error
 }
 
-func NewListener(fc *client.Client) *Listener {
-	return &Listener{
-		nil,
-		make(chan bool),
-		make(map[string]bool),
-		nil,
-		fc,
-	}
+func NewListener(fc *client.Client, db Store) *Listener {
+	return &Listener{nil, make(chan bool), make(map[string]bool), nil, fc, db}
 }
 
 func TypeFromToken(t templates.Token, tokenEvent string) string {
@@ -111,17 +112,14 @@ func (l *Listener) Start() *Listener {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		var start, end uint64
-		cur, _ := l.fc.GetLatestBlock(ctx, true)
-		start = cur.Height
+		status, err := l.db.GetListenerStatus()
+		if err != nil {
+			panic(err)
+		}
 
 		// TODO:
 
 		// psiemens:
-		// Rather than starting the listener from the latest block, I recommend
-		// storing the "last fetched height" in the database. This way if the server
-		// stops or falls behind the chain, it can catch up to the latest block next
-		// time it starts up.
 		//
 		// However, if the listener falls behind, it may need to catch up on many
 		// blocks at once (e.g. 1000+). The chain can only handle queries for
@@ -136,14 +134,18 @@ func (l *Listener) Start() *Listener {
 			case <-l.done:
 				return
 			case <-l.ticker.C:
-				cur, _ = l.fc.GetLatestBlock(ctx, true)
-				end = cur.Height
-				if end > start {
-					// start has already been checked, add 1
-					if err := l.process(ctx, start+1, end); err != nil {
+				cur, _ := l.fc.GetLatestBlock(ctx, true)
+				end := cur.Height
+				if end > status.latestHeight {
+					// latestHeight has already been checked, add 1
+					if err := l.process(ctx, status.latestHeight+1, end); err != nil {
 						l.handleError(err)
 					} else {
-						start = end
+						status.latestHeight = end
+						err := l.db.UpdateListenerStatus(status)
+						if err != nil {
+							l.handleError(err)
+						}
 					}
 				}
 			}

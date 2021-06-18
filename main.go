@@ -225,8 +225,10 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	if !disableChainEvents {
 		ls.Println("Starting event listener..")
 
+		eventStore := events.NewGormStore(db)
+
 		l := events.
-			NewListener(fc).
+			NewListener(fc, eventStore).
 			Start()
 
 		defer func() {
