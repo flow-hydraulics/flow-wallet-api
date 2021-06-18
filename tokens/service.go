@@ -160,7 +160,7 @@ func (s *Service) RegisterFtDeposit(token templates.Token, transactionId, amount
 		}
 	}
 
-	// Check for existing deposit, ignore error
+	// Check for existing deposit
 	if _, err := s.db.FungibleTokenDeposit(recipient, token.CanonName(), tx.TransactionId); err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			return err
