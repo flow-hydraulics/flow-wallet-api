@@ -20,12 +20,13 @@ const (
 )
 
 type Listener struct {
-	ticker *time.Ticker
-	done   chan bool
-	types  map[string]bool
-	Events chan []flow.Event
-	fc     *client.Client
-	db     Store
+	ticker  *time.Ticker
+	done    chan bool
+	types   map[string]bool
+	Events  chan []flow.Event
+	fc      *client.Client
+	db      Store
+	maxDiff uint64
 }
 
 type ListenerStatus struct {
@@ -37,14 +38,21 @@ type TimeOutError struct {
 	error
 }
 
-func NewListener(fc *client.Client, db Store) *Listener {
-	return &Listener{nil, make(chan bool), make(map[string]bool), nil, fc, db}
+func NewListener(fc *client.Client, db Store, maxDiff uint64) *Listener {
+	return &Listener{nil, make(chan bool), make(map[string]bool), nil, fc, db, maxDiff}
 }
 
 func TypeFromToken(t templates.Token, tokenEvent string) string {
 	a := strings.TrimPrefix(t.Address, "0x")
 	n := t.CanonName()
 	return fmt.Sprintf("A.%s.%s.%s", a, n, tokenEvent)
+}
+
+func Min(x, y uint64) uint64 {
+	if x > y {
+		return y
+	}
+	return x
 }
 
 func (l *Listener) process(ctx context.Context, start, end uint64) error {
@@ -117,28 +125,18 @@ func (l *Listener) Start() *Listener {
 			panic(err)
 		}
 
-		// TODO:
-
-		// psiemens:
-		//
-		// However, if the listener falls behind, it may need to catch up on many
-		// blocks at once (e.g. 1000+). The chain can only handle queries for
-		// roughly 200 blocks at a time, so you'll need to batch these requests.
-		//
-		// You could do this by enforcing a maximum value on the block difference
-		// (end - start) below. It probably makes to make this maximum a
-		// configurable value.
-
 		for {
 			select {
 			case <-l.done:
 				return
 			case <-l.ticker.C:
 				cur, _ := l.fc.GetLatestBlock(ctx, true)
-				end := cur.Height
-				if end > status.latestHeight {
+				curHeight := cur.Height
+				if curHeight > status.latestHeight {
 					// latestHeight has already been checked, add 1
-					if err := l.process(ctx, status.latestHeight+1, end); err != nil {
+					start := status.latestHeight + 1
+					end := Min(start+l.maxDiff, curHeight) // Limit maximum end
+					if err := l.process(ctx, start, end); err != nil {
 						l.handleError(err)
 					} else {
 						status.latestHeight = end

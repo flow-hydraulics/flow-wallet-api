@@ -228,7 +228,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		eventStore := events.NewGormStore(db)
 
 		l := events.
-			NewListener(fc, eventStore).
+			NewListener(fc, eventStore, 100).
 			Start()
 
 		defer func() {
