@@ -161,3 +161,9 @@ GOOGLE_KMS_LOCATION_ID=
 ## API Specification
 
 [View the full Wallet API specification](API.md).
+
+## Credit
+
+The Flow Wallet API is developed and maintained by [Equilibrium](https://equilibrium.co/).
+
+[![Equilibrium](equilibrium.svg)](https://equilibrium.co/)
