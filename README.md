@@ -167,4 +167,4 @@ GOOGLE_KMS_LOCATION_ID=
 
 The Flow Wallet API is developed and maintained by [Equilibrium](https://equilibrium.co/).
 
-<img src="equilibrium.svg" alt="Equilibrium" width="200"/>
+<a href="https://equilibrium.co/"><img src="equilibrium.svg" alt="Equilibrium" width="200"/></a>
