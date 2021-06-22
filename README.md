@@ -12,8 +12,8 @@ This service can be used by an application that needs to manage Flow user accoun
 - Send a transaction from an account
 - Transfer fungible tokens (e.g. FLOW, FUSD)
 - Detect fungible token deposits
-- Transfer NFTs (e.g. FLOW, FUSD)
-- Detect NFT deposits
+- _Transfer NFTs (e.g. FLOW, FUSD) (coming soon)_
+- _Detect NFT deposits (coming soon)_
 
 [View full list of supported functionality](#functionality).
 
@@ -50,11 +50,11 @@ rather than a hosted 3rd-party solution.
 ### 3. Fungible Tokens
 
 - [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
-- [ ] Detect fungible token deposits to admin account (FLOW, FUSD)
+- [x] Detect fungible token deposits to admin account (FLOW, FUSD)
 - [x] Send fungible token withdrawals from a user account (FLOW, FUSD)
-- [ ] Detect fungible token deposits to a user account (FLOW, FUSD)
-- [ ] View the fungible token balance of the admin account
-- [ ] View the fungible token balance of a user account
+- [x] Detect fungible token deposits to a user account (FLOW, FUSD)
+- [x] View the fungible token balance of the admin account
+- [x] View the fungible token balance of a user account
 
 ### 4. Non-Fungible Tokens
 
