@@ -133,6 +133,27 @@ components:
           type: string
           example: "2021-06-16T12:05:24.617898+03:00"
 
+    tokenDeposit:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        token:
+          type: string
+          example: "FlowToken"
+        sender:
+          type: string
+          example: "0x01cf0e2f2f715450"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
 
   parameters:
     limit:
@@ -436,3 +457,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/tokenWithdrawal"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/deposits:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    - $ref: "#/components/parameters/tokenName"
+    get:
+      summary: List all deposits of a fungible token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/tokenDeposit"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}:
+    parameters:
+    - $ref: "#/components/parameters/address"
+    - $ref: "#/components/parameters/tokenName"
+    - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a fungible token deposit
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tokenDeposit"
