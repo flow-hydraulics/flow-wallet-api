@@ -4,6 +4,40 @@ The documents contains the REST routes provided by the Flow Wallet API.
 
 These routes are also defined in the [OpenAPI specification for this service](openapi.yml).
 
+## Functionality
+
+### 1. Admin
+
+- [x] Single admin account (hot wallet)
+- [x] Create user accounts (using admin account)
+
+### 2. Transaction Execution
+
+- [x] Send an arbitrary transaction from the admin account
+- [x] Send an arbitrary transaction from a user account
+
+### 3. Fungible Tokens
+
+- [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
+- [x] Detect fungible token deposits to admin account (FLOW, FUSD)
+- [x] Send fungible token withdrawals from a user account (FLOW, FUSD)
+- [x] Detect fungible token deposits to a user account (FLOW, FUSD)
+- [x] View the fungible token balance of the admin account
+- [x] View the fungible token balance of a user account
+
+### 4. Non-Fungible Tokens
+
+- [ ] Set up admin account with non-fungible token collections (`NFT.Collection`)
+- [ ] Send non-fungible token withdrawals from admin account
+- [ ] Detect non-fungible token deposits to admin account
+- [ ] Set up a user account with non-fungible token collections (`NFT.Collection`)
+- [ ] Send non-fungible token withdrawals from a user account
+- [ ] Detect non-fungible token deposits to a user account
+- [ ] View the non-fungible tokens owned by the admin account
+- [ ] View the non-fungible tokens owned by a user account
+
+---
+
 ## Accounts
 
 ### List all accounts
