@@ -1,4 +1,4 @@
-# Flow Wallet Service v0.0.2
+# Flow Wallet Service v0.3.0
 
 A custodial wallet service for tokens on the Flow blockchain.
 
