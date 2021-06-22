@@ -270,21 +270,21 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "list db empty",
 			method:   http.MethodGet,
 			url:      "/",
-			expected: `\[\]`,
+			expected: `(?m)^\[\]$`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "create",
 			method:   http.MethodPost,
 			url:      "/",
-			expected: `"jobId":".+"`,
+			expected: `(?m)^{"jobId":".+"}$`,
 			status:   http.StatusCreated,
 		},
 		{
 			name:     "list db not empty",
 			method:   http.MethodGet,
 			url:      "/",
-			expected: `\[.*"address":".+".*\]\n`,
+			expected: `(?m)^\[{"address":".+".*}\]$`,
 			status:   http.StatusOK,
 		},
 		{
@@ -305,7 +305,7 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "details known address",
 			method:   http.MethodGet,
 			url:      "/<address>",
-			expected: `"address":".+"`,
+			expected: `(?m)^{"address":".+"}$`,
 			status:   http.StatusOK,
 		},
 	}
@@ -438,7 +438,7 @@ func TestTransactionHandlers(t *testing.T) {
 			name:     "list db empty",
 			method:   http.MethodGet,
 			url:      fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
-			expected: `\[\]`,
+			expected: `(?m)^\[\]$`,
 			status:   http.StatusOK,
 		},
 		{
@@ -454,7 +454,7 @@ func TestTransactionHandlers(t *testing.T) {
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
 			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
-			expected:    `"jobId":".+"`,
+			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
 		{
@@ -463,7 +463,7 @@ func TestTransactionHandlers(t *testing.T) {
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
 			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
-			expected:    `"transactionId":".+"`,
+			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
 		},
@@ -483,7 +483,7 @@ func TestTransactionHandlers(t *testing.T) {
 			contentType: "application/json",
 			body:        strings.NewReader(validTransferFlow),
 			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
-			expected:    `"transactionId":".+"`,
+			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
 		},
@@ -541,7 +541,7 @@ func TestTransactionHandlers(t *testing.T) {
 			name:     "list db not empty",
 			method:   http.MethodGet,
 			url:      fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
-			expected: `\[.*"transactionId":".+".*\]\n`,
+			expected: `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:   http.StatusOK,
 		},
 		{
@@ -562,7 +562,7 @@ func TestTransactionHandlers(t *testing.T) {
 			name:     "details known id",
 			method:   http.MethodGet,
 			url:      fmt.Sprintf("/%s/transactions/<id>", cfg.AdminAddress),
-			expected: `"transactionId":".+"`,
+			expected: `(?m)^{"transactionId":".+"}$`,
 			status:   http.StatusOK,
 		},
 		{
@@ -654,7 +654,7 @@ func TestScriptsHandlers(t *testing.T) {
 				"arguments":[]
 			}`),
 			contentType: "application/json",
-			expected:    "{\"Value\":1}",
+			expected:    `(?m)^{"Value":1}$`,
 			status:      http.StatusOK,
 		},
 		{
@@ -706,7 +706,7 @@ func TestScriptsHandlers(t *testing.T) {
 			re := regexp.MustCompile(step.expected)
 			match := re.FindString(rr.Body.String())
 			if match == "" {
-				t.Errorf("handler returned unexpected body: got %q want %v", rr.Body.String(), re)
+				t.Errorf("handler returned unexpected body: got %s want %v", rr.Body.String(), re)
 			}
 		})
 	}
@@ -975,7 +975,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "flow-token"),
-			expected:    `"name":"FlowToken","balance":".+"`,
+			expected:    `(?m)^{"name":"FlowToken","balance":".+"}$`,
 			status:      http.StatusOK,
 		},
 		{
@@ -983,7 +983,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "fusd"),
-			expected:    `"name":"FUSD\","balance":".+"`,
+			expected:    `(?m)^{"name":"FUSD\","balance":".+"}$`,
 			status:      http.StatusOK,
 		},
 	}
@@ -1001,7 +1001,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens", aa[1].Address),
-			expected:    `\[.*"name":"FUSD".*"name":"FlowToken".*\]`,
+			expected:    `(?m)^\[{"name":"FUSD".*"name":"FlowToken".*}\]$`,
 			status:      http.StatusOK,
 		},
 	}
@@ -1031,7 +1031,7 @@ func TestTokenHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
-			expected:    `"jobId":".+"`,
+			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
 		{
@@ -1041,7 +1041,7 @@ func TestTokenHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, account.Address)),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
-			expected:    `"transactionId":".+"`,
+			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 		},
 		{
@@ -1082,7 +1082,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, token.Name),
-			expected:    `\[.*"transactionId":".+".*\]`,
+			expected:    `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:      http.StatusOK,
 		},
 		{
@@ -1090,7 +1090,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", account.Address, token.Name),
-			expected:    `\[\]`,
+			expected:    `(?m)^\[\]$`,
 			status:      http.StatusOK,
 		},
 		{
@@ -1098,7 +1098,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", cfg.AdminAddress, token.Name, transfer.TransactionId),
-			expected:    fmt.Sprintf(`"transactionId":"%s"`, transfer.TransactionId),
+			expected:    fmt.Sprintf(`(?m)^{"transactionId":"%s".*}$`, transfer.TransactionId),
 			status:      http.StatusOK,
 		},
 		{
