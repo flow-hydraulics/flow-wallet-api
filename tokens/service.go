@@ -41,7 +41,12 @@ func NewService(
 }
 
 func (s *Service) List() []templates.Token {
-	return templates.EnabledTokens()
+	enabled := templates.EnabledTokens()
+	tokens := make([]templates.Token, 0, len(enabled))
+	for _, t := range enabled {
+		tokens = append(tokens, t)
+	}
+	return tokens
 }
 
 func (s *Service) Details(ctx context.Context, tokenName, address string) (TokenDetails, error) {
@@ -68,7 +73,7 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (Token
 		return TokenDetails{}, err
 	}
 
-	return TokenDetails{Name: token.CanonName(), Balance: b.String()}, nil
+	return TokenDetails{Name: token.Name, Balance: b.String()}, nil
 }
 
 func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenName, sender, recipient, amount string) (*jobs.Job, *transactions.Transaction, error) {
@@ -111,7 +116,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 	t := &FungibleTokenTransfer{
 		RecipientAddress: recipient,
 		Amount:           amount,
-		TokenName:        token.CanonName(),
+		TokenName:        token.Name,
 	}
 
 	// Handle database update
@@ -132,7 +137,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 	return job, tx, err
 }
 
-func (s *Service) RegisterFtDeposit(token templates.Token, transactionId, amount, recipient string) error {
+func (s *Service) RegisterFtDeposit(token *templates.Token, transactionId, amount, recipient string) error {
 	// Check if the input address is a valid address
 	recipient, err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
 	if err != nil {
@@ -161,7 +166,7 @@ func (s *Service) RegisterFtDeposit(token templates.Token, transactionId, amount
 	}
 
 	// Check for existing deposit
-	if _, err := s.db.FungibleTokenDeposit(recipient, token.CanonName(), tx.TransactionId); err != nil {
+	if _, err := s.db.FungibleTokenDeposit(recipient, token.Name, tx.TransactionId); err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			return err
 		}
@@ -176,7 +181,7 @@ func (s *Service) RegisterFtDeposit(token templates.Token, transactionId, amount
 		TransactionId:    tx.TransactionId,
 		RecipientAddress: recipient,
 		Amount:           amount,
-		TokenName:        token.CanonName(),
+		TokenName:        token.Name,
 	}
 
 	return s.db.InsertFungibleTokenTransfer(t)
@@ -198,9 +203,9 @@ func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*F
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
 	case transferTypeWithdrawal:
-		return s.db.FungibleTokenWithdrawals(address, token.CanonName())
+		return s.db.FungibleTokenWithdrawals(address, token.Name)
 	case transferTypeDeposit:
-		return s.db.FungibleTokenDeposits(address, token.CanonName())
+		return s.db.FungibleTokenDeposits(address, token.Name)
 	}
 }
 
@@ -251,9 +256,9 @@ func (s *Service) GetFtTransfer(transferType, address, tokenName, transactionId 
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
 	case transferTypeWithdrawal:
-		return s.db.FungibleTokenWithdrawal(address, token.CanonName(), transactionId)
+		return s.db.FungibleTokenWithdrawal(address, token.Name, transactionId)
 	case transferTypeDeposit:
-		return s.db.FungibleTokenDeposit(address, token.CanonName(), transactionId)
+		return s.db.FungibleTokenDeposit(address, token.Name, transactionId)
 	}
 }
 
@@ -288,7 +293,7 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync boo
 		return nil, nil, err
 	}
 
-	n := token.CanonName()
+	n := token.Name
 
 	t_str, err := template_strings.GetByName(n)
 	if err != nil {

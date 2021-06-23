@@ -43,9 +43,8 @@ func NewListener(fc *client.Client, db Store, maxDiff uint64) *Listener {
 }
 
 func TypeFromToken(t templates.Token, tokenEvent string) string {
-	a := strings.TrimPrefix(t.Address, "0x")
-	n := t.CanonName()
-	return fmt.Sprintf("A.%s.%s.%s", a, n, tokenEvent)
+	address := strings.TrimPrefix(t.Address, "0x")
+	return fmt.Sprintf("A.%s.%s.%s", address, t.Name, tokenEvent)
 }
 
 func Min(x, y uint64) uint64 {

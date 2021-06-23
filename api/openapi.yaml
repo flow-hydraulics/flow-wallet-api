@@ -198,8 +198,8 @@ components:
       required: true
       schema:
         type: string
-        enum: [flow-token, FUSD]
-        example: flow-token
+        enum: [FlowToken, FUSD]
+        example: FlowToken
 
     transactionId:
       name: transactionId

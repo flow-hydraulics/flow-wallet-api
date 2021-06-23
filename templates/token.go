@@ -6,54 +6,53 @@ import (
 
 	"github.com/eqlabs/flow-wallet-service/flow_helpers"
 	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
-	"github.com/iancoleman/strcase"
 	"github.com/onflow/flow-go-sdk"
 )
 
 type Token struct {
-	Name    string `json:"name"`
+	Name    string `json:"name"` // Declaration name
 	Address string `json:"address"`
+	lcName  string `json:"-"` // lowerCamelCase name for generic fungible token transaction templates
 }
 
-func EnabledTokens() []Token {
+func EnabledTokens() map[string]Token {
 	return parseConfig().enabledTokens
 }
 
-func EnabledTokenAddresses() map[string]string {
-	return parseConfig().enabledTokenAddresses
-}
-
-func EnabledTokenNames() []string {
-	enabled := EnabledTokens()
-	keys := make([]string, len(enabled))
-	for i, k := range enabled {
-		keys[i] = k.CanonName()
-	}
-	return keys
-}
-
-func NewToken(name string) (Token, error) {
-	t := Token{Name: name} // So we can compare the CanonName
-	address, ok := EnabledTokenAddresses()[t.CanonName()]
+func NewToken(name string) (*Token, error) {
+	// Assume the name is in declaration name format
+	token, ok := EnabledTokens()[name]
 	if !ok {
-		return Token{}, fmt.Errorf("token %s not enabled", t.CanonName())
+		return nil, fmt.Errorf("token %s not enabled, make sure to use the declaration name format", name)
 	}
-	return Token{Name: name, Address: address}, nil
+	return &token, nil
 }
 
-func (t *Token) CanonName() string {
-	return t.ParseName()[0]
-}
-
-func TokenFromEvent(e flow.Event, chainId flow.ChainID) (Token, error) {
+func TokenFromEvent(e flow.Event, chainId flow.ChainID) (*Token, error) {
 	// Example event:
 	// A.0ae53cb6e3f42a79.FlowToken.TokensDeposited
 	ss := strings.Split(e.Type, ".")
-	a, err := flow_helpers.ValidateAddress(ss[1], chainId)
+
+	eAddress, err := flow_helpers.ValidateAddress(ss[1], chainId)
 	if err != nil {
-		return Token{}, err
+		return nil, err
 	}
-	return Token{Name: ss[2], Address: a}, nil
+
+	t, err := NewToken(ss[2])
+	if err != nil {
+		return nil, err
+	}
+
+	tAddress, err := flow_helpers.ValidateAddress(t.Address, chainId)
+	if err != nil {
+		return nil, err
+	}
+
+	if eAddress != tAddress {
+		return nil, fmt.Errorf("addresses do not match for %s, from event %s, from config %s", t.Name, eAddress, tAddress)
+	}
+
+	return t, nil
 }
 
 func (t *Token) IsEnabled() bool {
@@ -65,62 +64,36 @@ func (t *Token) IsEnabled() bool {
 	return false
 }
 
-func (t *Token) ParseName() [3]string {
-	// TODO: how to handle these kind of cases?
-	if strings.ToLower(t.Name) == "fusd" {
-		return [3]string{
-			"FUSD", "FUSD", "fusd",
-		}
-	}
-
-	return [3]string{
-		strcase.ToCamel(t.Name),
-		strcase.ToScreamingSnake(t.Name),
-		strcase.ToLowerCamel(t.Name),
-	}
-}
-
-func fungibleTemplateCode(tmpl_str string, token Token) string {
-	p := token.ParseName()
-	camel := p[0]
-	snake := p[1]
-	lower := p[2]
-
+func tokenTemplateCode(tmpl_str string, token *Token) string {
 	r := strings.NewReplacer(
-		"TokenName", camel,
-		"TOKEN_NAME", snake,
-		"tokenName", lower,
+		"TOKEN_DECLARATION_NAME", token.Name,
+		"TOKEN_ADDRESS", token.Address,
+		"TOKEN_VAULT", fmt.Sprintf("%sVault", token.lcName),
+		"TOKEN_RECEIVER", fmt.Sprintf("%sReceiver", token.lcName),
+		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.lcName),
 	)
 
 	tmpl_str = r.Replace(tmpl_str)
 
-	// Replace token address
-	if token.Address != "" {
-		r := strings.NewReplacer(
-			fmt.Sprintf("%s_ADDRESS", snake), token.Address,
-		)
-		tmpl_str = r.Replace(tmpl_str)
-	}
-
 	return Code(&Template{Source: tmpl_str})
 }
 
-func FungibleTransferCode(token Token) string {
-	return fungibleTemplateCode(
+func FungibleTransferCode(token *Token) string {
+	return tokenTemplateCode(
 		template_strings.GenericFungibleTransfer,
 		token,
 	)
 }
 
-func FungibleSetupCode(token Token) string {
-	return fungibleTemplateCode(
+func FungibleSetupCode(token *Token) string {
+	return tokenTemplateCode(
 		template_strings.GenericFungibleSetup,
 		token,
 	)
 }
 
-func FungibleBalanceCode(token Token) string {
-	return fungibleTemplateCode(
+func FungibleBalanceCode(token *Token) string {
+	return tokenTemplateCode(
 		template_strings.GenericFungibleBalance,
 		token,
 	)

@@ -18,7 +18,7 @@ A custodial wallet service for tokens on the Flow blockchain.
     DEFAULT_KEY_TYPE=local # Will store keys in your database, use "google_kms" if you have that setup
     ENCRYPTION_KEY=passphrasewhichneedstobe32bytes! # replace this with something that is 32 bytes
 
-    ENABLED_TOKENS=FlowToken:0x7e60df042a9c0868
+    ENABLED_TOKENS=FlowToken:0x7e60df042a9c0868:flowToken
 
 Running:
 
@@ -69,10 +69,19 @@ Run:
 
 A comma separated list of fungible tokens and their corresponding addresses enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined.
 
+**NOTE:** For _fungible tokens_ it is necessary to add a 3rd parameter "lowercamelcase" name for each token. For FlowToken this would be "flowToken" and for FUSD "fusd". This is used to construct the vault name, receiver name and balance name in generic transaction templates. Consult the contract code for each token to derive the proper name (search for `.*Vault`, `.*Receiver`, `.*Balance`)
+
 Examples:
 
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79,FUSD:0xf8d6e0586b0a20c7
+    # Only fungible tokens
+    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken
+    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd
+
+    # Only NFTs
+    ENABLED_TOKENS=ExampleNFT:0x0ae53cb6e3f42a79 # Note the missing 3rd param
+
+    # All together
+    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd,ExampleNFT:0x0ae53cb6e3f42a79
 
 ### Database
 
