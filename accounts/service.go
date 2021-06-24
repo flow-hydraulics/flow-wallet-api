@@ -53,7 +53,7 @@ func (s *Service) InitAdminAccount() {
 		at := AccountToken{
 			AccountAddress: a.Address,
 			TokenAddress:   t.Address,
-			TokenName:      t.CanonName(),
+			TokenName:      t.Name,
 		}
 		s.db.InsertAccountToken(&at) // Ignore errors
 	}
@@ -102,7 +102,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			s.db.InsertAccountToken(&AccountToken{ // Ignore errors
 				AccountAddress: a.Address,
 				TokenAddress:   t.Address,
-				TokenName:      t.CanonName(),
+				TokenName:      t.Name,
 			})
 		}
 
@@ -163,7 +163,7 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 		err = s.db.InsertAccountToken(&AccountToken{
 			AccountAddress: address,
 			TokenAddress:   token.Address,
-			TokenName:      token.CanonName(),
+			TokenName:      token.Name,
 		})
 
 		if err != nil && !strings.Contains(err.Error(), "duplicate key value") {

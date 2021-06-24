@@ -9,15 +9,15 @@ GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens 
 content-type: application/json
 
 ### Get FlowToken details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/flow-token HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
 content-type: application/json
 
 ### Get FUSD details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/fusd HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
 
 ### Create a FlowToken withdrawal from admin to custody account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/flow-token/withdrawals HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
 
 {
@@ -26,7 +26,7 @@ content-type: application/json
 }
 
 ### Create a FUSD withdrawal from admin to custody account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/fusd/withdrawals HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
 {
@@ -35,19 +35,19 @@ content-type: application/json
 }
 
 ### List FlowToken withdrawals for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/flow-token/withdrawals HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
 
 ### List FUSD withdrawals for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/fusd/withdrawals HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken withdrawal details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/flow-token/withdrawals/<transaction_id> HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
 content-type: application/json
 
 ### Setup FUSD on emulator for admin account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/fusd HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
 
 
@@ -57,15 +57,15 @@ GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens
 content-type: application/json
 
 ### Get FlowToken details for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken HTTP/1.1
 content-type: application/json
 
 ### Get FUSD details for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
 
 ### Create a FlowToken withdrawal from custody to admin account
-POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/withdrawals HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
 
 {
@@ -74,7 +74,7 @@ content-type: application/json
 }
 
 ### Create a FUSD withdrawal from custody to admin account
-POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd/withdrawals HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
 {
@@ -83,29 +83,29 @@ content-type: application/json
 }
 
 ### List FlowToken withdrawals for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/withdrawals HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
 
 ### List FUSD withdrawals for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd/withdrawals HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken withdrawal details for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/withdrawals/<transaction_id> HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
 content-type: application/json
 
 ### List FlowToken deposits for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/deposits HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/deposits HTTP/1.1
 content-type: application/json
 
 ### List FUSD deposits for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd/deposits HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/deposits HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken deposit details for custody account
-GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flow-token/deposits/<transaction_id> HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/deposits/<transaction_id> HTTP/1.1
 content-type: application/json
 
 ### Setup FUSD on emulator for custody account
-POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/fusd HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json

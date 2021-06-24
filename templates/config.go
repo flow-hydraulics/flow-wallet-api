@@ -9,10 +9,9 @@ import (
 
 // config struct for templates.
 type config struct {
-	ChainId               flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
-	EnvEnabledTokens      []string     `env:"ENABLED_TOKENS" envSeparator:","`
-	enabledTokens         []Token
-	enabledTokenAddresses map[string]string
+	ChainId          flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	EnvEnabledTokens []string     `env:"ENABLED_TOKENS" envSeparator:","`
+	enabledTokens    map[string]Token
 }
 
 var cachedConfig *config
@@ -26,12 +25,14 @@ func parseConfig() *config {
 			panic(err)
 		}
 
-		cachedConfig.enabledTokens = make([]Token, len(cachedConfig.EnvEnabledTokens))
-		cachedConfig.enabledTokenAddresses = make(map[string]string, len(cachedConfig.EnvEnabledTokens))
-		for i, s := range cachedConfig.EnvEnabledTokens {
+		cachedConfig.enabledTokens = make(map[string]Token, len(cachedConfig.EnvEnabledTokens))
+		for _, s := range cachedConfig.EnvEnabledTokens {
 			ss := strings.Split(s, ":")
-			cachedConfig.enabledTokens[i] = Token{Name: ss[0], Address: ss[1]}
-			cachedConfig.enabledTokenAddresses[ss[0]] = ss[1]
+			token := Token{Name: ss[0], Address: ss[1]}
+			if len(ss) > 2 {
+				token.lcName = ss[2]
+			}
+			cachedConfig.enabledTokens[ss[0]] = token
 		}
 	}
 

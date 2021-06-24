@@ -1,7 +1,7 @@
 
 current_dir = $(shell pwd)
 
-cli_version = 0.22.0
+cli_version = 0.24.0
 cli_image=flow-cli
 
 .PHONY: run

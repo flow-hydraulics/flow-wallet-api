@@ -1,10 +1,10 @@
 package templates
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
 )
@@ -21,7 +21,7 @@ func TestConfig(t *testing.T) {
 		t.Fatal("expected configs to point to the same address")
 	}
 
-	if cfg1.enabledTokenAddresses == nil {
+	if cfg1.enabledTokens == nil {
 		t.Fatal("expected there to be enabled tokens")
 	}
 }
@@ -42,82 +42,36 @@ func TestTokenFromEvent(t *testing.T) {
 	}
 }
 
-func TestParseName(t *testing.T) {
-	n := (&Token{Name: "FUSD"}).ParseName()
-	if n != [3]string{"FUSD", "FUSD", "fusd"} {
-		t.Error("invalid output for FUSD")
-	}
-
-	n = (&Token{Name: "fusd"}).ParseName()
-	if n != [3]string{"FUSD", "FUSD", "fusd"} {
-		t.Error("invalid output for fusd")
-	}
-
-	n = (&Token{Name: "FlowToken"}).ParseName()
-	if n != [3]string{"FlowToken", "FLOW_TOKEN", "flowToken"} {
-		t.Error("invalid output for FlowToken")
-	}
-
-	n = (&Token{Name: "flow-token"}).ParseName()
-	if n != [3]string{"FlowToken", "FLOW_TOKEN", "flowToken"} {
-		t.Error("invalid output for flow-token")
-	}
-}
-
 func TestParseGenericFungibleTransfer(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
-		g := FungibleTransferCode(
-			Token{Name: "FlowToken"},
-		)
-
-		c := Code(&Template{Source: template_strings.TransferFlow})
-
-		if g != c {
-			t.Error("expected outputs to equal")
+		token, _ := NewToken("FlowToken")
+		c := FungibleTransferCode(token)
+		if !strings.Contains(c, fmt.Sprintf("import FlowToken from %s", token.Address)) {
+			t.Error("expected to find correct token address")
 		}
 	})
 
 	t.Run("FlowToken with non-standard addresses", func(t *testing.T) {
-		g := FungibleTransferCode(
-			Token{Name: "FlowToken", Address: "some_other_tokenaddress"},
-		)
-
-		c := Code(&Template{Source: template_strings.TransferFlow})
-
-		if g == c {
-			t.Error("expected outputs not to equal")
-		}
-
-		if i := strings.Index(g, "import FlowToken from some_other_tokenaddress"); i == -1 {
-			t.Error("expected to find non-standard tokenaddress")
+		token := &Token{Name: "FlowToken", Address: "some_other_tokenaddress", lcName: "flowToken"}
+		c := FungibleTransferCode(token)
+		if !strings.Contains(c, "import FlowToken from some_other_tokenaddress") {
+			t.Error("expected to find non-standard token address")
 		}
 	})
 
 	t.Run("FUSD", func(t *testing.T) {
-		g := FungibleTransferCode(
-			Token{Name: "FUSD"},
-		)
-
-		c := Code(&Template{template_strings.TransferFUSD})
-
-		if g != c {
-			t.Error("expected outputs to equal")
+		token, _ := NewToken("FUSD")
+		c := FungibleTransferCode(token)
+		if !strings.Contains(c, fmt.Sprintf("import FUSD from %s", token.Address)) {
+			t.Error("expected to find correct token address")
 		}
 	})
 
 	t.Run("FUSD with non-standard addresses", func(t *testing.T) {
-		g := FungibleTransferCode(
-			Token{Name: "FUSD", Address: "some_other_tokenaddress"},
-		)
-
-		c := Code(&Template{template_strings.TransferFUSD})
-
-		if g == c {
-			t.Error("expected outputs not to equal")
-		}
-
-		if i := strings.Index(g, "import FUSD from some_other_tokenaddress"); i == -1 {
-			t.Error("expected to find non-standard tokenaddress")
+		token := &Token{Name: "FUSD", Address: "some_other_tokenaddress", lcName: "fusd"}
+		c := FungibleTransferCode(token)
+		if !strings.Contains(c, "import FUSD from some_other_tokenaddress") {
+			t.Error("expected to find non-standard token address")
 		}
 	})
 }

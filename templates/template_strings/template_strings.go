@@ -8,5 +8,7 @@ func GetByName(name string) (string, error) {
 		return "", fmt.Errorf("could not find template for %s", name)
 	case "FUSD":
 		return FUSD, nil
+	case "ExampleNFT":
+		return ExampleNFT, nil
 	}
 }
