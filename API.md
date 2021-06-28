@@ -6,35 +6,28 @@ These routes are also defined in the [OpenAPI specification for this service](op
 
 ## Functionality
 
-### 1. Admin
+### Accounts
 
-- [x] Single admin account (hot wallet)
-- [x] Create user accounts (using admin account)
+- [x] Initialize the API with a root admin account
+- [x] Create a new Flow account
 
-### 2. Transaction Execution
+### Transactions
 
-- [x] Send an arbitrary transaction from the admin account
-- [x] Send an arbitrary transaction from a user account
+- [x] Send a transaction signed by an account
+- [x] Get the transaction history for an account
 
 ### 3. Fungible Tokens
 
-- [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
-- [x] Detect fungible token deposits to admin account (FLOW, FUSD)
-- [x] Send fungible token withdrawals from a user account (FLOW, FUSD)
-- [x] Detect fungible token deposits to a user account (FLOW, FUSD)
-- [x] View the fungible token balance of the admin account
-- [x] View the fungible token balance of a user account
+- [x] Send fungible token withdrawals from an account (FLOW, FUSD)
+- [x] Detect fungible token deposits to an account (FLOW, FUSD)
+- [x] View the fungible token balance of an account
 
 ### 4. Non-Fungible Tokens
 
-- [ ] Set up admin account with non-fungible token collections (`NFT.Collection`)
-- [ ] Send non-fungible token withdrawals from admin account
-- [ ] Detect non-fungible token deposits to admin account
-- [ ] Set up a user account with non-fungible token collections (`NFT.Collection`)
-- [ ] Send non-fungible token withdrawals from a user account
-- [ ] Detect non-fungible token deposits to a user account
-- [ ] View the non-fungible tokens owned by the admin account
-- [ ] View the non-fungible tokens owned by a user account
+- [ ] Set up an account with non-fungible token collections (`NFT.Collection`)
+- [ ] Send non-fungible token withdrawals from an account
+- [ ] Detect non-fungible token deposits to an account
+- [ ] View the non-fungible tokens owned by an account
 
 ---
 
