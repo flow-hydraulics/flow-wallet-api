@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Flow Custodial Wallet API
+  title: Flow Wallet API
   version: 0.0.1
 servers:
   - url: /v1
