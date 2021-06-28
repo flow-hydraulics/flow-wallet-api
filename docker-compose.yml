@@ -19,7 +19,7 @@ services:
       - emulator
 
   emulator:
-    image: gcr.io/flow-container-registry/emulator:latest
+    image: gcr.io/flow-container-registry/emulator:v0.22.0
     ports:
       - "3569:3569"
       - "8080:8080"
