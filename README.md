@@ -56,7 +56,7 @@ cp .env.example .env
 Start the Wallet API, Flow Emulator and Postgres:
 
 ```sh
-docker-compose up
+docker-compose up -d
 ```
 
 Deploy the FUSD contract to the emulator:
@@ -70,6 +70,12 @@ You can now access the API at http://localhost:3000.
 Next, see the [FUSD sample app](/examples/nextjs-fusd-provider)
 for an example of how to use this configuration as part of
 a complete application.
+
+Once you're finished, run this to stop the containers:
+
+```sh
+docker-compose down
+```
 
 ## Configuration
 
