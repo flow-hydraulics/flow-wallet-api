@@ -30,9 +30,6 @@
   "deployments": {
     "emulator": {
       "emulator-account": [ "FUSD" ]
-    },
-    "emulator-docker": {
-      "emulator-account": [ "FUSD" ]
     }
   },
   "networks": {
