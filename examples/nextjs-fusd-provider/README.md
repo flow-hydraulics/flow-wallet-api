@@ -25,7 +25,7 @@ cp .env.example .env
 Start the Wallet API, Flow Emulator and Postgres:
 
 ```sh
-docker-compose up
+docker-compose up -d
 ```
 
 Deploy the FUSD contract to the emulator:
