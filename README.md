@@ -37,31 +37,39 @@ rather than a hosted 3rd-party solution.
 
 ## Installation
 
-The Wallet API is provided as a Docker image.
-
-## Basic example setup (Testnet)
-
-`.env` file:
+The Wallet API is provided as a Docker image:
 
 ```sh
-ACCESS_API_HOST=https://access-testnet.onflow.org
-CHAIN_ID=flow-testnet
-DATABASE_DSN=postgresql://postgres:postgres@db:5432/postgres # replace this
-DATABASE_TYPE=psql
-
-ADMIN_ADDRESS=<your testnet admin account address>
-ADMIN_PRIVATE_KEY=<your testnet  admin account private key>
-DEFAULT_KEY_TYPE=local # Will store keys in your database, use "google_kms" if you have that setup
-ENCRYPTION_KEY=passphrasewhichneedstobe32bytes! # replace this with something that is 32 bytes
-
-ENABLED_TOKENS=FlowToken:0x7e60df042a9c0868
+docker pull gcr.io/flow-container-registry/wallet-api:v0.0.4
 ```
 
-Running:
+### Basic example usage
+
+> This setup requires [Docker](https://docs.docker.com/engine/install/) and the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
+
+Create a configuration file:
 
 ```sh
-docker run -d --name flow-wallet-api --env-file .env gcr.io/flow-container-registry/wallet-api:v0.0.3
+cp .env.example .env
 ```
+
+Start the Wallet API, Flow Emulator and Postgres:
+
+```sh
+docker-compose up
+```
+
+Deploy the FUSD contract to the emulator:
+
+```sh
+flow project deploy -n emulator
+```
+
+You can now access the API at http://localhost:3000.
+
+Next, see the [FUSD sample app](/examples/nextjs-fusd-provider)
+for an example of how to use this configuration as part of
+a complete application.
 
 ## Configuration
 
@@ -71,8 +79,10 @@ A comma separated list of fungible tokens and their corresponding addresses enab
 
 Examples:
 
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79,FUSD:0xf8d6e0586b0a20c7
+```sh
+ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
+ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79,FUSD:0xf8d6e0586b0a20c7
+```
 
 ### Database
 
@@ -163,7 +173,6 @@ GOOGLE_KMS_LOCATION_ID=
 [View the full Wallet API specification](API.md).
 
 ## Credit
-
 
 The Flow Wallet API is developed and maintained by [Equilibrium](https://equilibrium.co/).
 
