@@ -3,6 +3,8 @@
 This example application demonstrates how to use the Flow Wallet API
 to distribute the FUSD stablecoin.
 
+![FUSD Provider Example](screenshot.png)
+
 ## Usage
 
 ### Start the API
