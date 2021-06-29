@@ -18,35 +18,35 @@ import (
 
 // Service defines the API for account management.
 type Service struct {
-	db  Store
-	km  keys.Manager
-	fc  *client.Client
-	wp  *jobs.WorkerPool
-	ts  *transactions.Service
-	cfg Config
+	store Store
+	km    keys.Manager
+	fc    *client.Client
+	wp    *jobs.WorkerPool
+	ts    *transactions.Service
+	cfg   Config
 }
 
 // NewService initiates a new account service.
 func NewService(
-	db Store,
+	store Store,
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 	ts *transactions.Service,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{db, km, fc, wp, ts, cfg}
+	return &Service{store, km, fc, wp, ts, cfg}
 }
 
 func (s *Service) InitAdminAccount() {
-	a, err := s.db.Account(s.cfg.AdminAccountAddress)
+	a, err := s.store.Account(s.cfg.AdminAccountAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			panic(err)
 		}
 		// Admin account not in database
 		a = Account{Address: s.cfg.AdminAccountAddress}
-		s.db.InsertAccount(&a)
+		s.store.InsertAccount(&a)
 	}
 
 	for _, t := range templates.EnabledTokens() {
@@ -55,14 +55,14 @@ func (s *Service) InitAdminAccount() {
 			TokenAddress:   t.Address,
 			TokenName:      t.Name,
 		}
-		s.db.InsertAccountToken(&at) // Ignore errors
+		s.store.InsertAccountToken(&at) // Ignore errors
 	}
 }
 
 // List returns all accounts in the datastore.
 func (s *Service) List(limit, offset int) (result []Account, err error) {
 	o := datastore.ParseListOptions(limit, offset)
-	return s.db.Accounts(o)
+	return s.store.Accounts(o)
 }
 
 // Create calls account.New to generate a new account.
@@ -91,7 +91,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 
 		// Store account and key
 		a.Keys = []keys.Storable{accountKey}
-		if err := s.db.InsertAccount(&a); err != nil {
+		if err := s.store.InsertAccount(&a); err != nil {
 			return "", err
 		}
 
@@ -99,7 +99,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 		// enabled on all accounts
 		t, err := templates.NewToken("FlowToken")
 		if err == nil { // If err != nil, FlowToken is not enabled for some reason
-			s.db.InsertAccountToken(&AccountToken{ // Ignore errors
+			s.store.InsertAccountToken(&AccountToken{ // Ignore errors
 				AccountAddress: a.Address,
 				TokenAddress:   t.Address,
 				TokenName:      t.Name,
@@ -133,7 +133,7 @@ func (s *Service) Details(address string) (Account, error) {
 		return Account{}, err
 	}
 
-	return s.db.Account(address)
+	return s.store.Account(address)
 }
 
 func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
@@ -160,7 +160,7 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 			return
 		}
 
-		err = s.db.InsertAccountToken(&AccountToken{
+		err = s.store.InsertAccountToken(&AccountToken{
 			AccountAddress: address,
 			TokenAddress:   token.Address,
 			TokenName:      token.Name,
@@ -181,5 +181,5 @@ func (s *Service) AccountFungibleTokens(address string) ([]AccountToken, error) 
 		return nil, err
 	}
 
-	return s.db.AccountTokens(address)
+	return s.store.AccountTokens(address)
 }

@@ -24,20 +24,20 @@ const (
 )
 
 type Service struct {
-	db  Store
-	km  keys.Manager
-	fc  *client.Client
-	ts  *transactions.Service
-	cfg Config
+	store Store
+	km    keys.Manager
+	fc    *client.Client
+	ts    *transactions.Service
+	cfg   Config
 }
 
 func NewService(
-	db Store,
+	store Store,
 	km keys.Manager,
 	fc *client.Client,
 	ts *transactions.Service) *Service {
 	cfg := ParseConfig()
-	return &Service{db, km, fc, ts, cfg}
+	return &Service{store, km, fc, ts, cfg}
 }
 
 func (s *Service) List() []templates.Token {
@@ -129,7 +129,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 			return
 		}
 		t.TransactionId = tx.TransactionId
-		if err := s.db.InsertFungibleTokenTransfer(t); err != nil {
+		if err := s.store.InsertFungibleTokenTransfer(t); err != nil {
 			fmt.Printf("error while inserting token transfer: %s\n", err)
 		}
 	}()
@@ -168,7 +168,7 @@ func (s *Service) RegisterFtDeposit(token *templates.Token, transactionId, amoun
 	// TODO: Add AccountToken for account if it doesn't already exist (it should but just to be sure)
 
 	// Check for existing deposit
-	if _, err := s.db.FungibleTokenDeposit(recipient, token.Name, tx.TransactionId); err != nil {
+	if _, err := s.store.FungibleTokenDeposit(recipient, token.Name, tx.TransactionId); err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			return err
 		}
@@ -186,7 +186,7 @@ func (s *Service) RegisterFtDeposit(token *templates.Token, transactionId, amoun
 		TokenName:        token.Name,
 	}
 
-	return s.db.InsertFungibleTokenTransfer(t)
+	return s.store.InsertFungibleTokenTransfer(t)
 }
 
 func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*FungibleTokenTransfer, error) {
@@ -205,9 +205,9 @@ func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*F
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
 	case transferTypeWithdrawal:
-		return s.db.FungibleTokenWithdrawals(address, token.Name)
+		return s.store.FungibleTokenWithdrawals(address, token.Name)
 	case transferTypeDeposit:
-		return s.db.FungibleTokenDeposits(address, token.Name)
+		return s.store.FungibleTokenDeposits(address, token.Name)
 	}
 }
 
@@ -258,9 +258,9 @@ func (s *Service) GetFtTransfer(transferType, address, tokenName, transactionId 
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
 	case transferTypeWithdrawal:
-		return s.db.FungibleTokenWithdrawal(address, token.Name, transactionId)
+		return s.store.FungibleTokenWithdrawal(address, token.Name, transactionId)
 	case transferTypeDeposit:
-		return s.db.FungibleTokenDeposit(address, token.Name, transactionId)
+		return s.store.FungibleTokenDeposit(address, token.Name, transactionId)
 	}
 }
 

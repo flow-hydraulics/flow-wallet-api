@@ -15,7 +15,7 @@ type WorkerPool struct {
 	log     *log.Logger
 	wg      *sync.WaitGroup
 	workers []*Worker
-	db      Store
+	store   Store
 }
 
 type Worker struct {
@@ -69,14 +69,14 @@ func (p *WorkerPool) AddWorker(capacity uint) {
 
 func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
 	job := &Job{Do: do, Status: Init}
-	if err := p.db.InsertJob(job); err != nil {
+	if err := p.store.InsertJob(job); err != nil {
 		return job, err
 	}
 
 	worker, err := p.AvailableWorker()
 	if err != nil {
 		job.Status = NoAvailableWorkers
-		if err := p.db.UpdateJob(job); err != nil {
+		if err := p.store.UpdateJob(job); err != nil {
 			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
@@ -84,14 +84,14 @@ func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
 
 	if !worker.tryEnqueue(job) {
 		job.Status = QueueFull
-		if err := p.db.UpdateJob(job); err != nil {
+		if err := p.store.UpdateJob(job); err != nil {
 			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
 	}
 
 	job.Status = Accepted
-	if err := p.db.UpdateJob(job); err != nil {
+	if err := p.store.UpdateJob(job); err != nil {
 		p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 	}
 
@@ -141,13 +141,13 @@ func (w *Worker) process(job *Job) {
 		}
 		job.Status = Error
 		job.Error = err.Error()
-		if err := w.pool.db.UpdateJob(job); err != nil {
+		if err := w.pool.store.UpdateJob(job); err != nil {
 			w.pool.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return
 	}
 	job.Status = Complete
-	if err := w.pool.db.UpdateJob(job); err != nil {
+	if err := w.pool.store.UpdateJob(job); err != nil {
 		w.pool.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 	}
 }

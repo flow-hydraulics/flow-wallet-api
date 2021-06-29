@@ -7,12 +7,12 @@ import (
 )
 
 type Service struct {
-	db  Store
-	cfg *config
+	store Store
+	cfg   *config
 }
 
-func NewService(db Store) *Service {
-	return &Service{db, parseConfig()}
+func NewService(store Store) *Service {
+	return &Service{store, parseConfig()}
 }
 
 func (s *Service) AddToken(t *Token) error {
@@ -28,17 +28,21 @@ func (s *Service) AddToken(t *Token) error {
 		return fmt.Errorf(`not a valid name: "%s"`, t.Name)
 	}
 
-	return s.db.Insert(t)
+	return s.store.Insert(t)
 }
 
 func (s *Service) ListTokens(tType *TokenType) (*[]Token, error) {
-	return s.db.List(tType)
+	return s.store.List(tType)
 }
 
-func (s *Service) GetToken(id uint64) (*Token, error) {
-	return s.db.Get(id)
+func (s *Service) GetTokenById(id uint64) (*Token, error) {
+	return s.store.GetById(id)
+}
+
+func (s *Service) GetTokenByName(name string) (*Token, error) {
+	return s.store.GetByName(name)
 }
 
 func (s *Service) RemoveToken(id uint64) error {
-	return s.db.Remove(id)
+	return s.store.Remove(id)
 }

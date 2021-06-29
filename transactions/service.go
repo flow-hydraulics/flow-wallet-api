@@ -19,22 +19,22 @@ import (
 
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
-	db  Store
-	km  keys.Manager
-	fc  *client.Client
-	wp  *jobs.WorkerPool
-	cfg Config
+	store Store
+	km    keys.Manager
+	fc    *client.Client
+	wp    *jobs.WorkerPool
+	cfg   Config
 }
 
 // NewService initiates a new transaction service.
 func NewService(
-	db Store,
+	store Store,
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{db, km, fc, wp, cfg}
+	return &Service{store, km, fc, wp, cfg}
 }
 
 func (s *Service) Create(c context.Context, sync bool, address string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
@@ -85,7 +85,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		// Insert to datastore
-		if err := s.db.InsertTransaction(t); err != nil {
+		if err := s.store.InsertTransaction(t); err != nil {
 			return t.TransactionId, err
 		}
 
@@ -95,7 +95,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		// Update in datastore
-		err = s.db.UpdateTransaction(t)
+		err = s.store.UpdateTransaction(t)
 
 		return t.TransactionId, err
 	})
@@ -126,7 +126,7 @@ func (s *Service) List(tType Type, address string, limit, offset int) ([]Transac
 
 	o := datastore.ParseListOptions(limit, offset)
 
-	return s.db.Transactions(tType, address, o)
+	return s.store.Transactions(tType, address, o)
 }
 
 // Details returns a specific transaction.
@@ -143,7 +143,7 @@ func (s *Service) Details(tType Type, address, transactionId string) (result Tra
 	}
 
 	// Get from datastore
-	result, err = s.db.Transaction(tType, address, transactionId)
+	result, err = s.store.Transaction(tType, address, transactionId)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
@@ -172,9 +172,9 @@ func (s *Service) ExecuteScript(ctx context.Context, raw templates.Raw) (cadence
 }
 
 func (s *Service) UpdateTransaction(t *Transaction) error {
-	return s.db.UpdateTransaction(t)
+	return s.store.UpdateTransaction(t)
 }
 
 func (s *Service) GetOrCreateTransaction(transactionId string) *Transaction {
-	return s.db.GetOrCreateTransaction(transactionId)
+	return s.store.GetOrCreateTransaction(transactionId)
 }
