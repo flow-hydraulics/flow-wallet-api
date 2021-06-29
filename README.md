@@ -40,7 +40,7 @@ rather than a hosted 3rd-party solution.
 The Wallet API is provided as a Docker image:
 
 ```sh
-docker pull gcr.io/flow-container-registry/wallet-api:v0.0.4
+docker pull gcr.io/flow-container-registry/wallet-api:v0.3.1
 ```
 
 ### Basic example usage

@@ -1,7 +1,7 @@
 version: "3.3"
 services:
   wallet:
-    image: gcr.io/flow-container-registry/wallet-api:v0.0.4
+    image: gcr.io/flow-container-registry/wallet-api:v0.3.1
     ports:
       - "3000:3000"
     environment:
