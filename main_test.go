@@ -1252,3 +1252,170 @@ func TestNFTDeployment(t *testing.T) {
 		}
 	}
 }
+
+func TestTemplateHandlers(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	db, err := gorm.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(testDbDSN)
+	defer gorm.Close(db)
+
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+	templateHandler := handlers.NewTemplates(logger, templateService)
+
+	router := mux.NewRouter()
+	router.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)
+	router.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)
+	router.Handle("/tokens/{id}", templateHandler.GetToken()).Methods(http.MethodGet)
+	router.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)
+
+	listSteps := []httpTestStep{
+		{
+			name:        "List empty",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `\[\]`,
+			status:      http.StatusOK,
+		},
+	}
+
+	addStepts := []httpTestStep{
+		{
+			name:        "Add with empty body",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `empty body`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with invalid body",
+			method:      http.MethodPost,
+			body:        strings.NewReader(`invalid`),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `invalid body`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with invalid name",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `not a valid name: ""`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with invalid address",
+			method:      http.MethodPost,
+			body:        strings.NewReader(`{"name":"TestToken","address":"0x1"}`),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `not a valid address: "0x1"`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with valid body",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "List not empty",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`\[{"id":1,"name":"TestToken","address":"%s"}\]`, cfg.AdminAddress),
+			status:      http.StatusOK,
+		},
+	}
+
+	getSteps := []httpTestStep{
+		{
+			name:        "Get invalid id",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens/invalid-id",
+			expected:    `parsing "invalid-id": invalid syntax`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Get not found",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens/2",
+			expected:    `record not found`,
+			status:      http.StatusNotFound,
+		},
+		{
+			name:        "Get valid id",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens/1",
+			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s"}`, cfg.AdminAddress),
+			status:      http.StatusOK,
+		},
+	}
+
+	removeSteps := []httpTestStep{
+		{
+			name:        "Remove invalid id",
+			method:      http.MethodDelete,
+			contentType: "application/json",
+			url:         "/tokens/invalid-id",
+			expected:    `parsing "invalid-id": invalid syntax`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			// Gorm won't return an error if deleting a non-existent entry
+			name:        "Remove not found",
+			method:      http.MethodDelete,
+			contentType: "application/json",
+			url:         "/tokens/4",
+			expected:    `4`,
+			status:      http.StatusOK,
+		},
+		{
+			name:        "Remove valid id",
+			method:      http.MethodDelete,
+			contentType: "application/json",
+			url:         "/tokens/1",
+			expected:    "1",
+			status:      http.StatusOK,
+		},
+	}
+
+	for _, s := range listSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	for _, s := range addStepts {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	for _, s := range getSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	for _, s := range removeSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+}

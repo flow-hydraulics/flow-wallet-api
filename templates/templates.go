@@ -10,6 +10,8 @@ type Template struct {
 	Source string
 }
 
+type TemplateString string
+
 type chainReplacers map[flow.ChainID]*strings.Replacer
 type chainAddresses map[flow.ChainID]string
 type templateVariables map[string]chainAddresses

@@ -68,7 +68,7 @@ func ValidateAddress(address string, chainId flow.ChainID) (string, error) {
 	if !flowAddress.IsValid(chainId) {
 		return "", &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
-			Err:        fmt.Errorf("not a valid address"),
+			Err:        fmt.Errorf(`not a valid address: "%s"`, address),
 		}
 	}
 	return FormatAddress(flowAddress), nil
@@ -77,7 +77,7 @@ func ValidateAddress(address string, chainId flow.ChainID) (string, error) {
 func ValidateTransactionId(id string) error {
 	invalidErr := &errors.RequestError{
 		StatusCode: http.StatusBadRequest,
-		Err:        fmt.Errorf("not a valid transaction id"),
+		Err:        fmt.Errorf(`not a valid transaction id: "%s"`, id),
 	}
 	b, err := hex.DecodeString(id)
 	if err != nil {

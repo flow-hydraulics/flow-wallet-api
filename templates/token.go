@@ -10,9 +10,12 @@ import (
 )
 
 type Token struct {
-	Name    string `json:"name"` // Declaration name
-	Address string `json:"address"`
-	lcName  string `json:"-"` // lowerCamelCase name for generic fungible token transaction templates
+	ID            uint64         `json:"id"`
+	Name          string         `json:"name" gorm:"uniqueIndex:addressname;index;not null"` // Declaration name
+	NameLowerCase string         `json:"nameLowerCase,omitempty"`                            // For generic fungible token transaction templates
+	Address       string         `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
+	Setup         TemplateString `json:"setup,omitempty"`
+	Transfer      TemplateString `json:"transfer,omitempty"`
 }
 
 func EnabledTokens() map[string]Token {
@@ -68,9 +71,9 @@ func tokenTemplateCode(tmpl_str string, token *Token) string {
 	r := strings.NewReplacer(
 		"TOKEN_DECLARATION_NAME", token.Name,
 		"TOKEN_ADDRESS", token.Address,
-		"TOKEN_VAULT", fmt.Sprintf("%sVault", token.lcName),
-		"TOKEN_RECEIVER", fmt.Sprintf("%sReceiver", token.lcName),
-		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.lcName),
+		"TOKEN_VAULT", fmt.Sprintf("%sVault", token.NameLowerCase),
+		"TOKEN_RECEIVER", fmt.Sprintf("%sReceiver", token.NameLowerCase),
+		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.NameLowerCase),
 	)
 
 	tmpl_str = r.Replace(tmpl_str)

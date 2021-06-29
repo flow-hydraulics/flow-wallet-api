@@ -52,7 +52,7 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FlowToken with non-standard addresses", func(t *testing.T) {
-		token := &Token{Name: "FlowToken", Address: "some_other_tokenaddress", lcName: "flowToken"}
+		token := &Token{Name: "FlowToken", Address: "some_other_tokenaddress", NameLowerCase: "flowToken"}
 		c := FungibleTransferCode(token)
 		if !strings.Contains(c, "import FlowToken from some_other_tokenaddress") {
 			t.Error("expected to find non-standard token address")
@@ -68,7 +68,7 @@ func TestParseGenericFungibleTransfer(t *testing.T) {
 	})
 
 	t.Run("FUSD with non-standard addresses", func(t *testing.T) {
-		token := &Token{Name: "FUSD", Address: "some_other_tokenaddress", lcName: "fusd"}
+		token := &Token{Name: "FUSD", Address: "some_other_tokenaddress", NameLowerCase: "fusd"}
 		c := FungibleTransferCode(token)
 		if !strings.Contains(c, "import FUSD from some_other_tokenaddress") {
 			t.Error("expected to find non-standard token address")

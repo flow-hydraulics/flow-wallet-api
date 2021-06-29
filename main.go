@@ -108,6 +108,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	}
 	defer gorm.Close(db)
 
+	templateStore := templates.NewGormStore(db)
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
@@ -128,6 +129,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	km := basic.NewKeyManager(keyStore, fc)
 
 	// Services
+	templateService := templates.NewService(templateStore)
 	jobsService := jobs.NewService(jobStore)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
@@ -143,6 +145,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// HTTP handling
 
+	templateHandler := handlers.NewTemplates(ls, templateService)
 	jobsHandler := handlers.NewJobs(ls, jobsService)
 	accountHandler := handlers.NewAccounts(ls, accountService)
 	transactionHandler := handlers.NewTransactions(ls, transactionService)
@@ -154,11 +157,17 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
 	// Debug
-	rv.HandleFunc("/debug", debugService.HandleDebug).Methods(http.MethodGet) // details
+	rv.HandleFunc("/debug", debugService.HandleDebug).Methods(http.MethodGet)
 
 	// Jobs
-	rv.Handle("/jobs", jobsHandler.List()).Methods(http.MethodGet)            // details
+	rv.Handle("/jobs", jobsHandler.List()).Methods(http.MethodGet)            // list
 	rv.Handle("/jobs/{jobId}", jobsHandler.Details()).Methods(http.MethodGet) // details
+
+	// Token templates
+	rv.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)           // create
+	rv.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)          // list
+	rv.Handle("/tokens/{id}", templateHandler.GetToken()).Methods(http.MethodGet)       // details
+	rv.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete) // delete
 
 	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()
