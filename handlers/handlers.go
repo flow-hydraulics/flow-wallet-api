@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -11,6 +12,9 @@ import (
 )
 
 const SyncHeader = "Use-Sync"
+
+var EmptyBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("empty body")}
+var InvalidBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
 
 // handleError is a helper function for unified HTTP error handling.
 func handleError(rw http.ResponseWriter, logger *log.Logger, err error) {
@@ -39,4 +43,11 @@ func handleJsonResponse(rw http.ResponseWriter, status int, res interface{}) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(status)
 	json.NewEncoder(rw).Encode(res)
+}
+
+func checkNonEmptyBody(r *http.Request) error {
+	if r.Body == nil || r.Body == http.NoBody {
+		return EmptyBodyError
+	}
+	return nil
 }

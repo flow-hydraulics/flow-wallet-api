@@ -165,6 +165,8 @@ func (s *Service) RegisterFtDeposit(token *templates.Token, transactionId, amoun
 		}
 	}
 
+	// TODO: Add AccountToken for account if it doesn't already exist (it should but just to be sure)
+
 	// Check for existing deposit
 	if _, err := s.db.FungibleTokenDeposit(recipient, token.Name, tx.TransactionId); err != nil {
 		if !strings.Contains(err.Error(), "record not found") {

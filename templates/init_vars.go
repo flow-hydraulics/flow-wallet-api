@@ -3,7 +3,7 @@ package templates
 import "github.com/onflow/flow-go-sdk"
 
 func init() {
-	t := make(templateVariables, 4)
+	t := make(templateVariables, 2)
 
 	t[`"./FungibleToken.cdc"`] = chainAddresses{
 		flow.Emulator: "0xee82856bf20e2aa6",
