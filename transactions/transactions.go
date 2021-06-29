@@ -45,6 +45,11 @@ func New(
 	// Authorizers sign the payload
 	// TODO: support multiple keys per account?
 	for _, a := range authorizers {
+		// If account is also the payer, it must only sign the envelope
+		if a.Address == payer.Address {
+			continue
+		}
+
 		if err := builder.Tx.SignPayload(a.Address, a.Key.Index, a.Signer); err != nil {
 			return err
 		}
