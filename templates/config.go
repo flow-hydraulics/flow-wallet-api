@@ -32,7 +32,10 @@ func parseConfig() *config {
 			if len(ss) > 2 {
 				token.lcName = ss[2]
 			}
-			cachedConfig.enabledTokens[ss[0]] = token
+			// Use all lowercase as the key so we can do case insenstive matchig
+			// in URLs
+			key := strings.ToLower(ss[0])
+			cachedConfig.enabledTokens[key] = token
 		}
 	}
 
