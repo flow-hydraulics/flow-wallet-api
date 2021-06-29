@@ -30,18 +30,11 @@
   "deployments": {
     "emulator": {
       "emulator-account": [ "FUSD" ]
-    },
-    "emulator-docker": {
-      "emulator-account": [ "FUSD" ]
     }
   },
   "networks": {
     "emulator": {
       "host": "127.0.0.1:3569",
-      "chain": "flow-emulator"
-    },
-    "emulator-docker": {
-      "host": "emulator:3569",
       "chain": "flow-emulator"
     },
     "mainnet": {

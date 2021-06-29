@@ -1,450 +1,186 @@
-# Flow Wallet API Demo (Node.js + express)
+# Flow Wallet API
 
-> :warning: This demo is a work in progress.
+> :warning: This software is a work in progress and is not yet intended for production use.
 
+The Flow Wallet API is a REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure. 
+This service can be used by an application that needs to manage Flow user accounts and the assets inside them.
 
-This is a demonstration of a RESTful API that
-implements a simple custodial wallet service for the Flow blockchain.
+## Features
 
-## Functionality
+- Create new Flow accounts
+- Securely store account private keys 
+- Send a transaction from an account
+- Transfer fungible tokens (e.g. FLOW, FUSD)
+- Detect fungible token deposits
+- _Transfer NFTs (e.g. FLOW, FUSD) (coming soon)_
+- _Detect NFT deposits (coming soon)_
 
-### 1. Admin
+View full list of functionality in the [API specification](API.md).
 
-- [x] Single admin account (hot wallet)
-- [x] [Create user accounts (using admin account)](https://github.com/onflow/flow-wallet-api-node-demo/issues/1)
+## Background
 
-### 2. Transaction Execution
+Some application developers may wish to manage Flow accounts in a fully-custodial fashion,
+but without taking on the complexity of building an account management system.
 
-- [x] Send an arbitrary transaction from the admin account
-- [x] Send an arbitrary transaction from a user account
+An application may need to support custody of fungible tokens (FLOW, FUSD), non-fungible tokens, or both.
 
-### 3. Fungible Tokens
+For security and/or legal reasons, 
+some developers need to use a custody service running on-premises as part of their existing infrastructure,
+rather than a hosted 3rd-party solution.
 
-- [x] Send fungible token withdrawals from admin account (FLOW, FUSD)
-- [ ] [Detect fungible token deposits to admin account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/2)
-- [x] [Send fungible token withdrawals from a user account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/3)
-- [ ] [Detect fungible token deposits to a user account (FLOW, FUSD)](https://github.com/onflow/flow-wallet-api-node-demo/issues/4)
-- [ ] View the fungible token balance of the admin account
-- [ ] View the fungible token balance of a user account
+### Example use cases
 
-### 4. Non-Fungible Tokens
+- **Custodial NFT Dapp** — an NFT dapp where each user receives a Flow account that is fully managed by the dapp admin. This application requires that each user account can store and transfer NFTs, but does not need to support fungible token custody.
+- **FLOW/FUSD Hot Wallet** — an application that allows users to convert fiat currency to FLOW or FUSD. A single admin account would be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
+- **Exchange** — a cryptocurrency exchange that is listing FLOW and/or FUSD. Similar to the case above, one or more admin accounts may be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
+- **Web Wallet** — a user-facing wallet application that is compatible with Flow dapps. Each user account would be created and managed by the wallet service.
 
-- [ ] Set up admin account with non-fungible token collections (`NFT.Collection`)
-- [ ] Send non-fungible token withdrawals from admin account
-- [ ] Detect non-fungible token deposits to admin account
-- [ ] Set up a user account with non-fungible token collections (`NFT.Collection`)
-- [ ] Send non-fungible token withdrawals from a user account
-- [ ] Detect non-fungible token deposits to a user account
-- [ ] View the non-fungible tokens owned by the admin account
-- [ ] View the non-fungible tokens owned by a user account
+## Installation
 
-## Local Development
-
-> This local development environment uses the 
-> [Flow Emulator](https://docs.onflow.org/emulator) to 
-> simulate the real Flow network.
-
-### Install the Flow CLI
-
-First, install the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
-
-### Install dependencies and configure environment
+The Wallet API is provided as a Docker image:
 
 ```sh
-npm install
+docker pull gcr.io/flow-container-registry/wallet-api:v0.0.4
+```
 
+### Basic example usage
+
+> This setup requires [Docker](https://docs.docker.com/engine/install/) and the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
+
+Create a configuration file:
+
+```sh
 cp .env.example .env
 ```
 
-### Start the database and emulator
-
-Use Docker Compose to launch Postgres and the [Flow Emulator](https://docs.onflow.org/emulator):
+Start the Wallet API, Flow Emulator and Postgres:
 
 ```sh
-npm run docker-local-network
+docker-compose up -d
 ```
 
-### Start the server
+Deploy the FUSD contract to the emulator:
 
 ```sh
-npm run dev
+flow project deploy -n emulator
 ```
 
-## Deploy with Docker
+You can now access the API at http://localhost:3000.
 
-To deploy this API as a Docker container in your infrastructure,
-either build from source or use the pre-built image:
+Next, see the [FUSD sample app](/examples/nextjs-fusd-provider)
+for an example of how to use this configuration as part of
+a complete application.
+
+Once you're finished, run this to stop the containers:
 
 ```sh
-docker pull gcr.io/flow-container-registry/flow-wallet-api-demo:latest
+docker-compose down
 ```
 
-The Docker Compose sample configurations
-in this repository show how to configure this application when
-running as a Docker container.
+## Configuration
 
-### Emulator
+### Enabled fungible tokens
 
-> This example shows how to connect the Docker container
-> to an instance of the [Flow Emulator](https://docs.onflow.org/emulator).
+A comma separated list of fungible tokens and their corresponding addresses enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined.
 
-Configuration: [docker-compose.emulator.yml](docker-compose.emulator.yml)
+Examples:
 
 ```sh
-cp .env.emulator.example .env
-
-docker-compose -f docker-compose.emulator.yml up
+ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
+ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79,FUSD:0xf8d6e0586b0a20c7
 ```
 
-Once the emulator is running, 
-you will need to deploy the FUSD contract:
+### Database
 
-```sh
-npm run dev-deploy-contracts
+| Config variable | Environment variable | Description                                                                                      | Default     | Examples                  |
+| --------------- | :------------------- | ------------------------------------------------------------------------------------------------ | ----------- | ------------------------- |
+| DatabaseType    | `DATABASE_TYPE`      | Type of database driver                                                                          | `sqlite`    | `sqlite`, `psql`, `mysql` |
+| DatabaseDSN     | `DATABASE_DSN`       | Data source name ([DSN](https://en.wikipedia.org/wiki/Data_source_name)) for database connection | `wallet.db` | See below                 |
+
+Examples of Database DSN
+
+    mysql://john:pass@localhost:3306/my_db
+
+    postgresql://postgres:postgres@localhost:5432/postgres
+
+    user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local
+
+    host=localhost user=gorm password=gorm dbname=gorm port=9920 sslmode=disable TimeZone=Asia/Shanghai
+
+For more: https://gorm.io/docs/connecting_to_the_database.html
+
+### Google KMS setup
+
+Note: In order to use Google KMS for remote key management you'll need a Google Cloud Platform account.
+
+Pre-requisites:
+
+1. Create a new Project if you don't have one already. You'll need the Project ID later.
+2. Enable Cloud Key Management Service (KMS) API for the project, Security -> [Cryptographic Keys](https://console.cloud.google.com/security/kms).
+3. Create a new Key Ring for your wallet (or use an existing Key Ring), Security -> Cryptographic Keys -> [Create Key Ring](https://console.cloud.google.com/security/kms/keyring/create), you'll need the Location ID (or _Location_) and Key Ring ID (or _Name_) later.
+
+Using a Service Account to access the KMS API (see [official docs](https://cloud.google.com/docs/authentication/getting-started) for more);
+
+1. Create a new Service Account, IAM & Admin -> Service Accounts -> [Create Service Account](https://console.cloud.google.com/iam-admin/serviceaccounts/create)
+2. Use the roles `Cloud KMS Admin` & `Cloud KMS Signer/Verifier` or grant the required permissions through a custom role (NOTE: deletion not supported yet):
+   - `cloudkms.cryptoKeyVersions.useToSign`
+   - `cloudkms.cryptoKeyVersions.viewPublicKey`
+   - `cloudkms.cryptoKeys.create`
+3. After creating the Service Account, select Manage Keys from the Actions menu in the Service Account listing.
+4. Create a new key, Add Key -> Create New key, and select JSON as the key type.
+5. Save the JSON file.
+
+Configure the Google KMS client library by setting the environment variable `GOOGLE_APPLICATION_CREDENTIALS`:
+
+```
+export GOOGLE_APPLICATION_CREDENTIALS="/home/example/path/to/service-account-file.json"
 ```
 
-### Testnet
+Configure Google KMS as the key storage for `flow-wallet-service` and set the necessary environment variables:
 
-> This example shows how to connect the Docker container
-> to Flow Testnet.
+| Config variable | Environment variable     | Description      | Default | Examples                    |
+| --------------- | ------------------------ | ---------------- | ------- | --------------------------- |
+| DefaultKeyType  | `DEFAULT_KEY_TYPE`       | Default key type | `local` | `local`, `google_kms`       |
+| ProjectID       | `GOOGLE_KMS_PROJECT_ID`  | GCP Project ID   | -       | `flow-wallet-example`       |
+| LocationID      | `GOOGLE_KMS_LOCATION_ID` | GCP Location ID  | -       | `europe-north1`, `us-west1` |
+| KeyRingID       | `GOOGLE_KMS_KEYRING_ID`  | GCP Key Ring ID  | -       | `example-wallet-keyring`    |
 
-First you'll need a Testnet account. Here's how to make one:
+### All possible environment variables
 
-#### Generate a key pair 
+```
+HOST=
+PORT=3000
+ACCESS_API_HOST=localhost:3569
 
-Generate a new key pair with the Flow CLI:
+ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
 
-```sh
-flow keys generate
+DATABASE_DSN=wallet.db
+DATABASE_TYPE=sqlite
+
+ADMIN_ADDRESS=
+ADMIN_KEY_INDEX=0
+ADMIN_KEY_TYPE=local
+ADMIN_PRIVATE_KEY=
+CHAIN_ID=flow-emulator
+DEFAULT_KEY_TYPE=local
+DEFAULT_KEY_INDEX=0
+DEFAULT_KEY_WEIGHT=-1
+DEFAULT_SIGN_ALGO=ECDSA_P256
+DEFAULT_HASH_ALGO=SHA3_256
+ENCRYPTION_KEY=
+
+GOOGLE_APPLICATION_CREDENTIALS=
+GOOGLE_KMS_PROJECT_ID=
+GOOGLE_KMS_LOCATION_ID=
 ```
 
-_⚠️ Make sure to save these keys in a safe place, you'll need them later._
+## API Specification
 
-#### Create your account
+[View the full Wallet API specification](API.md).
 
-Go to the [Flow Testnet Faucet](https://testnet-faucet.onflow.org/) to create a new account. Use the **public key** from the previous step.
+## Credit
 
-#### Save your keys
+The Flow Wallet API is developed and maintained by [Equilibrium](https://equilibrium.co/),
+with support from the Flow core contributors.
 
-After your account has been created, save the address and private key in the `.env` file:
-
-```sh
-cp .env.testnet.example .env
-```
-
-```sh
-# Replace these values with your own!
-FLOW_ADDRESS=0xabcdef12345689
-FLOW_PRIVATE_KEY=aaaaaa...aaaaaa
-```
-
-### Start the Docker containers
-
-Configuration: [docker-compose.testnet.yml](docker-compose.testnet.yml)
-
-```sh
-docker-compose -f docker-compose.testnet.yml up
-```
-
-## API Routes
-
-### Accounts
-
-#### List all accounts
-
-`GET /v1/accounts`
-
-Example
-
-```sh
-curl --request GET \
-  --url http://localhost:3000/v1/accounts
-```
-
-```json
-[
-  {
-    "address": "0xf8d6e0586b0a20c7"
-  },
-  {
-    "address": "0xe467b9dd11fa00df"
-  }
-]
-```
-
----
-
-#### Get an account
-
-`GET /v1/accounts/{address}`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-
-Example
-
-```sh
-curl --request GET \
-  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7
-```
-
-```json
-{
-  "address": "0xf8d6e0586b0a20c7"
-}
-```
-
----
-
-#### Create an account
-
-`POST /v1/accounts`
-
-Example
-
-```sh
-curl --request POST \
-  --url http://localhost:3000/v1/accounts
-```
-
-```json
-{
-  "address": "0xe467b9dd11fa00df"
-}
-```
-
----
-
-### Transaction Execution
-
-#### Execute a transaction
-
-> :warning: Not yet implemented
-
-`POST /v1/accounts/{address}/transactions`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-
-Body (JSON)
-
-- `code`: The Cadence code to execute in the transaction
-  - The code must always specify exactly one authorizer (i.e. `prepare(auth: AuthAccount)`)
-
-Example
-
-```sh
-curl --request POST \
-  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/transactions \
-  --header 'Content-Type: application/json' \
-  --data '{ "code": "transaction { prepare(auth: AuthAccount) { log(\"Hello, World!\") } }" }'
-```
-
-```json
-{
-  "transactionId": "18647b584a03345f3b2d2c4d9ab2c4179ae1b124a7f62ef9f33910e5ca8b353c",
-  "error": null,
-}
-```
-
----
-
-### Fungible Tokens
-
-Supported tokens:
-- `FLOW`
-- `FUSD`
-
-#### List all tokens
-
-`GET /v1/accounts/{address}/fungible-tokens`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-
-Example
-
-```sh
-curl --request GET \
-  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/fungible-tokens
-```
-
-```json
-[
-  {
-    "name": "flow"
-  },
-  {
-    "name": "fusd"
-  }
-]
-```
-
----
-
-#### Get details of a token type
-
-`GET /v1/accounts/{address}/fungible-tokens/{tokenName}`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the fungible token (e.g. "flow")
-
-Example
-
-```sh
-curl --request GET \
-  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/fungible-tokens/flow
-```
-
-```json
-{
-  "name": "flow", 
-  "balance": "42.0"
-}
-```
-
----
-
-#### List all withdrawals of a token type
-
-> :warning: Not yet implemented
-
-`GET /v1/accounts/{address}/fungible-tokens/{tokenName}/withdrawals`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the fungible token (e.g. "flow")
-
----
-
-#### Get details of a token withdrawal
-
-> :warning: Not yet implemented
-
-`GET /v1/accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the fungible token (e.g. "flow")
-- `transactionId`: The Flow transaction ID for the withdrawal
-
----
-
-#### Create a token withdrawal
-
-`POST /v1/accounts/{address}/fungible-tokens/{tokenName}/withdrawals`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the fungible token (e.g. "flow")
-
-Body (JSON)
-
-- `amount`: The number of tokens to transfer (e.g. "123.456")
-  - Must be a fixed-point number with a maximum of 8 decimal places
-- `recipient`: The Flow address of the recipient (e.g. "0xf8d6e0586b0a20c7")
-
-Example
-
-```sh
-curl --request POST \
-  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/fungible-tokens/fusd/withdrawls \
-  --header 'Content-Type: application/json' \
-  --data '{ "recipient": "0xe467b9dd11fa00df", "amount": "123.456" }'
-```
-
-```json
-{
-  "transactionId": "18647b584a03345f3b2d2c4d9ab2c4179ae1b124a7f62ef9f33910e5ca8b353c",
-  "recipient": "0xe467b9dd11fa00df",
-  "amount": "123.456"
-}
-```
-
----
-
-### Non-Fungible Tokens
-
-> :warning: Not yet implemented
-
-#### List all tokens
-
-> :warning: Not yet implemented
-
-`GET /v1/accounts/{address}/non-fungible-tokens`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-
-Example
-
-```sh
-curl --request GET \
-  --url http://localhost:3000/v1/accounts/0xf8d6e0586b0a20c7/non-fungible-tokens
-```
-
----
-
-#### Get details of a token
-
-> :warning: Not yet implemented
-
-`GET /v1/accounts/{address}/non-fungible-tokens/{tokenName}`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
-
----
-
-#### List all withdrawals of a token type
-
-> :warning: Not yet implemented
-
-`GET /v1/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
-
----
-
-#### Get details of a token withdrawal
-
-> :warning: Not yet implemented
-
-`GET /v1/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
-- `transactionId`: The Flow transaction ID for the withdrawal
-
----
-
-#### Create a token withdrawal
-
-> :warning: Not yet implemented
-
-`POST /v1/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals`
-
-Parameters
-
-- `address`: The address of the account (e.g. "0xf8d6e0586b0a20c7")
-- `tokenName`: The name of the non-fungible token (e.g. "nba-top-shot-moment")
-
-Body (JSON)
-
-- `recipient`: The Flow address of the recipient (e.g. "0xf8d6e0586b0a20c7")
+<a href="https://equilibrium.co/"><img src="equilibrium.svg" alt="Equilibrium" width="200"/></a>
