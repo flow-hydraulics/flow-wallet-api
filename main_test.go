@@ -1331,6 +1331,15 @@ func TestTemplateHandlers(t *testing.T) {
 			status:      http.StatusCreated,
 		},
 		{
+			name:        "Add duplicate",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `UNIQUE constraint failed: tokens.name`,
+			status:      http.StatusBadRequest,
+		},
+		{
 			name:        "List not empty",
 			method:      http.MethodGet,
 			contentType: "application/json",
@@ -1454,4 +1463,53 @@ func TestTemplateHandlers(t *testing.T) {
 			handleStepRequest(s, router, t)
 		})
 	}
+}
+
+func TestTemplateService(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	db, err := gorm.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(testDbDSN)
+	defer gorm.Close(db)
+
+	store := templates.NewGormStore(db)
+	service := templates.NewService(store)
+
+	// Add a token for testing
+	token := templates.Token{Name: "RandomTokenName", Address: cfg.AdminAddress}
+	err = service.AddToken(&token)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("Get token by name", func(t *testing.T) {
+		t1, err := service.GetTokenByName("RandomTokenName")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t2, err := service.GetTokenByName("randomtokenname")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t3, err := service.GetTokenByName("randomTokenName")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = service.GetTokenByName("othername")
+		if err == nil {
+			t.Error("expected an error")
+		}
+
+		if t1.Address != token.Address || t2.Address != token.Address || t3.Address != token.Address {
+			t.Error("expected tokens to be equal")
+		}
+	})
+
 }

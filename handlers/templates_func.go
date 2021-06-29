@@ -55,7 +55,7 @@ func (s *Templates) GetTokenFunc(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := s.service.GetToken(id)
+	token, err := s.service.GetTokenById(id)
 	if err != nil {
 		handleError(rw, s.log, err)
 		return

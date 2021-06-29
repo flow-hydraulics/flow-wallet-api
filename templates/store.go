@@ -4,6 +4,7 @@ package templates
 type Store interface {
 	Insert(*Token) error
 	List(*TokenType) (*[]Token, error)
-	Get(id uint64) (*Token, error)
+	GetById(id uint64) (*Token, error)
+	GetByName(name string) (*Token, error)
 	Remove(id uint64) error
 }

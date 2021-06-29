@@ -11,9 +11,9 @@ import (
 
 type Token struct {
 	ID            uint64         `json:"id"`
-	Name          string         `json:"name" gorm:"uniqueIndex:addressname;index;not null"` // Declaration name
-	NameLowerCase string         `json:"nameLowerCase,omitempty"`                            // For generic fungible token transaction templates
-	Address       string         `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
+	Name          string         `json:"name" gorm:"uniqueIndex;not null"` // Declaration name
+	NameLowerCase string         `json:"nameLowerCase,omitempty"`          // For generic fungible token transaction templates
+	Address       string         `json:"address" gorm:"not null"`
 	Setup         TemplateString `json:"setup,omitempty"`
 	Transfer      TemplateString `json:"transfer,omitempty"`
 	Type          TokenType      `json:"type"`

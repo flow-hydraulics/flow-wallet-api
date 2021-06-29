@@ -1,6 +1,8 @@
 package templates
 
 import (
+	"database/sql"
+
 	"gorm.io/gorm"
 )
 
@@ -36,9 +38,18 @@ func (s *GormStore) List(tType *TokenType) (*[]Token, error) {
 	return tt, nil
 }
 
-func (s *GormStore) Get(id uint64) (*Token, error) {
+func (s *GormStore) GetById(id uint64) (*Token, error) {
 	var token Token
 	err := s.db.First(&token, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
+func (s *GormStore) GetByName(name string) (*Token, error) {
+	var token Token
+	err := s.db.Where("UPPER(name) LIKE UPPER(@name)", sql.Named("name", name)).First(&token).Error
 	if err != nil {
 		return nil, err
 	}
