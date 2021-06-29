@@ -20,10 +20,10 @@ func EnabledTokens() map[string]Token {
 }
 
 func NewToken(name string) (*Token, error) {
-	// Assume the name is in declaration name format
-	token, ok := EnabledTokens()[name]
+	key := strings.ToLower(name)
+	token, ok := EnabledTokens()[key]
 	if !ok {
-		return nil, fmt.Errorf("token %s not enabled, make sure to use the declaration name format", name)
+		return nil, fmt.Errorf("token %s not enabled", name)
 	}
 	return &token, nil
 }
