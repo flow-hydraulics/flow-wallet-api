@@ -15,8 +15,7 @@ type Service struct {
 
 func NewService(store Store) *Service {
 	cfg := parseConfig()
-	// Add all enabled tokens as fungible tokens
-	// TODO: need to parse Setup and Transfer codes
+	// Add all enabled tokens from config as fungible tokens
 	for _, t := range cfg.enabledTokens {
 		t.Type = FT
 		t.Setup = FungibleSetupCode(&t)

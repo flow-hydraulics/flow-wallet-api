@@ -7,15 +7,12 @@ import (
 	"github.com/eqlabs/flow-wallet-service/templates"
 )
 
-// Accounts is a HTTP server for account management.
-// It provides list, create and details APIs.
-// It uses an account service to interface with data.
+// Templates is a HTTP server for template management.
 type Templates struct {
 	log     *log.Logger
 	service *templates.Service
 }
 
-// NewAccounts initiates a new accounts server.
 func NewTemplates(l *log.Logger, service *templates.Service) *Templates {
 	return &Templates{l, service}
 }
