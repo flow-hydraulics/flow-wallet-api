@@ -149,13 +149,16 @@ func TestAccountServices(t *testing.T) {
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	service := accounts.NewService(accountStore, km, fc, wp, nil)
+	service := accounts.NewService(accountStore, km, fc, wp, nil, templateService)
 
 	t.Run("admin init", func(t *testing.T) {
 		service.InitAdminAccount()
@@ -241,6 +244,9 @@ func TestAccountHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -248,7 +254,7 @@ func TestAccountHandlers(t *testing.T) {
 	wp.AddWorker(1)
 
 	store := accounts.NewGormStore(db)
-	service := accounts.NewService(store, km, fc, wp, nil)
+	service := accounts.NewService(store, km, fc, wp, nil, templateService)
 	h := handlers.NewAccounts(logger, service)
 
 	router := mux.NewRouter()
@@ -381,6 +387,9 @@ func TestTransactionHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -396,11 +405,12 @@ func TestTransactionHandlers(t *testing.T) {
 	router.Handle("/{address}/transactions", h.Create()).Methods(http.MethodPost)
 	router.Handle("/{address}/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
 
-	flowToken, err := templates.NewToken("FlowToken")
+	token, err := templateService.GetTokenByName("FlowToken")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tFlow := templates.FungibleTransferCode(flowToken)
+
+	tFlow := templates.FungibleTransferCode(token)
 	tFlowBytes, err := json.Marshal(tFlow)
 	if err != nil {
 		t.Fatal(err)
@@ -735,6 +745,9 @@ func TestTokenServices(t *testing.T) {
 	transactionStore := transactions.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -742,8 +755,8 @@ func TestTokenServices(t *testing.T) {
 	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	service := tokens.NewService(tokenStore, km, fc, transactionService)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
+	service := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
@@ -902,6 +915,9 @@ func TestTokenHandlers(t *testing.T) {
 	transactionStore := transactions.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -909,8 +925,8 @@ func TestTokenHandlers(t *testing.T) {
 	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	service := tokens.NewService(tokenStore, km, fc, transactionService)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
+	service := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	tokenHandlers := handlers.NewFungibleTokens(logger, service)
 	accountHandlers := handlers.NewAccounts(logger, accountService)
@@ -1017,7 +1033,7 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Withdrawals
-	token, err := templates.NewToken("FlowToken")
+	token, err := templateService.GetTokenByName("FlowToken")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1144,8 +1160,8 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/deposits", account.Address, "some-invalid-token-name"),
-			expected:    `token some-invalid-token-name not enabled`,
-			status:      http.StatusBadRequest,
+			expected:    `record not found`,
+			status:      http.StatusNotFound,
 		},
 		{
 			name:        "list deposits invalid address",
@@ -1178,8 +1194,8 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/deposits/%s", account.Address, "some-invalid-token-name", transfer.TransactionId),
-			expected:    `token some-invalid-token-name not enabled`,
-			status:      http.StatusBadRequest,
+			expected:    `record not found`,
+			status:      http.StatusNotFound,
 		},
 		{
 			name:        "get deposit details invalid address",
@@ -1231,6 +1247,9 @@ func TestNFTDeployment(t *testing.T) {
 	defer os.Remove(testDbDSN)
 	defer gorm.Close(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
@@ -1243,7 +1262,7 @@ func TestNFTDeployment(t *testing.T) {
 	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
@@ -1273,17 +1292,6 @@ func TestTemplateHandlers(t *testing.T) {
 	router.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)
 	router.Handle("/tokens/{id}", templateHandler.GetToken()).Methods(http.MethodGet)
 	router.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)
-
-	listSteps := []httpTestStep{
-		{
-			name:        "List empty",
-			method:      http.MethodGet,
-			contentType: "application/json",
-			url:         "/tokens",
-			expected:    `\[\]`,
-			status:      http.StatusOK,
-		},
-	}
 
 	addStepts := []httpTestStep{
 		{
@@ -1327,7 +1335,7 @@ func TestTemplateHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
@@ -1344,7 +1352,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`\[{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}\]`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`\[*{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}*\]`, cfg.AdminAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1362,7 +1370,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Get not found",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         "/tokens/2",
+			url:         "/tokens/100",
 			expected:    `record not found`,
 			status:      http.StatusNotFound,
 		},
@@ -1371,7 +1379,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens/1",
-			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			expected:    `{"id":1,.*"type":"FT"}`,
 			status:      http.StatusOK,
 		},
 	}
@@ -1390,8 +1398,8 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Remove not found",
 			method:      http.MethodDelete,
 			contentType: "application/json",
-			url:         "/tokens/4",
-			expected:    `4`,
+			url:         "/tokens/100",
+			expected:    `100`,
 			status:      http.StatusOK,
 		},
 		{
@@ -1408,36 +1416,30 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add invalid type",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add FT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"FT"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":2,"name":"TestToken2","address":"%s","type":"FT"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add NFT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"NFT"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":3,"name":"TestToken3","address":"%s","type":"NFT"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
-	}
-
-	for _, s := range listSteps {
-		t.Run(s.name, func(t *testing.T) {
-			handleStepRequest(s, router, t)
-		})
 	}
 
 	for _, s := range addStepts {

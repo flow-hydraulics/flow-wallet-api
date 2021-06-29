@@ -18,12 +18,13 @@ import (
 
 // Service defines the API for account management.
 type Service struct {
-	store Store
-	km    keys.Manager
-	fc    *client.Client
-	wp    *jobs.WorkerPool
-	ts    *transactions.Service
-	cfg   Config
+	store        Store
+	km           keys.Manager
+	fc           *client.Client
+	wp           *jobs.WorkerPool
+	transactions *transactions.Service
+	templates    *templates.Service
+	cfg          Config
 }
 
 // NewService initiates a new account service.
@@ -32,10 +33,11 @@ func NewService(
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
-	ts *transactions.Service,
+	txs *transactions.Service,
+	tes *templates.Service,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{store, km, fc, wp, ts, cfg}
+	return &Service{store, km, fc, wp, txs, tes, cfg}
 }
 
 func (s *Service) InitAdminAccount() {
@@ -49,7 +51,12 @@ func (s *Service) InitAdminAccount() {
 		s.store.InsertAccount(&a)
 	}
 
-	for _, t := range templates.EnabledTokens() {
+	tType := templates.FT
+	tokens, err := s.templates.ListTokens(&tType)
+	if err != nil {
+		panic(err)
+	}
+	for _, t := range *tokens {
 		at := AccountToken{
 			AccountAddress: a.Address,
 			TokenAddress:   t.Address,
@@ -97,12 +104,12 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 
 		// Store an AccountToken named FlowToken for the account as it is automatically
 		// enabled on all accounts
-		t, err := templates.NewToken("FlowToken")
+		token, err := s.templates.GetTokenByName("FlowToken")
 		if err == nil { // If err != nil, FlowToken is not enabled for some reason
 			s.store.InsertAccountToken(&AccountToken{ // Ignore errors
 				AccountAddress: a.Address,
-				TokenAddress:   t.Address,
-				TokenName:      t.Name,
+				TokenAddress:   token.Address,
+				TokenName:      token.Name,
 			})
 		}
 
@@ -143,16 +150,16 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 		return nil, nil, err
 	}
 
-	token, err := templates.NewToken(tokenName)
+	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	raw := templates.Raw{
-		Code: templates.FungibleSetupCode(token),
+		Code: token.Setup,
 	}
 
-	job, tx, err := s.ts.Create(ctx, sync, address, raw, transactions.FtSetup)
+	job, tx, err := s.transactions.Create(ctx, sync, address, raw, transactions.FtSetup)
 
 	// Handle adding token to account in database
 	go func() {

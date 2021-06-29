@@ -132,8 +132,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	templateService := templates.NewService(templateStore)
 	jobsService := jobs.NewService(jobStore)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	debugService := debug.Service{
 		RepoUrl:   "https://github.com/eqlabs/flow-wallet-service",
@@ -246,7 +246,12 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		}()
 
 		// Listen for enabled tokens deposit events
-		for _, t := range templates.EnabledTokens() {
+		tType := templates.FT
+		tokens, err := templateService.ListTokens(&tType)
+		if err != nil {
+			panic(err)
+		}
+		for _, t := range *tokens {
 			l.ListenTokenEvent(t, events.TokensDeposited)
 		}
 
@@ -255,11 +260,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 				for _, e := range ee {
 					ss := strings.Split(e.Type, ".")
 					if ss[len(ss)-1] == events.TokensDeposited {
-						t, err := templates.TokenFromEvent(e, cfg.ChainId)
+						t, err := templateService.TokenFromEvent(e)
 						if err != nil {
-							continue
-						}
-						if !t.IsEnabled() {
 							continue
 						}
 

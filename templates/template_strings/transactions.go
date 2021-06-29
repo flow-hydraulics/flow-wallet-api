@@ -8,6 +8,18 @@ transaction(name: String, code: String) {
 }
 `
 
+const CreateAccount = `
+transaction(publicKeys: [String]) {
+	prepare(signer: AuthAccount) {
+		let acct = AuthAccount(payer: signer)
+
+		for key in publicKeys {
+			acct.addPublicKey(key.decodeHex())
+		}
+	}
+}
+`
+
 const GenericFungibleTransfer = `
 import FungibleToken from "./FungibleToken.cdc"
 import TOKEN_DECLARATION_NAME from TOKEN_ADDRESS
@@ -59,17 +71,5 @@ transaction {
       target: /storage/TOKEN_VAULT
     )
   }
-}
-`
-
-const CreateAccount = `
-transaction(publicKeys: [String]) {
-	prepare(signer: AuthAccount) {
-		let acct = AuthAccount(payer: signer)
-
-		for key in publicKeys {
-			acct.addPublicKey(key.decodeHex())
-		}
-	}
 }
 `
