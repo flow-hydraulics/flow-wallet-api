@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: Flow Wallet Service API
-  version: 0.3.0
+  version: 0.3.1
 
 servers:
   - url: http://localhost:3000/v1
