@@ -31,8 +31,8 @@ func (s *Service) AddToken(t *Token) error {
 	return s.db.Insert(t)
 }
 
-func (s *Service) ListTokens() (*[]Token, error) {
-	return s.db.List()
+func (s *Service) ListTokens(tType *TokenType) (*[]Token, error) {
+	return s.db.List(tType)
 }
 
 func (s *Service) GetToken(id uint64) (*Token, error) {

@@ -16,6 +16,7 @@ type Token struct {
 	Address       string         `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
 	Setup         TemplateString `json:"setup,omitempty"`
 	Transfer      TemplateString `json:"transfer,omitempty"`
+	Type          TokenType      `json:"type"`
 }
 
 func EnabledTokens() map[string]Token {

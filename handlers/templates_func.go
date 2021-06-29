@@ -37,7 +37,7 @@ func (s *Templates) AddTokenFunc(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Templates) ListTokensFunc(rw http.ResponseWriter, r *http.Request) {
-	tokens, err := s.service.ListTokens()
+	tokens, err := s.service.ListTokens(nil)
 	if err != nil {
 		handleError(rw, s.log, err)
 		return

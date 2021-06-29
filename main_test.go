@@ -1327,7 +1327,7 @@ func TestTemplateHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
@@ -1335,7 +1335,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`\[{"id":1,"name":"TestToken","address":"%s"}\]`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`\[{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}\]`, cfg.AdminAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1362,7 +1362,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens/1",
-			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1395,6 +1395,36 @@ func TestTemplateHandlers(t *testing.T) {
 		},
 	}
 
+	typeSteps := []httpTestStep{
+		{
+			name:        "Add invalid type",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":1,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Add FT valid",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"FT"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":2,"name":"TestToken2","address":"%s","type":"FT"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Add NFT valid",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"NFT"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":3,"name":"TestToken3","address":"%s","type":"NFT"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+	}
+
 	for _, s := range listSteps {
 		t.Run(s.name, func(t *testing.T) {
 			handleStepRequest(s, router, t)
@@ -1414,6 +1444,12 @@ func TestTemplateHandlers(t *testing.T) {
 	}
 
 	for _, s := range removeSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	for _, s := range typeSteps {
 		t.Run(s.name, func(t *testing.T) {
 			handleStepRequest(s, router, t)
 		})
