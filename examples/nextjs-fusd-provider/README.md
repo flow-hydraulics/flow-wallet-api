@@ -41,6 +41,8 @@ flow project deploy -n emulator
 In this directory, install and run the Next.js app:
 
 ```bash
+cd examples/nextjs-fusd-provider
+
 npm install
 
 npm run dev
