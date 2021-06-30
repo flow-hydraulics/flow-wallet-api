@@ -1,6 +1,9 @@
 package accounts
 
-import "github.com/eqlabs/flow-wallet-service/datastore"
+import (
+	"github.com/eqlabs/flow-wallet-service/datastore"
+	"github.com/eqlabs/flow-wallet-service/templates"
+)
 
 // Store manages data regarding accounts.
 type Store interface {
@@ -14,7 +17,7 @@ type Store interface {
 	InsertAccount(a *Account) error
 
 	// List accounts AccountTokens
-	AccountTokens(address string) ([]AccountToken, error)
+	AccountTokens(address string, tType *templates.TokenType) ([]AccountToken, error)
 
 	// Insert an AccountToken.
 	InsertAccountToken(at *AccountToken) error

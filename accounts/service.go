@@ -51,8 +51,7 @@ func (s *Service) InitAdminAccount() {
 		s.store.InsertAccount(&a)
 	}
 
-	tType := templates.FT
-	tokens, err := s.templates.ListTokens(&tType)
+	tokens, err := s.templates.ListTokens(nil)
 	if err != nil {
 		panic(err)
 	}
@@ -61,6 +60,7 @@ func (s *Service) InitAdminAccount() {
 			AccountAddress: a.Address,
 			TokenAddress:   t.Address,
 			TokenName:      t.Name,
+			TokenType:      t.Type,
 		}
 		s.store.InsertAccountToken(&at) // Ignore errors
 	}
@@ -110,6 +110,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 				AccountAddress: a.Address,
 				TokenAddress:   token.Address,
 				TokenName:      token.Name,
+				TokenType:      token.Type,
 			})
 		}
 
@@ -143,7 +144,7 @@ func (s *Service) Details(address string) (Account, error) {
 	return s.store.Account(address)
 }
 
-func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *Service) SetupToken(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -171,6 +172,7 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 			AccountAddress: address,
 			TokenAddress:   token.Address,
 			TokenName:      token.Name,
+			TokenType:      token.Type,
 		})
 
 		if err != nil && !strings.Contains(err.Error(), "duplicate key value") {
@@ -181,12 +183,12 @@ func (s *Service) SetupFungibleToken(ctx context.Context, sync bool, tokenName, 
 	return job, tx, err
 }
 
-func (s *Service) AccountFungibleTokens(address string) ([]AccountToken, error) {
+func (s *Service) AccountTokens(address string, tType *templates.TokenType) ([]AccountToken, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.store.AccountTokens(address)
+	return s.store.AccountTokens(address, tType)
 }

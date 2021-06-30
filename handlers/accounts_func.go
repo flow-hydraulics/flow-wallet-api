@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/eqlabs/flow-wallet-service/templates"
 	"github.com/gorilla/mux"
 )
 
@@ -66,14 +67,14 @@ func (s *Accounts) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	handleJsonResponse(rw, http.StatusOK, res)
 }
 
-func (s *Accounts) SetupFungibleTokenFunc(rw http.ResponseWriter, r *http.Request) {
+func (s *Accounts) SetupTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	a := vars["address"]
 	t := vars["tokenName"]
 
 	// Decide whether to serve sync or async, default async
 	sync := r.Header.Get(SyncHeader) != ""
-	job, tx, err := s.service.SetupFungibleToken(r.Context(), sync, t, a)
+	job, tx, err := s.service.SetupToken(r.Context(), sync, t, a)
 	var res interface{}
 	if sync {
 		res = tx
@@ -89,16 +90,17 @@ func (s *Accounts) SetupFungibleTokenFunc(rw http.ResponseWriter, r *http.Reques
 	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
-func (s *Accounts) AccountFungibleTokensFunc(rw http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	a := vars["address"]
+func (s *Accounts) GetAccountTokensFunc(tType templates.TokenType) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		a := vars["address"]
 
-	res, err := s.service.AccountFungibleTokens(a)
+		res, err := s.service.AccountTokens(a, &tType)
+		if err != nil {
+			handleError(rw, s.log, err)
+			return
+		}
 
-	if err != nil {
-		handleError(rw, s.log, err)
-		return
+		handleJsonResponse(rw, http.StatusOK, res)
 	}
-
-	handleJsonResponse(rw, http.StatusOK, res)
 }
