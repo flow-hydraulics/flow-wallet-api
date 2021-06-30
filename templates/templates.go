@@ -62,7 +62,7 @@ func FungibleBalanceCode(token *Token) string {
 	)
 }
 
-func tokenCode(tmpl_str string, token *Token) string {
+func tokenCode(tmplStr string, token *Token) string {
 	r := strings.NewReplacer(
 		"TOKEN_DECLARATION_NAME", token.Name,
 		"TOKEN_ADDRESS", token.Address,
@@ -71,7 +71,7 @@ func tokenCode(tmpl_str string, token *Token) string {
 		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.NameLowerCase),
 	)
 
-	return Code(&Template{Source: r.Replace(tmpl_str)})
+	return Code(&Template{Source: r.Replace(tmplStr)})
 }
 
 func makeChainReplacers(t templateVariables) chainReplacers {
