@@ -43,8 +43,7 @@ func NewService(
 	return &Service{store, km, fc, txs, tes, cfg}
 }
 
-func (s *Service) ListFungible() (*[]TokenDetails, error) {
-	tType := templates.FT
+func (s *Service) List(tType templates.TokenType) (*[]TokenDetails, error) {
 	enabled, err := s.templates.ListTokens(&tType)
 	if err != nil {
 		return nil, err
