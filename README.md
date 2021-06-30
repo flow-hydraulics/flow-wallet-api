@@ -69,19 +69,11 @@ Run:
 
 A comma separated list of fungible tokens and their corresponding addresses enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined.
 
-**NOTE:** For _fungible tokens_ it is necessary to add a 3rd parameter "lowercamelcase" name for each token. For FlowToken this would be "flowToken" and for FUSD "fusd". This is used to construct the vault name, receiver name and balance name in generic transaction templates. Consult the contract code for each token to derive the proper name (search for `.*Vault`, `.*Receiver`, `.*Balance`)
+**NOTE:** It is necessary to add a 3rd parameter "lowercamelcase" name for each token. For FlowToken this would be "flowToken" and for FUSD "fusd". This is used to construct the vault name, receiver name and balance name in generic transaction templates. Consult the contract code for each token to derive the proper name (search for `.*Vault`, `.*Receiver`, `.*Balance`)
 
 Examples:
 
-    # Only fungible tokens
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken
     ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd
-
-    # Only NFTs
-    ENABLED_TOKENS=ExampleNFT:0x0ae53cb6e3f42a79 # Note the missing 3rd param
-
-    # All together
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd,ExampleNFT:0x0ae53cb6e3f42a79
 
 ### Database
 
@@ -144,7 +136,7 @@ Configure Google KMS as the key storage for `flow-wallet-service` and set the ne
     PORT=3000
     ACCESS_API_HOST=localhost:3569
 
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
+    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken
 
     DATABASE_DSN=wallet.db
     DATABASE_TYPE=sqlite

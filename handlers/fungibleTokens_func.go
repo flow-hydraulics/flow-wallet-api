@@ -10,7 +10,12 @@ import (
 )
 
 func (s *FungibleTokens) ListFunc(rw http.ResponseWriter, r *http.Request) {
-	handleJsonResponse(rw, http.StatusOK, s.service.List())
+	tokens, err := s.service.ListFungible()
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+	handleJsonResponse(rw, http.StatusOK, tokens)
 }
 
 func (s *FungibleTokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {

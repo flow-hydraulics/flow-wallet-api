@@ -8,6 +8,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
+// TODO: should this actually be called Transaction or something similar?
 type Raw struct {
 	Code      string     `json:"code" gorm:"-"`
 	Arguments []Argument `json:"arguments" gorm:"-"`

@@ -24,29 +24,36 @@ const (
 )
 
 type Service struct {
-	db  Store
-	km  keys.Manager
-	fc  *client.Client
-	ts  *transactions.Service
-	cfg Config
+	store        Store
+	km           keys.Manager
+	fc           *client.Client
+	transactions *transactions.Service
+	templates    *templates.Service
+	cfg          Config
 }
 
 func NewService(
-	db Store,
+	store Store,
 	km keys.Manager,
 	fc *client.Client,
-	ts *transactions.Service) *Service {
+	txs *transactions.Service,
+	tes *templates.Service,
+) *Service {
 	cfg := ParseConfig()
-	return &Service{db, km, fc, ts, cfg}
+	return &Service{store, km, fc, txs, tes, cfg}
 }
 
-func (s *Service) List() []templates.Token {
-	enabled := templates.EnabledTokens()
-	tokens := make([]templates.Token, 0, len(enabled))
-	for _, t := range enabled {
-		tokens = append(tokens, t)
+func (s *Service) ListFungible() (*[]TokenDetails, error) {
+	tType := templates.FT
+	enabled, err := s.templates.ListTokens(&tType)
+	if err != nil {
+		return nil, err
 	}
-	return tokens
+	tokens := make([]TokenDetails, 0, len(*enabled))
+	for _, t := range *enabled {
+		tokens = append(tokens, TokenDetails{Name: t.Name, Address: t.Address})
+	}
+	return &tokens, nil
 }
 
 func (s *Service) Details(ctx context.Context, tokenName, address string) (TokenDetails, error) {
@@ -56,19 +63,19 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (Token
 		return TokenDetails{}, err
 	}
 
-	token, err := templates.NewToken(tokenName)
+	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return TokenDetails{}, err
 	}
 
 	r := templates.Raw{
-		Code: templates.FungibleBalanceCode(token),
+		Code: token.Balance,
 		Arguments: []templates.Argument{
 			cadence.NewAddress(flow.HexToAddress(address)),
 		},
 	}
 
-	b, err := s.ts.ExecuteScript(ctx, r)
+	b, err := s.transactions.ExecuteScript(ctx, r)
 	if err != nil {
 		return TokenDetails{}, err
 	}
@@ -89,7 +96,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 		return nil, nil, err
 	}
 
-	token, err := templates.NewToken(tokenName)
+	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,7 +109,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 
 	// Raw transfer template
 	raw := templates.Raw{
-		Code: templates.FungibleTransferCode(token),
+		Code: token.Transfer,
 		Arguments: []templates.Argument{
 			c_amount,
 			cadence.NewAddress(flow.HexToAddress(recipient)),
@@ -110,7 +117,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 	}
 
 	// Create the transaction
-	job, tx, err := s.ts.Create(ctx, runSync, sender, raw, transactions.FtTransfer)
+	job, tx, err := s.transactions.Create(ctx, runSync, sender, raw, transactions.FtTransfer)
 
 	// Initialise the transfer object
 	t := &FungibleTokenTransfer{
@@ -129,7 +136,7 @@ func (s *Service) CreateFtWithdrawal(ctx context.Context, runSync bool, tokenNam
 			return
 		}
 		t.TransactionId = tx.TransactionId
-		if err := s.db.InsertFungibleTokenTransfer(t); err != nil {
+		if err := s.store.InsertFungibleTokenTransfer(t); err != nil {
 			fmt.Printf("error while inserting token transfer: %s\n", err)
 		}
 	}()
@@ -150,7 +157,7 @@ func (s *Service) RegisterFtDeposit(token *templates.Token, transactionId, amoun
 	}
 
 	// Get existing transaction or create one
-	tx := s.ts.GetOrCreateTransaction(transactionId)
+	tx := s.transactions.GetOrCreateTransaction(transactionId)
 	if tx.TransactionType == transactions.Unknown {
 		// Transaction was just created
 		// Deposit mostly likely did not originate in this wallet service
@@ -160,13 +167,15 @@ func (s *Service) RegisterFtDeposit(token *templates.Token, transactionId, amoun
 			return err
 		}
 		tx.PayerAddress = flow_helpers.FormatAddress(flowTx.Payer)
-		if err := s.ts.UpdateTransaction(tx); err != nil {
+		if err := s.transactions.UpdateTransaction(tx); err != nil {
 			return err
 		}
 	}
 
+	// TODO: Add AccountToken for account if it doesn't already exist (it should but just to be sure)
+
 	// Check for existing deposit
-	if _, err := s.db.FungibleTokenDeposit(recipient, token.Name, tx.TransactionId); err != nil {
+	if _, err := s.store.FungibleTokenDeposit(recipient, token.Name, tx.TransactionId); err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			return err
 		}
@@ -184,7 +193,7 @@ func (s *Service) RegisterFtDeposit(token *templates.Token, transactionId, amoun
 		TokenName:        token.Name,
 	}
 
-	return s.db.InsertFungibleTokenTransfer(t)
+	return s.store.InsertFungibleTokenTransfer(t)
 }
 
 func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*FungibleTokenTransfer, error) {
@@ -194,7 +203,7 @@ func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*F
 		return nil, err
 	}
 
-	token, err := templates.NewToken(tokenName)
+	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return nil, err
 	}
@@ -203,9 +212,9 @@ func (s *Service) ListFtTransfers(transferType, address, tokenName string) ([]*F
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
 	case transferTypeWithdrawal:
-		return s.db.FungibleTokenWithdrawals(address, token.Name)
+		return s.store.FungibleTokenWithdrawals(address, token.Name)
 	case transferTypeDeposit:
-		return s.db.FungibleTokenDeposits(address, token.Name)
+		return s.store.FungibleTokenDeposits(address, token.Name)
 	}
 }
 
@@ -247,7 +256,7 @@ func (s *Service) GetFtTransfer(transferType, address, tokenName, transactionId 
 		return nil, err
 	}
 
-	token, err := templates.NewToken(tokenName)
+	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return nil, err
 	}
@@ -256,9 +265,9 @@ func (s *Service) GetFtTransfer(transferType, address, tokenName, transactionId 
 	default:
 		return nil, fmt.Errorf("unknown transfer type %s", transferType)
 	case transferTypeWithdrawal:
-		return s.db.FungibleTokenWithdrawal(address, token.Name, transactionId)
+		return s.store.FungibleTokenWithdrawal(address, token.Name, transactionId)
 	case transferTypeDeposit:
-		return s.db.FungibleTokenDeposit(address, token.Name, transactionId)
+		return s.store.FungibleTokenDeposit(address, token.Name, transactionId)
 	}
 }
 
@@ -288,7 +297,7 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync boo
 		return nil, nil, err
 	}
 
-	token, err := templates.NewToken(tokenName)
+	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return nil, nil, err
 	}

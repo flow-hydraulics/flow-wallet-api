@@ -11,18 +11,18 @@ import (
 
 // Service defines the API for job HTTP handlers.
 type Service struct {
-	db Store
+	store Store
 }
 
 // NewService initiates a new job service.
-func NewService(db Store) *Service {
-	return &Service{db}
+func NewService(store Store) *Service {
+	return &Service{store}
 }
 
 // List returns all jobs in the datastore.
 func (s *Service) List(limit, offset int) (result []Job, err error) {
 	o := datastore.ParseListOptions(limit, offset)
-	return s.db.Jobs(o)
+	return s.store.Jobs(o)
 }
 
 // Details returns a specific job.
@@ -38,7 +38,7 @@ func (s *Service) Details(jobId string) (result Job, err error) {
 	}
 
 	// Get from datastore
-	result, err = s.db.Job(id)
+	result, err = s.store.Job(id)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{

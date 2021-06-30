@@ -16,7 +16,7 @@ import (
 )
 
 type KeyManager struct {
-	db              keys.Store
+	store           keys.Store
 	fc              *client.Client
 	crypter         encryption.Crypter
 	adminAccountKey keys.Private
@@ -25,7 +25,7 @@ type KeyManager struct {
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
+func NewKeyManager(store keys.Store, fc *client.Client) *KeyManager {
 	cfg := ParseConfig()
 
 	adminAccountKey := keys.Private{
@@ -39,7 +39,7 @@ func NewKeyManager(db keys.Store, fc *client.Client) *KeyManager {
 	crypter := encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
 
 	return &KeyManager{
-		db,
+		store,
 		fc,
 		crypter,
 		adminAccountKey,
@@ -108,7 +108,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 		k = s.adminAccountKey
 	} else {
 		// Get the "least recently used" key for this address
-		sk, err := s.db.AccountKey(flow_helpers.FormatAddress(address))
+		sk, err := s.store.AccountKey(flow_helpers.FormatAddress(address))
 		if err != nil {
 			return keys.Authorizer{}, err
 		}

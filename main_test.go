@@ -149,13 +149,16 @@ func TestAccountServices(t *testing.T) {
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
 	defer wp.Stop()
 	wp.AddWorker(1)
 
-	service := accounts.NewService(accountStore, km, fc, wp, nil)
+	service := accounts.NewService(accountStore, km, fc, wp, nil, templateService)
 
 	t.Run("admin init", func(t *testing.T) {
 		service.InitAdminAccount()
@@ -241,6 +244,9 @@ func TestAccountHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -248,7 +254,7 @@ func TestAccountHandlers(t *testing.T) {
 	wp.AddWorker(1)
 
 	store := accounts.NewGormStore(db)
-	service := accounts.NewService(store, km, fc, wp, nil)
+	service := accounts.NewService(store, km, fc, wp, nil, templateService)
 	h := handlers.NewAccounts(logger, service)
 
 	router := mux.NewRouter()
@@ -381,6 +387,9 @@ func TestTransactionHandlers(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -396,11 +405,12 @@ func TestTransactionHandlers(t *testing.T) {
 	router.Handle("/{address}/transactions", h.Create()).Methods(http.MethodPost)
 	router.Handle("/{address}/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
 
-	flowToken, err := templates.NewToken("FlowToken")
+	token, err := templateService.GetTokenByName("FlowToken")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tFlow := templates.FungibleTransferCode(flowToken)
+
+	tFlow := templates.FungibleTransferCode(token)
 	tFlowBytes, err := json.Marshal(tFlow)
 	if err != nil {
 		t.Fatal(err)
@@ -735,6 +745,9 @@ func TestTokenServices(t *testing.T) {
 	transactionStore := transactions.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -742,8 +755,8 @@ func TestTokenServices(t *testing.T) {
 	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	service := tokens.NewService(tokenStore, km, fc, transactionService)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
+	service := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
@@ -902,6 +915,9 @@ func TestTokenHandlers(t *testing.T) {
 	transactionStore := transactions.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	km := basic.NewKeyManager(keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore)
@@ -909,8 +925,8 @@ func TestTokenHandlers(t *testing.T) {
 	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService)
-	service := tokens.NewService(tokenStore, km, fc, transactionService)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
+	service := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	tokenHandlers := handlers.NewFungibleTokens(logger, service)
 	accountHandlers := handlers.NewAccounts(logger, accountService)
@@ -1017,7 +1033,7 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Withdrawals
-	token, err := templates.NewToken("FlowToken")
+	token, err := templateService.GetTokenByName("FlowToken")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1144,8 +1160,8 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/deposits", account.Address, "some-invalid-token-name"),
-			expected:    `token some-invalid-token-name not enabled`,
-			status:      http.StatusBadRequest,
+			expected:    `record not found`,
+			status:      http.StatusNotFound,
 		},
 		{
 			name:        "list deposits invalid address",
@@ -1178,8 +1194,8 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/deposits/%s", account.Address, "some-invalid-token-name", transfer.TransactionId),
-			expected:    `token some-invalid-token-name not enabled`,
-			status:      http.StatusBadRequest,
+			expected:    `record not found`,
+			status:      http.StatusNotFound,
 		},
 		{
 			name:        "get deposit details invalid address",
@@ -1231,6 +1247,9 @@ func TestNFTDeployment(t *testing.T) {
 	defer os.Remove(testDbDSN)
 	defer gorm.Close(db)
 
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
@@ -1243,7 +1262,7 @@ func TestNFTDeployment(t *testing.T) {
 	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
@@ -1251,4 +1270,248 @@ func TestNFTDeployment(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func TestTemplateHandlers(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	db, err := gorm.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(testDbDSN)
+	defer gorm.Close(db)
+
+	templateStore := templates.NewGormStore(db)
+	templateService := templates.NewService(templateStore)
+	templateHandler := handlers.NewTemplates(logger, templateService)
+
+	router := mux.NewRouter()
+	router.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)
+	router.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)
+	router.Handle("/tokens/{id}", templateHandler.GetToken()).Methods(http.MethodGet)
+	router.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)
+
+	addStepts := []httpTestStep{
+		{
+			name:        "Add with empty body",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `empty body`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with invalid body",
+			method:      http.MethodPost,
+			body:        strings.NewReader(`invalid`),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `invalid body`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with invalid name",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `not a valid name: ""`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with invalid address",
+			method:      http.MethodPost,
+			body:        strings.NewReader(`{"name":"TestToken","address":"0x1"}`),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `not a valid address: "0x1"`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Add with valid body",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Add duplicate",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    `UNIQUE constraint failed: tokens.name`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "List not empty",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`\[*{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}*\]`, cfg.AdminAddress),
+			status:      http.StatusOK,
+		},
+	}
+
+	getSteps := []httpTestStep{
+		{
+			name:        "Get invalid id",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens/invalid-id",
+			expected:    `parsing "invalid-id": invalid syntax`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Get not found",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens/100",
+			expected:    `record not found`,
+			status:      http.StatusNotFound,
+		},
+		{
+			name:        "Get valid id",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         "/tokens/1",
+			expected:    `{"id":1,.*"type":"FT"}`,
+			status:      http.StatusOK,
+		},
+	}
+
+	removeSteps := []httpTestStep{
+		{
+			name:        "Remove invalid id",
+			method:      http.MethodDelete,
+			contentType: "application/json",
+			url:         "/tokens/invalid-id",
+			expected:    `parsing "invalid-id": invalid syntax`,
+			status:      http.StatusBadRequest,
+		},
+		{
+			// Gorm won't return an error if deleting a non-existent entry
+			name:        "Remove not found",
+			method:      http.MethodDelete,
+			contentType: "application/json",
+			url:         "/tokens/100",
+			expected:    `100`,
+			status:      http.StatusOK,
+		},
+		{
+			name:        "Remove valid id",
+			method:      http.MethodDelete,
+			contentType: "application/json",
+			url:         "/tokens/1",
+			expected:    "1",
+			status:      http.StatusOK,
+		},
+	}
+
+	typeSteps := []httpTestStep{
+		{
+			name:        "Add invalid type",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Add FT valid",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Add NFT valid",
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress)),
+			contentType: "application/json",
+			url:         "/tokens",
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress),
+			status:      http.StatusCreated,
+		},
+	}
+
+	for _, s := range addStepts {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	for _, s := range getSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	for _, s := range removeSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+
+	for _, s := range typeSteps {
+		t.Run(s.name, func(t *testing.T) {
+			handleStepRequest(s, router, t)
+		})
+	}
+}
+
+func TestTemplateService(t *testing.T) {
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	defer goleak.VerifyNone(t, ignoreOpenCensus)
+
+	db, err := gorm.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(testDbDSN)
+	defer gorm.Close(db)
+
+	store := templates.NewGormStore(db)
+	service := templates.NewService(store)
+
+	// Add a token for testing
+	token := templates.Token{Name: "RandomTokenName", Address: cfg.AdminAddress}
+	err = service.AddToken(&token)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("Get token by name", func(t *testing.T) {
+		t1, err := service.GetTokenByName("RandomTokenName")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t2, err := service.GetTokenByName("randomtokenname")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t3, err := service.GetTokenByName("randomTokenName")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = service.GetTokenByName("othername")
+		if err == nil {
+			t.Error("expected an error")
+		}
+
+		if t1.Address != token.Address || t2.Address != token.Address || t3.Address != token.Address {
+			t.Error("expected tokens to be equal")
+		}
+	})
+
 }

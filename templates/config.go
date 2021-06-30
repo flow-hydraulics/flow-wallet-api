@@ -30,7 +30,7 @@ func parseConfig() *config {
 			ss := strings.Split(s, ":")
 			token := Token{Name: ss[0], Address: ss[1]}
 			if len(ss) > 2 {
-				token.lcName = ss[2]
+				token.NameLowerCase = ss[2]
 			}
 			// Use all lowercase as the key so we can do case insenstive matchig
 			// in URLs
