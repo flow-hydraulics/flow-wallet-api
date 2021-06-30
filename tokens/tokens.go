@@ -24,7 +24,8 @@ type FungibleTokenTransfer struct {
 
 type TokenDetails struct {
 	Name    string `json:"name"`
-	Balance string `json:"balance"`
+	Address string `json:"address,omitempty"`
+	Balance string `json:"balance,omitempty"`
 }
 
 // FungibleTokenTransferBase is used for JSON interfacing

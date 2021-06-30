@@ -43,15 +43,15 @@ func NewService(
 	return &Service{store, km, fc, txs, tes, cfg}
 }
 
-func (s *Service) ListFungible() (*[]templates.Token, error) {
+func (s *Service) ListFungible() (*[]TokenDetails, error) {
 	tType := templates.FT
 	enabled, err := s.templates.ListTokens(&tType)
 	if err != nil {
 		return nil, err
 	}
-	tokens := make([]templates.Token, 0, len(*enabled))
+	tokens := make([]TokenDetails, 0, len(*enabled))
 	for _, t := range *enabled {
-		tokens = append(tokens, t)
+		tokens = append(tokens, TokenDetails{Name: t.Name, Address: t.Address})
 	}
 	return &tokens, nil
 }
