@@ -1231,6 +1231,8 @@ func TestTokenHandlers(t *testing.T) {
 }
 
 func TestNFTDeployment(t *testing.T) {
+	t.Skip() // Currently not supported
+
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
