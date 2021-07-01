@@ -39,5 +39,5 @@ func (s *Accounts) SetupToken() http.Handler {
 }
 
 func (s *Accounts) AccountTokens(tType templates.TokenType) http.Handler {
-	return s.GetAccountTokensFunc(tType)
+	return s.MakeAccountTokensFunc(tType)
 }

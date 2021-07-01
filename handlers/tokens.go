@@ -23,11 +23,6 @@ func NewTokens(l *log.Logger, service *tokens.Service, tType templates.TokenType
 	return &Tokens{l, service, tType}
 }
 
-func (s *Tokens) List() http.Handler {
-	h := http.HandlerFunc(s.ListFunc)
-	return h
-}
-
 func (s *Tokens) Details() http.Handler {
 	h := http.HandlerFunc(s.DetailsFunc)
 	return h

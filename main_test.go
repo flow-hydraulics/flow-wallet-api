@@ -1291,7 +1291,7 @@ func TestTemplateHandlers(t *testing.T) {
 
 	router := mux.NewRouter()
 	router.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)
-	router.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)
+	router.Handle("/tokens", templateHandler.ListTokens(nil)).Methods(http.MethodGet)
 	router.Handle("/tokens/{id_or_name}", templateHandler.GetToken()).Methods(http.MethodGet)
 	router.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)
 

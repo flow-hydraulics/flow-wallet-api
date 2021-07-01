@@ -36,14 +36,15 @@ func (s *Templates) AddTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	handleJsonResponse(rw, http.StatusCreated, newToken)
 }
 
-func (s *Templates) ListTokensFunc(rw http.ResponseWriter, r *http.Request) {
-	tokens, err := s.service.ListTokens(nil)
-	if err != nil {
-		handleError(rw, s.log, err)
-		return
+func (s *Templates) MakeListTokensFunc(tType *templates.TokenType) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		tokens, err := s.service.ListTokens(tType)
+		if err != nil {
+			handleError(rw, s.log, err)
+			return
+		}
+		handleJsonResponse(rw, http.StatusOK, tokens)
 	}
-
-	handleJsonResponse(rw, http.StatusOK, tokens)
 }
 
 func (s *Templates) GetTokenFunc(rw http.ResponseWriter, r *http.Request) {

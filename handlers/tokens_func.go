@@ -10,16 +10,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Tokens) ListFunc(rw http.ResponseWriter, r *http.Request) {
-	tokens, err := s.service.List(s.tokenType)
-	if err != nil {
-		handleError(rw, s.log, err)
-		return
-	}
-
-	handleJsonResponse(rw, http.StatusOK, tokens)
-}
-
 func (s *Tokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	address := vars["address"]

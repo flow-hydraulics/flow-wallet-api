@@ -43,10 +43,6 @@ func NewService(
 	return &Service{store, km, fc, txs, tes, cfg}
 }
 
-func (s *Service) List(tType templates.TokenType) (*[]templates.BasicToken, error) {
-	return s.templates.ListTokens(&tType)
-}
-
 func (s *Service) Details(ctx context.Context, tokenName, address string) (TokenDetails, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
