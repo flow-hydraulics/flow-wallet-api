@@ -30,7 +30,7 @@ func TestParsing(t *testing.T) {
 		token := &Token{Name: "FlowToken", Address: "test-address", NameLowerCase: "flowToken"}
 		c := FungibleTransferCode(token)
 		if strings.Contains(c, ".cdc") {
-			t.Error("exptected all cadence file references to have been replaced")
+			t.Error("expected all cadence file references to have been replaced")
 		}
 		if !strings.Contains(c, fmt.Sprintf("import FlowToken from %s", token.Address)) {
 			t.Error("expected to find import statement for token address")
@@ -41,7 +41,7 @@ func TestParsing(t *testing.T) {
 		token := &Token{Name: "FUSD", Address: "test-address", NameLowerCase: "fusd"}
 		c := FungibleTransferCode(token)
 		if strings.Contains(c, ".cdc") {
-			t.Error("exptected all cadence file references to have been replaced")
+			t.Error("expected all cadence file references to have been replaced")
 		}
 		if !strings.Contains(c, fmt.Sprintf("import FUSD from %s", token.Address)) {
 			t.Error("expected to find import statement for token address")
@@ -76,7 +76,7 @@ func TestParsing(t *testing.T) {
 				}
 			`)
 		if strings.Contains(c, ".cdc") {
-			t.Error("exptected all cadence file references to have been replaced")
+			t.Error("expected all cadence file references to have been replaced")
 		}
 		if !strings.Contains(c, fmt.Sprintf("import ExampleNFT from %s", token.Address)) {
 			t.Error("expected to find import statement for token address")
