@@ -16,6 +16,8 @@ type Service struct {
 func NewService(store Store) *Service {
 	cfg := parseConfig()
 	// Add all enabled tokens from config as fungible tokens
+	// TODO: Do not try to insert if already exists, will increment next ID every time
+	// TODO: This kind of inserting is done elsewhere, check where and fix
 	for _, t := range cfg.enabledTokens {
 		t.Type = FT
 		t.Setup = FungibleSetupCode(&t)
