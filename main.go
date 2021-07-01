@@ -165,10 +165,10 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	rv.Handle("/jobs/{jobId}", jobsHandler.Details()).Methods(http.MethodGet) // details
 
 	// Token templates
-	rv.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)           // create
-	rv.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)          // list
-	rv.Handle("/tokens/{id}", templateHandler.GetToken()).Methods(http.MethodGet)       // details
-	rv.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete) // delete
+	rv.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)             // create
+	rv.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)            // list
+	rv.Handle("/tokens/{id_or_name}", templateHandler.GetToken()).Methods(http.MethodGet) // details
+	rv.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)   // delete
 
 	// Account
 	ra := rv.PathPrefix("/accounts").Subrouter()

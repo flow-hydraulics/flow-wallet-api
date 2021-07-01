@@ -4,6 +4,41 @@
 GET http://localhost:3000/v1/fungible-tokens
 content-type: application/json
 
+### List all enabled non-fungible tokens
+GET http://localhost:3000/v1/non-fungible-tokens
+content-type: application/json
+
+
+### Enable ExampleNFT
+POST http://localhost:3000/v1/tokens
+content-type: application/json
+
+{
+  "name":"ExampleNFT",
+  "address":"{{$dotenv ADMIN_ADDRESS}}",
+  "type":"NFT",
+  "setup":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction {\nprepare(signer: AuthAccount) {\nif signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath) != nil {\nreturn\n}\nlet collection <- ExampleNFT.createEmptyCollection()\nsigner.save(<-collection, to: ExampleNFT.CollectionStoragePath)\nsigner.link<&ExampleNFT.Collection{NonFungibleToken.CollectionPublic, ExampleNFT.ExampleNFTCollectionPublic}>(ExampleNFT.CollectionPublicPath, target: ExampleNFT.CollectionStoragePath)\n}\n}\n",
+  "transfer":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction(recipient: Address, withdrawID: UInt64) {\nprepare(signer: AuthAccount) {\nlet recipient = getAccount(recipient)\nlet collectionRef = signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath) ?? panic(\"Could not borrow a reference to the owner's collection\")\nlet depositRef = recipient.getCapability(ExampleNFT.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()!\nlet nft <- collectionRef.withdraw(withdrawID: withdrawID)\ndepositRef.deposit(token: <-nft)\n}\n}\n"
+}
+
+### List all enabled tokens
+GET http://localhost:3000/v1/tokens
+content-type: application/json
+
+### Get token details with id
+GET http://localhost:3000/v1/tokens/5
+content-type: application/json
+
+### Get token details with name
+GET http://localhost:3000/v1/tokens/examplenft
+content-type: application/json
+
+
+### Remove an enabled token
+DELETE http://localhost:3000/v1/tokens/3
+content-type: application/json
+
+
 ### Get accounts tokens for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens HTTP/1.1
 content-type: application/json

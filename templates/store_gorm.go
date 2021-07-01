@@ -19,17 +19,18 @@ func (s *GormStore) Insert(q *Token) error {
 	return s.db.Omit("ID").Create(q).Error
 }
 
-func (s *GormStore) List(tType *TokenType) (*[]Token, error) {
-	var tt = &[]Token{}
+func (s *GormStore) List(tType *TokenType) (*[]BasicToken, error) {
+	var tt = &[]BasicToken{}
 	var err error
+
+	q := s.db.Model(&Token{})
 
 	if tType != nil {
 		// Filter by type
-		err = s.db.Where(&Token{Type: *tType}).Find(tt).Error
-	} else {
-		// Find all
-		err = s.db.Find(tt).Error
+		q = q.Where(&Token{Type: *tType})
 	}
+
+	err = q.Find(tt).Error
 
 	if err != nil {
 		return nil, err

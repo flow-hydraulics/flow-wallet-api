@@ -42,7 +42,7 @@ func NewListener(fc *client.Client, db Store, maxDiff uint64) *Listener {
 	return &Listener{nil, make(chan bool), make(map[string]bool), nil, fc, db, maxDiff}
 }
 
-func TypeFromToken(t templates.Token, tokenEvent string) string {
+func TypeFromToken(t templates.BasicToken, tokenEvent string) string {
 	address := strings.TrimPrefix(t.Address, "0x")
 	return fmt.Sprintf("A.%s.%s.%s", address, t.Name, tokenEvent)
 }
@@ -98,11 +98,11 @@ func (l *Listener) RemoveType(t string) {
 	delete(l.types, t)
 }
 
-func (l *Listener) ListenTokenEvent(t templates.Token, tokenEvent string) {
+func (l *Listener) ListenTokenEvent(t templates.BasicToken, tokenEvent string) {
 	l.AddType(TypeFromToken(t, tokenEvent))
 }
 
-func (l *Listener) RemoveTokenEvent(t templates.Token, tokenEvent string) {
+func (l *Listener) RemoveTokenEvent(t templates.BasicToken, tokenEvent string) {
 	l.RemoveType(TypeFromToken(t, tokenEvent))
 }
 

@@ -20,6 +20,14 @@ type Token struct {
 	Type          TokenType `json:"type"`
 }
 
+// BasicToken is a simplifed representation of a Token used in listings
+type BasicToken struct {
+	ID      uint64    `json:"id"`
+	Name    string    `json:"name"`
+	Address string    `json:"address"`
+	Type    TokenType `json:"type"`
+}
+
 type chainReplacers map[flow.ChainID]*strings.Replacer
 type knownAddresses map[flow.ChainID]string
 type templateVariables map[string]knownAddresses

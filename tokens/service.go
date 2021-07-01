@@ -43,16 +43,8 @@ func NewService(
 	return &Service{store, km, fc, txs, tes, cfg}
 }
 
-func (s *Service) List(tType templates.TokenType) (*[]TokenDetails, error) {
-	enabled, err := s.templates.ListTokens(&tType)
-	if err != nil {
-		return nil, err
-	}
-	tokens := make([]TokenDetails, 0, len(*enabled))
-	for _, t := range *enabled {
-		tokens = append(tokens, TokenDetails{Name: t.Name, Address: t.Address})
-	}
-	return &tokens, nil
+func (s *Service) List(tType templates.TokenType) (*[]templates.BasicToken, error) {
+	return s.templates.ListTokens(&tType)
 }
 
 func (s *Service) Details(ctx context.Context, tokenName, address string) (TokenDetails, error) {
