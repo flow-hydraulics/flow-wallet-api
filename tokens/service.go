@@ -303,12 +303,12 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync boo
 
 	n := token.Name
 
-	t_str, err := template_strings.GetByName(n)
+	tmplStr, err := template_strings.GetByName(n)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	src := templates.Code(&templates.Template{Source: t_str})
+	src := templates.TokenCode(token, tmplStr)
 
 	c := flow_templates.Contract{Name: n, Source: src}
 

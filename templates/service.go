@@ -45,9 +45,9 @@ func (s *Service) AddToken(t *Token) error {
 	}
 
 	// Received code templates may have values that need replacing
-	t.Setup = Code(&Template{Source: t.Setup})
-	t.Transfer = Code(&Template{Source: t.Transfer})
-	t.Balance = Code(&Template{Source: t.Balance})
+	t.Setup = TokenCode(t, t.Setup)
+	t.Transfer = TokenCode(t, t.Transfer)
+	t.Balance = TokenCode(t, t.Balance)
 
 	return s.store.Insert(t)
 }
