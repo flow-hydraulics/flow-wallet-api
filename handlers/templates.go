@@ -22,8 +22,8 @@ func (s *Templates) AddToken() http.Handler {
 	return UseJson(h)
 }
 
-func (s *Templates) ListTokens() http.Handler {
-	return http.HandlerFunc(s.ListTokensFunc)
+func (s *Templates) ListTokens(tType *templates.TokenType) http.Handler {
+	return s.MakeListTokensFunc(tType)
 }
 
 func (s *Templates) GetToken() http.Handler {

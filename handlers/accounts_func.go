@@ -90,7 +90,7 @@ func (s *Accounts) SetupTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
-func (s *Accounts) GetAccountTokensFunc(tType templates.TokenType) http.HandlerFunc {
+func (s *Accounts) MakeAccountTokensFunc(tType templates.TokenType) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		a := vars["address"]

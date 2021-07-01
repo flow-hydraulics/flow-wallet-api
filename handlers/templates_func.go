@@ -36,29 +36,37 @@ func (s *Templates) AddTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	handleJsonResponse(rw, http.StatusCreated, newToken)
 }
 
-func (s *Templates) ListTokensFunc(rw http.ResponseWriter, r *http.Request) {
-	tokens, err := s.service.ListTokens(nil)
-	if err != nil {
-		handleError(rw, s.log, err)
-		return
+func (s *Templates) MakeListTokensFunc(tType *templates.TokenType) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		tokens, err := s.service.ListTokens(tType)
+		if err != nil {
+			handleError(rw, s.log, err)
+			return
+		}
+		handleJsonResponse(rw, http.StatusOK, tokens)
 	}
-
-	handleJsonResponse(rw, http.StatusOK, tokens)
 }
 
 func (s *Templates) GetTokenFunc(rw http.ResponseWriter, r *http.Request) {
+	var token *templates.Token
+	var err error
+
 	vars := mux.Vars(r)
+	idOrName := vars["id_or_name"]
 
-	id, err := strconv.ParseUint(vars["id"], 10, 64)
-	if err != nil {
-		handleError(rw, s.log, err)
-		return
-	}
-
-	token, err := s.service.GetTokenById(id)
-	if err != nil {
-		handleError(rw, s.log, err)
-		return
+	id, err := strconv.ParseUint(idOrName, 10, 64)
+	if err == nil {
+		token, err = s.service.GetTokenById(id)
+		if err != nil {
+			handleError(rw, s.log, err)
+			return
+		}
+	} else {
+		token, err = s.service.GetTokenByName(idOrName)
+		if err != nil {
+			handleError(rw, s.log, err)
+			return
+		}
 	}
 
 	handleJsonResponse(rw, http.StatusOK, token)

@@ -1291,8 +1291,8 @@ func TestTemplateHandlers(t *testing.T) {
 
 	router := mux.NewRouter()
 	router.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)
-	router.Handle("/tokens", templateHandler.ListTokens()).Methods(http.MethodGet)
-	router.Handle("/tokens/{id}", templateHandler.GetToken()).Methods(http.MethodGet)
+	router.Handle("/tokens", templateHandler.ListTokens(nil)).Methods(http.MethodGet)
+	router.Handle("/tokens/{id_or_name}", templateHandler.GetToken()).Methods(http.MethodGet)
 	router.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)
 
 	addStepts := []httpTestStep{
@@ -1365,8 +1365,8 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens/invalid-id",
-			expected:    `parsing "invalid-id": invalid syntax`,
-			status:      http.StatusBadRequest,
+			expected:    `record not found`,
+			status:      http.StatusNotFound,
 		},
 		{
 			name:        "Get not found",

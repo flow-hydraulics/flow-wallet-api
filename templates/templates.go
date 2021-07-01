@@ -2,15 +2,12 @@ package templates
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/eqlabs/flow-wallet-service/templates/template_strings"
 	"github.com/onflow/flow-go-sdk"
 )
-
-type Template struct {
-	Source string
-}
 
 type Token struct {
 	ID            uint64    `json:"id"`
@@ -23,9 +20,17 @@ type Token struct {
 	Type          TokenType `json:"type"`
 }
 
+// BasicToken is a simplifed representation of a Token used in listings
+type BasicToken struct {
+	ID      uint64    `json:"id"`
+	Name    string    `json:"name"`
+	Address string    `json:"address"`
+	Type    TokenType `json:"type"`
+}
+
 type chainReplacers map[flow.ChainID]*strings.Replacer
-type chainAddresses map[flow.ChainID]string
-type templateVariables map[string]chainAddresses
+type knownAddresses map[flow.ChainID]string
+type templateVariables map[string]knownAddresses
 
 var chains []flow.ChainID = []flow.ChainID{
 	flow.Emulator,
@@ -33,48 +38,9 @@ var chains []flow.ChainID = []flow.ChainID{
 	flow.Mainnet,
 }
 
-var replacers chainReplacers
+var knownAddressesReplacers chainReplacers
 
-// Code converts a Template to string (source code).
-func Code(t *Template) string {
-	c := parseConfig().ChainId
-	return replacers[c].Replace(t.Source)
-}
-
-func FungibleTransferCode(token *Token) string {
-	return tokenCode(
-		template_strings.GenericFungibleTransfer,
-		token,
-	)
-}
-
-func FungibleSetupCode(token *Token) string {
-	return tokenCode(
-		template_strings.GenericFungibleSetup,
-		token,
-	)
-}
-
-func FungibleBalanceCode(token *Token) string {
-	return tokenCode(
-		template_strings.GenericFungibleBalance,
-		token,
-	)
-}
-
-func tokenCode(tmplStr string, token *Token) string {
-	r := strings.NewReplacer(
-		"TOKEN_DECLARATION_NAME", token.Name,
-		"TOKEN_ADDRESS", token.Address,
-		"TOKEN_VAULT", fmt.Sprintf("%sVault", token.NameLowerCase),
-		"TOKEN_RECEIVER", fmt.Sprintf("%sReceiver", token.NameLowerCase),
-		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.NameLowerCase),
-	)
-
-	return Code(&Template{Source: r.Replace(tmplStr)})
-}
-
-func makeChainReplacers(t templateVariables) chainReplacers {
+func makeReplacers(t templateVariables) chainReplacers {
 	r := make(chainReplacers, len(chains))
 	for _, c := range chains {
 		vv := make([]string, len(t)*2)
@@ -84,4 +50,54 @@ func makeChainReplacers(t templateVariables) chainReplacers {
 		r[c] = strings.NewReplacer(vv...)
 	}
 	return r
+}
+
+func TokenCode(token *Token, tmplStr string) string {
+
+	// Regex that matches all references to cadence source files
+	// For example:
+	// - "../../contracts/Source.cdc"
+	// - "./Source.cdc"
+	// - "Source.cdc"
+	matchCadenceFiles := regexp.MustCompile(`"(.*?)(\w+\.cdc)"`)
+
+	// Replace all above matches with just the filename, without quotes
+	replaceCadenceFiles := "$2"
+
+	// Replaces all TokenName.cdc's with TOKEN_ADDRESS
+	sourceFileReplacer := strings.NewReplacer(
+		fmt.Sprintf("%s.cdc", token.Name), "TOKEN_ADDRESS",
+	)
+
+	templateReplacer := strings.NewReplacer(
+		"TOKEN_DECLARATION_NAME", token.Name,
+		"TOKEN_ADDRESS", token.Address,
+		"TOKEN_VAULT", fmt.Sprintf("%sVault", token.NameLowerCase),
+		"TOKEN_RECEIVER", fmt.Sprintf("%sReceiver", token.NameLowerCase),
+		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.NameLowerCase),
+	)
+
+	knownAddressesReplacer := knownAddressesReplacers[parseConfig().ChainId]
+
+	code := tmplStr
+
+	// Ordering matters here
+	code = matchCadenceFiles.ReplaceAllString(code, replaceCadenceFiles)
+	code = sourceFileReplacer.Replace(code)
+	code = templateReplacer.Replace(code)
+	code = knownAddressesReplacer.Replace(code)
+
+	return code
+}
+
+func FungibleTransferCode(token *Token) string {
+	return TokenCode(token, template_strings.GenericFungibleTransfer)
+}
+
+func FungibleSetupCode(token *Token) string {
+	return TokenCode(token, template_strings.GenericFungibleSetup)
+}
+
+func FungibleBalanceCode(token *Token) string {
+	return TokenCode(token, template_strings.GenericFungibleBalance)
 }

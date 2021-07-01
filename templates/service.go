@@ -16,6 +16,8 @@ type Service struct {
 func NewService(store Store) *Service {
 	cfg := parseConfig()
 	// Add all enabled tokens from config as fungible tokens
+	// TODO: Do not try to insert if already exists, will increment next ID every time
+	// TODO: This kind of inserting is done elsewhere, check where and fix
 	for _, t := range cfg.enabledTokens {
 		t.Type = FT
 		t.Setup = FungibleSetupCode(&t)
@@ -45,14 +47,14 @@ func (s *Service) AddToken(t *Token) error {
 	}
 
 	// Received code templates may have values that need replacing
-	t.Setup = Code(&Template{Source: t.Setup})
-	t.Transfer = Code(&Template{Source: t.Transfer})
-	t.Balance = Code(&Template{Source: t.Balance})
+	t.Setup = TokenCode(t, t.Setup)
+	t.Transfer = TokenCode(t, t.Transfer)
+	t.Balance = TokenCode(t, t.Balance)
 
 	return s.store.Insert(t)
 }
 
-func (s *Service) ListTokens(tType *TokenType) (*[]Token, error) {
+func (s *Service) ListTokens(tType *TokenType) (*[]BasicToken, error) {
 	return s.store.List(tType)
 }
 
