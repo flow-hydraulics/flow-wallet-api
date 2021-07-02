@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/tokens"
 )
 
@@ -14,6 +15,15 @@ type Tokens struct {
 
 func NewTokens(l *log.Logger, service *tokens.Service) *Tokens {
 	return &Tokens{l, service}
+}
+
+func (s *Tokens) Setup() http.Handler {
+	h := http.HandlerFunc(s.SetupFunc)
+	return h
+}
+
+func (s *Tokens) AccountTokens(tType templates.TokenType) http.Handler {
+	return s.MakeAccountTokensFunc(tType)
 }
 
 func (s *Tokens) Details() http.Handler {

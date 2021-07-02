@@ -50,20 +50,6 @@ func (s *Service) InitAdminAccount() {
 		a = Account{Address: s.cfg.AdminAccountAddress}
 		s.store.InsertAccount(&a)
 	}
-
-	tokens, err := s.templates.ListTokens(nil)
-	if err != nil {
-		panic(err)
-	}
-	for _, t := range *tokens {
-		at := AccountToken{
-			AccountAddress: a.Address,
-			TokenAddress:   t.Address,
-			TokenName:      t.Name,
-			TokenType:      t.Type,
-		}
-		s.store.InsertAccountToken(&at) // Ignore errors
-	}
 }
 
 // List returns all accounts in the datastore.
@@ -102,18 +88,6 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			return "", err
 		}
 
-		// Store an AccountToken named FlowToken for the account as it is automatically
-		// enabled on all accounts
-		token, err := s.templates.GetTokenByName("FlowToken")
-		if err == nil { // If err != nil, FlowToken is not enabled for some reason
-			s.store.InsertAccountToken(&AccountToken{ // Ignore errors
-				AccountAddress: a.Address,
-				TokenAddress:   token.Address,
-				TokenName:      token.Name,
-				TokenType:      token.Type,
-			})
-		}
-
 		return a.Address, nil
 	})
 
@@ -142,53 +116,4 @@ func (s *Service) Details(address string) (Account, error) {
 	}
 
 	return s.store.Account(address)
-}
-
-func (s *Service) SetupToken(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
-	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	token, err := s.templates.GetTokenByName(tokenName)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	raw := templates.Raw{
-		Code: token.Setup,
-	}
-
-	job, tx, err := s.transactions.Create(ctx, sync, address, raw, transactions.FtSetup)
-
-	// Handle adding token to account in database
-	go func() {
-		if err := job.Wait(true); err != nil && !strings.Contains(err.Error(), "vault exists") {
-			return
-		}
-
-		err = s.store.InsertAccountToken(&AccountToken{
-			AccountAddress: address,
-			TokenAddress:   token.Address,
-			TokenName:      token.Name,
-			TokenType:      token.Type,
-		})
-
-		if err != nil && !strings.Contains(err.Error(), "duplicate key value") {
-			fmt.Printf("error while adding account token: %s\n", err)
-		}
-	}()
-
-	return job, tx, err
-}
-
-func (s *Service) AccountTokens(address string, tType *templates.TokenType) ([]AccountToken, error) {
-	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.store.AccountTokens(address, tType)
 }

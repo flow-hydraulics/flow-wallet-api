@@ -3,7 +3,6 @@ package accounts
 import (
 	"github.com/eqlabs/flow-wallet-api/datastore"
 	"github.com/eqlabs/flow-wallet-api/keys"
-	"github.com/eqlabs/flow-wallet-api/templates"
 	"gorm.io/gorm"
 )
 
@@ -12,7 +11,7 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&Account{}, &AccountToken{}, &keys.Storable{})
+	db.AutoMigrate(&Account{}, &keys.Storable{})
 	return &GormStore{db}
 }
 
@@ -32,21 +31,4 @@ func (s *GormStore) Account(address string) (a Account, err error) {
 
 func (s *GormStore) InsertAccount(a *Account) error {
 	return s.db.Create(a).Error
-}
-
-func (s *GormStore) AccountTokens(address string, tType *templates.TokenType) (att []AccountToken, err error) {
-	q := s.db
-	if tType != nil {
-		// Filter by type
-		q = q.Where(&AccountToken{AccountAddress: address, TokenType: *tType})
-	} else {
-		// Find all
-		q = q.Where(&AccountToken{AccountAddress: address})
-	}
-	err = q.Order("token_name asc").Find(&att).Error
-	return
-}
-
-func (s *GormStore) InsertAccountToken(at *AccountToken) error {
-	return s.db.Create(at).Error
 }

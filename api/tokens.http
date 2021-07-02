@@ -38,8 +38,12 @@ DELETE http://localhost:3000/v1/tokens/3
 content-type: application/json
 
 
-### Get accounts tokens for admin account
+### Get accounts fungible tokens for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens HTTP/1.1
+content-type: application/json
+
+### Get accounts non-fungible tokens for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken details for admin account
@@ -142,6 +146,10 @@ content-type: application/json
 
 ### Get FlowToken deposit details for custody account
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/deposits/<transaction_id> HTTP/1.1
+content-type: application/json
+
+### Setup FlowToken on emulator for custody account
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flowtoken HTTP/1.1
 content-type: application/json
 
 ### Setup FUSD on emulator for custody account

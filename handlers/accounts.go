@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/eqlabs/flow-wallet-api/accounts"
-	"github.com/eqlabs/flow-wallet-api/templates"
 )
 
 // Accounts is a HTTP server for account management.
@@ -31,13 +30,4 @@ func (s *Accounts) Create() http.Handler {
 
 func (s *Accounts) Details() http.Handler {
 	return http.HandlerFunc(s.DetailsFunc)
-}
-
-func (s *Accounts) SetupToken() http.Handler {
-	h := http.HandlerFunc(s.SetupTokenFunc)
-	return UseJson(h)
-}
-
-func (s *Accounts) AccountTokens(tType templates.TokenType) http.Handler {
-	return s.MakeAccountTokensFunc(tType)
 }

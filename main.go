@@ -133,7 +133,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	jobsService := jobs.NewService(jobStore)
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
 	debugService := debug.Service{
 		RepoUrl:   "https://github.com/eqlabs/flow-wallet-api",
@@ -197,9 +197,9 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
-		rft.Handle("", accountHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
+		rft.Handle("", tokenHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}", accountHandler.SetupToken()).Methods(http.MethodPost)
+		rft.Handle("/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
 		rft.Handle("/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
 		rft.Handle("/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
@@ -217,9 +217,9 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		rv.Handle("/non-fungible-tokens", templateHandler.ListTokens(&tokenType)).Methods(http.MethodGet)
 
 		rnft := ra.PathPrefix("/{address}/non-fungible-tokens").Subrouter()
-		rnft.Handle("", accountHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
+		rnft.Handle("", tokenHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
 		rnft.Handle("/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}", accountHandler.SetupToken()).Methods(http.MethodPost)
+		rnft.Handle("/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
 		rnft.Handle("/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
 		rnft.Handle("/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
 		rnft.Handle("/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)

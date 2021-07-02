@@ -5,6 +5,8 @@ package tokens
 import (
 	"time"
 
+	"github.com/eqlabs/flow-wallet-api/accounts"
+	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/transactions"
 	"gorm.io/gorm"
 )
@@ -20,6 +22,19 @@ type WithdrawalRequest struct {
 	Recipient string `json:"recipient"`
 	FtAmount  string `json:"amount,omitempty"`
 	NftID     string `json:"id,omitempty"`
+}
+
+// AccountToken represents a token that is enabled on an account.
+type AccountToken struct {
+	ID             uint64              `json:"-" gorm:"primaryKey"`
+	AccountAddress string              `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
+	Account        accounts.Account    `json:"-" gorm:"foreignKey:AccountAddress;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	TokenName      string              `json:"name" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenAddress   string              `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenType      templates.TokenType `json:"-"`
+	CreatedAt      time.Time           `json:"-"`
+	UpdatedAt      time.Time           `json:"-"`
+	DeletedAt      gorm.DeletedAt      `json:"-" gorm:"index"`
 }
 
 // FungibleTokenTransfer is used for database interfacing

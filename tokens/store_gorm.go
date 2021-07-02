@@ -1,6 +1,7 @@
 package tokens
 
 import (
+	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/transactions"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -11,8 +12,27 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&FungibleTokenTransfer{})
+	db.AutoMigrate(&AccountToken{}, &FungibleTokenTransfer{})
 	return &GormStore{db}
+}
+
+func (s *GormStore) AccountTokens(address string, tType *templates.TokenType) (att []AccountToken, err error) {
+	q := s.db
+	if tType != nil {
+		// Filter by type
+		q = q.Where(&AccountToken{AccountAddress: address, TokenType: *tType})
+	} else {
+		// Find all
+		q = q.Where(&AccountToken{AccountAddress: address})
+	}
+	err = q.Order("token_name asc").Find(&att).Error
+	return
+}
+
+func (s *GormStore) InsertAccountToken(at *AccountToken) error {
+	// FirstOrCreate as that will just return the first match instead of throwing
+	// a duplicate key error
+	return s.db.FirstOrCreate(&AccountToken{}, at).Error
 }
 
 func (s *GormStore) InsertFungibleTokenTransfer(t *FungibleTokenTransfer) error {

@@ -29,6 +29,7 @@ type Service struct {
 	fc           *client.Client
 	transactions *transactions.Service
 	templates    *templates.Service
+	accounts     *accounts.Service
 	cfg          Config
 }
 
@@ -38,9 +39,68 @@ func NewService(
 	fc *client.Client,
 	txs *transactions.Service,
 	tes *templates.Service,
+	acs *accounts.Service,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{store, km, fc, txs, tes, cfg}
+	return &Service{store, km, fc, txs, tes, acs, cfg}
+}
+
+func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
+	// Check if the input is a valid address
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	token, err := s.templates.GetTokenByName(tokenName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	raw := templates.Raw{
+		Code: token.Setup,
+	}
+
+	var txType transactions.Type
+
+	switch token.Type {
+	case templates.FT:
+		txType = transactions.FtSetup
+	case templates.NFT:
+		txType = transactions.NftSetup
+	}
+
+	job, tx, err := s.transactions.Create(ctx, sync, address, raw, txType)
+
+	// Handle adding token to account in database
+	go func() {
+		if err := job.Wait(true); err != nil && !strings.Contains(err.Error(), "vault exists") {
+			return
+		}
+
+		// Won't return an error on duplicate keys as it uses FirstOrCreate
+		err = s.store.InsertAccountToken(&AccountToken{
+			AccountAddress: address,
+			TokenAddress:   token.Address,
+			TokenName:      token.Name,
+			TokenType:      token.Type,
+		})
+		if err != nil {
+			fmt.Printf("error while adding account token: %s\n", err)
+		}
+	}()
+
+	return job, tx, err
+}
+
+func (s *Service) AccountTokens(address string, tType *templates.TokenType) ([]AccountToken, error) {
+	// Check if the input is a valid address
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.store.AccountTokens(address, tType)
 }
 
 // Details is used to get the accounts balance (or similar for NFTs) for a token.
