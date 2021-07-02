@@ -1,7 +1,7 @@
-openapi: 3.0.3
+openapi: 3.1.0
 
 info:
-  title: Flow Wallet Api
+  title: Flow Wallet API
   version: 0.3.1
 
 servers:
@@ -212,8 +212,8 @@ components:
 paths:
   /debug:
     get:
-       summary: Get debug information about the running instance.
-       responses:
+      summary: Get debug information about the running instance.
+      responses:
         "200":
           description: OK
           content:
@@ -249,15 +249,15 @@ paths:
             application/json:
               schema:
                 oneOf:
-                  -  $ref: "#/components/schemas/cadenceValue"
-                  -  $ref: "#/components/schemas/plainValue"
+                  - $ref: "#/components/schemas/cadenceValue"
+                  - $ref: "#/components/schemas/plainValue"
 
   /jobs:
     get:
       summary: List all jobs
       parameters:
-      - $ref: "#/components/parameters/limit"
-      - $ref: "#/components/parameters/offset"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -270,7 +270,7 @@ paths:
 
   /jobs/{jobId}:
     parameters:
-    - $ref: "#/components/parameters/jobId"
+      - $ref: "#/components/parameters/jobId"
     get:
       summary: Get a job
       responses:
@@ -287,8 +287,8 @@ paths:
       summary: List all accounts
       description: Get a list of all accounts managed by the wallet service.
       parameters:
-      - $ref: "#/components/parameters/limit"
-      - $ref: "#/components/parameters/offset"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -311,7 +311,7 @@ paths:
 
   /accounts/{address}:
     parameters:
-    - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/address"
     get:
       summary: Get an account
       description: Get the details of a specific account.
@@ -330,8 +330,8 @@ paths:
       summary: List account raw transactions
       description: Get a list of all transactions sent by an account.
       parameters:
-      - $ref: "#/components/parameters/limit"
-      - $ref: "#/components/parameters/offset"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
       responses:
         "200":
           description: OK
@@ -359,8 +359,8 @@ paths:
 
   /accounts/{address}/transactions/{transactionId}:
     parameters:
-    - $ref: "#/components/parameters/address"
-    - $ref: "#/components/parameters/transactionId"
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get a raw transaction
       description: Get the details of a raw transaction sent by an account.
@@ -374,7 +374,7 @@ paths:
 
   /accounts/{address}/fungible-tokens:
     parameters:
-    - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/address"
     get:
       summary: Get account fungible tokens
       description: Get all fungible tokens that are enabled for an account.
@@ -390,8 +390,8 @@ paths:
 
   /accounts/{address}/fungible-tokens/{tokenName}:
     parameters:
-    - $ref: "#/components/parameters/address"
-    - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
     get:
       summary: Get fungible tokens details for an account
       description: Get details (balance) regarding a fungible token for an account.
@@ -418,8 +418,8 @@ paths:
 
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
     parameters:
-    - $ref: "#/components/parameters/address"
-    - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
     get:
       summary: List all withdrawals of a fungible token
       responses:
@@ -445,9 +445,9 @@ paths:
 
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
     parameters:
-    - $ref: "#/components/parameters/address"
-    - $ref: "#/components/parameters/tokenName"
-    - $ref: "#/components/parameters/transactionId"
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a fungible token withdrawal
       responses:
@@ -460,8 +460,8 @@ paths:
 
   /accounts/{address}/fungible-tokens/{tokenName}/deposits:
     parameters:
-    - $ref: "#/components/parameters/address"
-    - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
     get:
       summary: List all deposits of a fungible token
       responses:
@@ -476,9 +476,9 @@ paths:
 
   /accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}:
     parameters:
-    - $ref: "#/components/parameters/address"
-    - $ref: "#/components/parameters/tokenName"
-    - $ref: "#/components/parameters/transactionId"
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a fungible token deposit
       responses:

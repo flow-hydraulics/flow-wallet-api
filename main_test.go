@@ -44,7 +44,7 @@ var (
 )
 
 type testConfig struct {
-	AccessApiHost string       `env:"ACCESS_API_HOST,required"`
+	AccessAPIHost string       `env:"ACCESS_API_HOST,required"`
 	AdminAddress  string       `env:"ADMIN_ADDRESS,required"`
 	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
@@ -132,7 +132,7 @@ func TestAccountServices(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestAccountHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +371,7 @@ func TestTransactionHandlers(t *testing.T) {
 
 	// logger = log.New(&TestLogger{t}, "", log.Lshortfile)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -636,7 +636,7 @@ func TestScriptsHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +726,7 @@ func TestTokenServices(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -896,7 +896,7 @@ func TestTokenHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1236,7 +1236,7 @@ func TestNFTDeployment(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}

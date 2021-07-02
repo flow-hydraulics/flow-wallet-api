@@ -38,7 +38,7 @@ var (
 type Config struct {
 	Host          string       `env:"HOST"`
 	Port          int          `env:"PORT" envDefault:"3000"`
-	AccessApiHost string       `env:"ACCESS_API_HOST,required"`
+	AccessAPIHost string       `env:"ACCESS_API_HOST,required"`
 	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
@@ -90,7 +90,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// Flow client
 	// TODO: WithInsecure()?
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		ls.Fatal(err)
 	}
