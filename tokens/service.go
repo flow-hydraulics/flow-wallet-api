@@ -187,9 +187,9 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 	job, tx, err := s.transactions.Create(ctx, runSync, sender, raw, transactions.FtTransfer)
 
 	// Initialise the transfer object
-	t := &FungibleTokenTransfer{
+	t := &TokenTransfer{
 		RecipientAddress: recipient,
-		Amount:           request.FtAmount,
+		FtAmount:         request.FtAmount,
 		TokenName:        token.Name,
 	}
 
@@ -262,17 +262,17 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amount,
 	}
 
 	// Create and store a new token transfer
-	t := &FungibleTokenTransfer{
+	t := &TokenTransfer{
 		TransactionId:    tx.TransactionId,
 		RecipientAddress: recipient,
-		Amount:           amount,
+		FtAmount:         amount,
 		TokenName:        token.Name,
 	}
 
 	return s.store.InsertFungibleTokenTransfer(t)
 }
 
-func (s *Service) ListTransfers(transferType, address, tokenName string) ([]*FungibleTokenTransfer, error) {
+func (s *Service) ListTransfers(transferType, address, tokenName string) ([]*TokenTransfer, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {
@@ -329,7 +329,7 @@ func (s *Service) ListDeposits(address, tokenName string) ([]*FungibleTokenDepos
 	return res, nil
 }
 
-func (s *Service) GetTransfer(transferType, address, tokenName, transactionId string) (*FungibleTokenTransfer, error) {
+func (s *Service) GetTransfer(transferType, address, tokenName, transactionId string) (*TokenTransfer, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
 	if err != nil {

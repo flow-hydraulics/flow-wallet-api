@@ -12,7 +12,8 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&AccountToken{}, &FungibleTokenTransfer{})
+	db.Migrator().RenameTable("fungible_token_transfers", "token_transfers")
+	db.AutoMigrate(&AccountToken{}, &TokenTransfer{})
 	return &GormStore{db}
 }
 
@@ -35,66 +36,67 @@ func (s *GormStore) InsertAccountToken(at *AccountToken) error {
 	return s.db.FirstOrCreate(&AccountToken{}, at).Error
 }
 
-func (s *GormStore) InsertFungibleTokenTransfer(t *FungibleTokenTransfer) error {
+func (s *GormStore) InsertFungibleTokenTransfer(t *TokenTransfer) error {
 	return s.db.Create(t).Error
 }
 
 // TODO: DRY
 
-func (s *GormStore) FungibleTokenWithdrawals(address, tokenName string) (tt []*FungibleTokenTransfer, err error) {
+func (s *GormStore) FungibleTokenWithdrawals(address, tokenName string) (tt []*TokenTransfer, err error) {
 	tType := transactions.FtTransfer // This needs to be here separately
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
-		Joins("left join transactions on fungible_token_transfers.transaction_id = transactions.transaction_id").
+		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("transactions.transaction_type = ?", tType).
 		Where("transactions.payer_address = ?", address).
-		Where("fungible_token_transfers.token_name = ?", tokenName).
-		Order("fungible_token_transfers.created_at desc").
+		Where("token_transfers.token_name = ?", tokenName).
+		Order("token_transfers.created_at desc").
 		Find(&tt).Error
 	return
 }
 
-func (s *GormStore) FungibleTokenWithdrawal(address, tokenName, transactionId string) (t *FungibleTokenTransfer, err error) {
+func (s *GormStore) FungibleTokenWithdrawal(address, tokenName, transactionId string) (t *TokenTransfer, err error) {
 	tType := transactions.FtTransfer // This needs to be here separately
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
-		Joins("left join transactions on fungible_token_transfers.transaction_id = transactions.transaction_id").
+		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("transactions.transaction_type = ?", tType).
 		Where("transactions.payer_address = ?", address).
 		Where("transactions.transaction_id = ?", transactionId).
-		Where("fungible_token_transfers.token_name = ?", tokenName).
-		Order("fungible_token_transfers.created_at desc").
+		Where("token_transfers.token_name = ?", tokenName).
+		Order("token_transfers.created_at desc").
 		First(&t).Error
 	return
 }
 
-func (s *GormStore) FungibleTokenDeposits(address, tokenName string) (tt []*FungibleTokenTransfer, err error) {
+func (s *GormStore) FungibleTokenDeposits(address, tokenName string) (tt []*TokenTransfer, err error) {
 	tType := transactions.FtTransfer // This needs to be here separately
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
-		Joins("left join transactions on fungible_token_transfers.transaction_id = transactions.transaction_id").
+		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("transactions.transaction_type = ?", tType).
-		Where("fungible_token_transfers.token_name = ?", tokenName).
-		Where("fungible_token_transfers.recipient_address = ?", address).
-		Order("fungible_token_transfers.created_at desc").
+		Where("token_transfers.token_name = ?", tokenName).
+		Where("token_transfers.recipient_address = ?", address).
+		Order("token_transfers.created_at desc").
 		Find(&tt).Error
 	return
 }
 
-func (s *GormStore) FungibleTokenDeposit(address, tokenName, transactionId string) (t *FungibleTokenTransfer, err error) {
+func (s *GormStore) FungibleTokenDeposit(address, tokenName, transactionId string) (t *TokenTransfer, err error) {
 	tType := transactions.FtTransfer // This needs to be here separately
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
-		Joins("left join transactions on fungible_token_transfers.transaction_id = transactions.transaction_id").
-		Where("fungible_token_transfers.token_name = ?", tokenName).
+		Debug().
+		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
+		Where("token_transfers.token_name = ?", tokenName).
 		Where("transactions.transaction_type = ?", tType).
 		Where("transactions.transaction_id = ?", transactionId).
-		Where("fungible_token_transfers.recipient_address = ?", address).
-		Order("fungible_token_transfers.created_at desc").
+		Where("token_transfers.recipient_address = ?", address).
+		Order("token_transfers.created_at desc").
 		First(&t).Error
 	return
 }

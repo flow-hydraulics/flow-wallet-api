@@ -28,7 +28,7 @@ type WithdrawalRequest struct {
 type AccountToken struct {
 	ID             uint64              `json:"-" gorm:"primaryKey"`
 	AccountAddress string              `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
-	Account        accounts.Account    `json:"-" gorm:"foreignKey:AccountAddress;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Account        accounts.Account    `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	TokenName      string              `json:"name" gorm:"uniqueIndex:addressname;index;not null"`
 	TokenAddress   string              `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
 	TokenType      templates.TokenType `json:"-"`
@@ -37,14 +37,15 @@ type AccountToken struct {
 	DeletedAt      gorm.DeletedAt      `json:"-" gorm:"index"`
 }
 
-// FungibleTokenTransfer is used for database interfacing
-type FungibleTokenTransfer struct {
+// TokenTransfer is used for database interfacing
+type TokenTransfer struct {
+	ID               uint64                   `json:"-" gorm:"primaryKey"`
 	TransactionId    string                   `json:"transactionId"`
 	Transaction      transactions.Transaction `json:"-" gorm:"foreignKey:TransactionId;references:TransactionId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	RecipientAddress string                   `json:"recipient" gorm:"index"`
-	Amount           string                   `json:"amount"`
+	FtAmount         string                   `json:"amount"`
+	NftID            string                   `json:"id"`
 	TokenName        string                   `json:"token"`
-	ID               int                      `json:"-" gorm:"primaryKey"`
 	CreatedAt        time.Time                `json:"createdAt"`
 	UpdatedAt        time.Time                `json:"updatedAt"`
 	DeletedAt        gorm.DeletedAt           `json:"-" gorm:"index"`
@@ -71,24 +72,24 @@ type FungibleTokenDeposit struct {
 	PayerAddress string `json:"sender"`
 }
 
-func baseFromTransfer(t *FungibleTokenTransfer) FungibleTokenTransferBase {
+func baseFromTransfer(t *TokenTransfer) FungibleTokenTransferBase {
 	return FungibleTokenTransferBase{
 		TransactionId: t.TransactionId,
-		Amount:        t.Amount,
+		Amount:        t.FtAmount,
 		TokenName:     t.TokenName,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}
 }
 
-func (t *FungibleTokenTransfer) Withdrawal() FungibleTokenWithdrawal {
+func (t *TokenTransfer) Withdrawal() FungibleTokenWithdrawal {
 	return FungibleTokenWithdrawal{
 		baseFromTransfer(t),
 		t.RecipientAddress,
 	}
 }
 
-func (t *FungibleTokenTransfer) Deposit() FungibleTokenDeposit {
+func (t *TokenTransfer) Deposit() FungibleTokenDeposit {
 	return FungibleTokenDeposit{
 		baseFromTransfer(t),
 		t.Transaction.PayerAddress,
