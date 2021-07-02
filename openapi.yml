@@ -209,6 +209,18 @@ components:
         type: string
         example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
 
+tags:
+  - name: Accounts
+    description: Create and lists accounts managed by this Wallet API.
+  - name: Transactions
+    description: Send transactions from accounts managed by this Wallet API.
+  - name: Scripts
+    description: Execute read-only scripts against the blockchain.
+  - name: Fungible Tokens
+    description: Initialize tokens, withdraw funds and detect deposits of fungible tokens.
+  - name: Jobs
+    description: View the status of asynchronous tasks being completed by the Wallet API.
+
 paths:
   /debug:
     get:
@@ -239,6 +251,8 @@ paths:
   /scripts:
     post:
       summary: Execute a script on chain
+      tags:
+        - Scripts
       requestBody:
         content:
           application/json:
