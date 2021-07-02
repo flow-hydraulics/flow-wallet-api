@@ -4,7 +4,7 @@ const jobPollAttempts = 40
 const jobStatusComplete = "Complete"
 const jobStatusError = "Error"
 
-const contentType = "application/json"
+const contentTypeJson = "application/json"
 
 export default class WalletApiClient {
 
@@ -62,6 +62,12 @@ export default class WalletApiClient {
     )
   }
 
+  async getFungibleTokenDeposits(from, token) {    
+    return this.get(
+      `/v1/accounts/${from}/fungible-tokens/${token}/deposits}`
+    )
+  }
+
   async getJob(id) {    
     return this.get(`/v1/jobs/${id}`)
   }
@@ -88,7 +94,7 @@ export default class WalletApiClient {
     return fetch(this.baseUrl + endpoint, {
       method: 'POST',
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': contentTypeJson,
       },
       body: JSON.stringify(body),
     }).then(res => res.json())
@@ -98,7 +104,7 @@ export default class WalletApiClient {
     return fetch(this.baseUrl + endpoint, {
       method: 'GET',
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': contentTypeJson,
       },
     }).then(res => res.json())
   }
