@@ -37,7 +37,7 @@ rather than a hosted 3rd-party solution.
 
 ## API Specification
 
-View the [Wallet API documentation and OpenAPI (Swagger) definition](https://onflow.github.io/wallet-api/).
+View the [Wallet API documentation and OpenAPI (Swagger) specification](https://onflow.github.io/wallet-api/).
 
 ## Installation
 
