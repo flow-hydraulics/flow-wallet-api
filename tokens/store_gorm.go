@@ -90,7 +90,6 @@ func (s *GormStore) FungibleTokenDeposit(address, tokenName, transactionId strin
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
-		Debug().
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("token_transfers.token_name = ?", tokenName).
 		Where("transactions.transaction_type = ?", tType).
