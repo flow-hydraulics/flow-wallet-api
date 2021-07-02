@@ -69,7 +69,7 @@ Deploy the FUSD contract to the emulator:
 flow project deploy -n emulator
 ```
 
-You can now access the API at http://localhost:3000.
+You can now access the API at http://localhost:3000/v1/accounts.
 
 Next, see the [FUSD sample app](/examples/nextjs-fusd-provider)
 for an example of how to use this configuration as part of
