@@ -15,7 +15,7 @@ This service can be used by an application that needs to manage Flow user accoun
 - _Transfer NFTs (e.g. FLOW, FUSD) (coming soon)_
 - _Detect NFT deposits (coming soon)_
 
-View full list of functionality in the [API specification](API.md).
+View full list of functionality in the [API documentation](https://onflow.github.io/wallet-api/).
 
 ## Background
 
