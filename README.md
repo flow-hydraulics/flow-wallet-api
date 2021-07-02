@@ -35,6 +35,10 @@ rather than a hosted 3rd-party solution.
 - **Exchange** — a cryptocurrency exchange that is listing FLOW and/or FUSD. Similar to the case above, one or more admin accounts may be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
 - **Web Wallet** — a user-facing wallet application that is compatible with Flow dapps. Each user account would be created and managed by the wallet service.
 
+## API Specification
+
+View the [Wallet API documentation and OpenAPI (Swagger) definition](https://onflow.github.io/wallet-api/).
+
 ## Installation
 
 The Wallet API is provided as a Docker image:
@@ -173,10 +177,6 @@ GOOGLE_APPLICATION_CREDENTIALS=
 GOOGLE_KMS_PROJECT_ID=
 GOOGLE_KMS_LOCATION_ID=
 ```
-
-## API Specification
-
-[View the full Wallet API specification](API.md).
 
 ## Credit
 
