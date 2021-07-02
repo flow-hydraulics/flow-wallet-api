@@ -54,7 +54,7 @@ type TestLogger struct {
 }
 
 func (tl *TestLogger) Write(p []byte) (n int, err error) {
-	tl.t.Log(fmt.Sprintf("%s", p))
+	tl.t.Log(string(p))
 	return len(p), nil
 }
 
@@ -766,26 +766,30 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Fund the account from service account
-		_, _, err = service.CreateFtWithdrawal(
+		_, _, err = service.CreateWithdrawal(
 			context.Background(),
 			true,
-			"FlowToken",
 			cfg.AdminAddress,
-			account.Address,
-			"1.0",
+			tokens.WithdrawalRequest{
+				TokenName: "FlowToken",
+				Recipient: account.Address,
+				FtAmount:  "1.0",
+			},
 		)
 
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		_, transfer, err := service.CreateFtWithdrawal(
+		_, transfer, err := service.CreateWithdrawal(
 			context.Background(),
 			true,
-			"FlowToken",
 			account.Address,
-			cfg.AdminAddress,
-			"1.0",
+			tokens.WithdrawalRequest{
+				TokenName: "FlowToken",
+				Recipient: cfg.AdminAddress,
+				FtAmount:  "1.0",
+			},
 		)
 
 		if err != nil {
@@ -804,13 +808,15 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, tx, err := service.CreateFtWithdrawal(
+		_, tx, err := service.CreateWithdrawal(
 			context.Background(),
 			true,
-			"FlowToken",
 			account.Address,
-			cfg.AdminAddress,
-			"1.0",
+			tokens.WithdrawalRequest{
+				TokenName: "FlowToken",
+				Recipient: cfg.AdminAddress,
+				FtAmount:  "1.0",
+			},
 		)
 
 		if tx == nil {
@@ -864,7 +870,16 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Create a withdrawal, should error as we can not mint FUSD right now
-		_, _, err = service.CreateFtWithdrawal(ctx, true, tokenName, cfg.AdminAddress, account.Address, "1.0")
+		_, _, err = service.CreateWithdrawal(
+			ctx,
+			true,
+			cfg.AdminAddress,
+			tokens.WithdrawalRequest{
+				TokenName: tokenName,
+				Recipient: account.Address,
+				FtAmount:  "1.0",
+			},
+		)
 		if err != nil {
 			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
 				t.Fatal(err)
@@ -928,18 +943,18 @@ func TestTokenHandlers(t *testing.T) {
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
 	service := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
-	tokenHandlers := handlers.NewTokens(logger, service, templates.FT)
-	accountHandlers := handlers.NewAccounts(logger, accountService)
+	tokenHandler := handlers.NewTokens(logger, service)
+	accountHandler := handlers.NewAccounts(logger, accountService)
 
 	router := mux.NewRouter()
-	router.Handle("/{address}/fungible-tokens", accountHandlers.AccountTokens(templates.FT)).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}", accountHandlers.SetupToken()).Methods(http.MethodPost)
-	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandlers.Details()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.CreateWithdrawal()).Methods(http.MethodPost)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.ListWithdrawals()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandlers.GetWithdrawal()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits", tokenHandlers.ListDeposits()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandlers.GetDeposit()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens", accountHandler.AccountTokens(templates.FT)).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", accountHandler.SetupToken()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 
 	// Setup tokens
 
@@ -1090,7 +1105,16 @@ func TestTokenHandlers(t *testing.T) {
 		})
 	}
 
-	_, transfer, err := service.CreateFtWithdrawal(context.Background(), true, token.Name, cfg.AdminAddress, account.Address, "1.0")
+	_, transfer, err := service.CreateWithdrawal(
+		context.Background(),
+		true,
+		cfg.AdminAddress,
+		tokens.WithdrawalRequest{
+			TokenName: token.Name,
+			Recipient: account.Address,
+			FtAmount:  "1.0",
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

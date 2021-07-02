@@ -4,23 +4,16 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/tokens"
 )
 
 type Tokens struct {
-	log       *log.Logger
-	service   *tokens.Service
-	tokenType templates.TokenType
+	log     *log.Logger
+	service *tokens.Service
 }
 
-type FTWithdrawalRequest struct {
-	Recipient string `json:"recipient"`
-	Amount    string `json:"amount"`
-}
-
-func NewTokens(l *log.Logger, service *tokens.Service, tType templates.TokenType) *Tokens {
-	return &Tokens{l, service, tType}
+func NewTokens(l *log.Logger, service *tokens.Service) *Tokens {
+	return &Tokens{l, service}
 }
 
 func (s *Tokens) Details() http.Handler {

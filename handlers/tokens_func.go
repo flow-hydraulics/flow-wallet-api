@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/eqlabs/flow-wallet-api/errors"
-	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/tokens"
 	"github.com/gorilla/mux"
 )
 
@@ -14,11 +14,6 @@ func (s *Tokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	address := vars["address"]
 	tokenName := vars["tokenName"]
-
-	if s.tokenType == templates.NFT {
-		handleError(rw, s.log, fmt.Errorf("not yet implemented"))
-		return
-	}
 
 	res, err := s.service.Details(r.Context(), tokenName, address)
 	if err != nil {
@@ -34,12 +29,7 @@ func (s *Tokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	address := vars["address"]
 	tokenName := vars["tokenName"]
 
-	if s.tokenType == templates.NFT {
-		handleError(rw, s.log, fmt.Errorf("not yet implemented"))
-		return
-	}
-
-	var b FTWithdrawalRequest
+	var withdrawal tokens.WithdrawalRequest
 
 	if r.Body == nil || r.Body == http.NoBody {
 		err := &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("empty body")}
@@ -48,15 +38,17 @@ func (s *Tokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try to decode the request body.
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&withdrawal); err != nil {
 		err = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
 		handleError(rw, s.log, err)
 		return
 	}
 
+	withdrawal.TokenName = tokenName
+
 	// Decide whether to serve sync or async, default async
 	sync := r.Header.Get(SyncHeader) != ""
-	job, tx, err := s.service.CreateFtWithdrawal(r.Context(), sync, tokenName, address, b.Recipient, b.Amount)
+	job, tx, err := s.service.CreateWithdrawal(r.Context(), sync, address, withdrawal)
 	var res interface{}
 	if sync {
 		res = tx
@@ -77,12 +69,7 @@ func (s *Tokens) ListWithdrawalsFunc(rw http.ResponseWriter, r *http.Request) {
 	address := vars["address"]
 	tokenName := vars["tokenName"]
 
-	if s.tokenType == templates.NFT {
-		handleError(rw, s.log, fmt.Errorf("not yet implemented"))
-		return
-	}
-
-	res, err := s.service.ListFtWithdrawals(address, tokenName)
+	res, err := s.service.ListWithdrawals(address, tokenName)
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -97,12 +84,7 @@ func (s *Tokens) GetWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	tokenName := vars["tokenName"]
 	txId := vars["transactionId"]
 
-	if s.tokenType == templates.NFT {
-		handleError(rw, s.log, fmt.Errorf("not yet implemented"))
-		return
-	}
-
-	res, err := s.service.GetFtWithdrawal(address, tokenName, txId)
+	res, err := s.service.GetWithdrawal(address, tokenName, txId)
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -116,12 +98,7 @@ func (s *Tokens) ListDepositsFunc(rw http.ResponseWriter, r *http.Request) {
 	address := vars["address"]
 	tokenName := vars["tokenName"]
 
-	if s.tokenType == templates.NFT {
-		handleError(rw, s.log, fmt.Errorf("not yet implemented"))
-		return
-	}
-
-	res, err := s.service.ListFtDeposits(address, tokenName)
+	res, err := s.service.ListDeposits(address, tokenName)
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -136,12 +113,7 @@ func (s *Tokens) GetDepositFunc(rw http.ResponseWriter, r *http.Request) {
 	tokenName := vars["tokenName"]
 	transactionId := vars["transactionId"]
 
-	if s.tokenType == templates.NFT {
-		handleError(rw, s.log, fmt.Errorf("not yet implemented"))
-		return
-	}
-
-	res, err := s.service.GetFtDeposit(address, tokenName, transactionId)
+	res, err := s.service.GetDeposit(address, tokenName, transactionId)
 	if err != nil {
 		handleError(rw, s.log, err)
 		return

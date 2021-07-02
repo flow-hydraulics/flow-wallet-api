@@ -149,8 +149,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	jobsHandler := handlers.NewJobs(ls, jobsService)
 	accountHandler := handlers.NewAccounts(ls, accountService)
 	transactionHandler := handlers.NewTransactions(ls, transactionService)
-	ftHandler := handlers.NewTokens(ls, tokenService, templates.FT)
-	nftHandler := handlers.NewTokens(ls, tokenService, templates.NFT)
+	tokenHandler := handlers.NewTokens(ls, tokenService)
 
 	r := mux.NewRouter()
 
@@ -199,13 +198,13 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		// Handle "/accounts/{address}/fungible-tokens"
 		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
 		rft.Handle("", accountHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}", ftHandler.Details()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
 		rft.Handle("/{tokenName}", accountHandler.SetupToken()).Methods(http.MethodPost)
-		rft.Handle("/{tokenName}/withdrawals", ftHandler.ListWithdrawals()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/withdrawals", ftHandler.CreateWithdrawal()).Methods(http.MethodPost)
-		rft.Handle("/{tokenName}/withdrawals/{transactionId}", ftHandler.GetWithdrawal()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/deposits", ftHandler.ListDeposits()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/deposits/{transactionId}", ftHandler.GetDeposit()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
+		rft.Handle("/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
+		rft.Handle("/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
 		ls.Println("fungible tokens disabled")
 	}
@@ -219,13 +218,13 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 		rnft := ra.PathPrefix("/{address}/non-fungible-tokens").Subrouter()
 		rnft.Handle("", accountHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}", nftHandler.Details()).Methods(http.MethodGet)
+		rnft.Handle("/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
 		rnft.Handle("/{tokenName}", accountHandler.SetupToken()).Methods(http.MethodPost)
-		rnft.Handle("/{tokenName}/withdrawals", nftHandler.ListWithdrawals()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}/withdrawals", nftHandler.CreateWithdrawal()).Methods(http.MethodPost)
-		rnft.Handle("/{tokenName}/withdrawals/{transactionId}", nftHandler.GetWithdrawal()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}/deposits", nftHandler.ListDeposits()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}/deposits/{transactionId}", nftHandler.GetDeposit()).Methods(http.MethodGet)
+		rnft.Handle("/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
+		rnft.Handle("/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
+		rnft.Handle("/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
+		rnft.Handle("/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
+		rnft.Handle("/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
 		ls.Println("non-fungible tokens disabled")
 	}
@@ -293,7 +292,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 							continue
 						}
 
-						if err = tokenService.RegisterFtDeposit(t, e.TransactionID.Hex(), e.Value.Fields[0].String(), a.Address); err != nil {
+						if err = tokenService.RegisterDeposit(t, e.TransactionID.Hex(), e.Value.Fields[0].String(), a.Address); err != nil {
 							ls.Printf("error while registering a deposit: %s\n", err)
 						}
 					}
