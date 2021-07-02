@@ -7,7 +7,7 @@ import (
 
 // Config struct for account service.
 type Config struct {
-	AdminAccountAddress string       `env:"ADMIN_ADDRESS,required"`
+	AdminAccountAddress string       `env:"ADMIN_ADDRESS,notEmpty"`
 	ChainId             flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
