@@ -10,9 +10,9 @@ type Store interface {
 	// Enable a token for an account
 	InsertAccountToken(at *AccountToken) error
 
-	InsertFungibleTokenTransfer(*FungibleTokenTransfer) error
-	FungibleTokenWithdrawals(address, tokenName string) ([]*FungibleTokenTransfer, error)
-	FungibleTokenWithdrawal(address, tokenName, transactionId string) (*FungibleTokenTransfer, error)
-	FungibleTokenDeposits(address, tokenName string) ([]*FungibleTokenTransfer, error)
-	FungibleTokenDeposit(address, tokenName, transactionId string) (*FungibleTokenTransfer, error)
+	InsertFungibleTokenTransfer(*TokenTransfer) error
+	FungibleTokenWithdrawals(address, tokenName string) ([]*TokenTransfer, error)
+	FungibleTokenWithdrawal(address, tokenName, transactionId string) (*TokenTransfer, error)
+	FungibleTokenDeposits(address, tokenName string) ([]*TokenTransfer, error)
+	FungibleTokenDeposit(address, tokenName, transactionId string) (*TokenTransfer, error)
 }
