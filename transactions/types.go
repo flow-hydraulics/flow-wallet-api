@@ -11,8 +11,7 @@ const (
 	FtSetup
 	FtTransfer
 	NftSetup
-	NftDeposit
-	NftWithdrawal
+	NftTransfer
 )
 
 func (s Type) MarshalText() ([]byte, error) {
@@ -32,13 +31,11 @@ func StatusFromText(text string) Type {
 		return General
 	case "ftsetup":
 		return FtSetup
-	case "ftransfer":
+	case "fttransfer":
 		return FtTransfer
 	case "nftsetup":
 		return NftSetup
-	case "nftdeposit":
-		return NftDeposit
-	case "nftwithdrawal":
-		return NftWithdrawal
+	case "nfttransfer":
+		return NftTransfer
 	}
 }

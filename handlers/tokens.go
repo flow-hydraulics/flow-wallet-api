@@ -9,18 +9,21 @@ import (
 )
 
 type Tokens struct {
-	log       *log.Logger
-	service   *tokens.Service
-	tokenType templates.TokenType
+	log     *log.Logger
+	service *tokens.Service
 }
 
-type FTWithdrawalRequest struct {
-	Recipient string `json:"recipient"`
-	Amount    string `json:"amount"`
+func NewTokens(l *log.Logger, service *tokens.Service) *Tokens {
+	return &Tokens{l, service}
 }
 
-func NewTokens(l *log.Logger, service *tokens.Service, tType templates.TokenType) *Tokens {
-	return &Tokens{l, service, tType}
+func (s *Tokens) Setup() http.Handler {
+	h := http.HandlerFunc(s.SetupFunc)
+	return h
+}
+
+func (s *Tokens) AccountTokens(tType templates.TokenType) http.Handler {
+	return s.MakeAccountTokensFunc(tType)
 }
 
 func (s *Tokens) Details() http.Handler {

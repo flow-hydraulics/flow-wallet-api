@@ -1,13 +1,41 @@
-// Package tokens provides functions for token handling in Flow blockhain.
-// https://docs.onflow.org/core-contracts
+// Package tokens provides functions for token handling for a hosted account on Flow Wallet API.
+
 package tokens
 
 import (
 	"time"
 
+	"github.com/eqlabs/flow-wallet-api/accounts"
+	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/transactions"
 	"gorm.io/gorm"
 )
+
+type Details struct {
+	TokenName string `json:"name"`
+	Address   string `json:"address,omitempty"`
+	Balance   string `json:"balance,omitempty"`
+}
+
+type WithdrawalRequest struct {
+	TokenName string `json:"-"`
+	Recipient string `json:"recipient"`
+	FtAmount  string `json:"amount,omitempty"`
+	NftID     string `json:"id,omitempty"`
+}
+
+// AccountToken represents a token that is enabled on an account.
+type AccountToken struct {
+	ID             uint64              `json:"-" gorm:"primaryKey"`
+	AccountAddress string              `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
+	Account        accounts.Account    `json:"-" gorm:"foreignKey:AccountAddress;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	TokenName      string              `json:"name" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenAddress   string              `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
+	TokenType      templates.TokenType `json:"-"`
+	CreatedAt      time.Time           `json:"-"`
+	UpdatedAt      time.Time           `json:"-"`
+	DeletedAt      gorm.DeletedAt      `json:"-" gorm:"index"`
+}
 
 // FungibleTokenTransfer is used for database interfacing
 type FungibleTokenTransfer struct {
@@ -20,12 +48,6 @@ type FungibleTokenTransfer struct {
 	CreatedAt        time.Time                `json:"createdAt"`
 	UpdatedAt        time.Time                `json:"updatedAt"`
 	DeletedAt        gorm.DeletedAt           `json:"-" gorm:"index"`
-}
-
-type TokenDetails struct {
-	Name    string `json:"name"`
-	Address string `json:"address,omitempty"`
-	Balance string `json:"balance,omitempty"`
 }
 
 // FungibleTokenTransferBase is used for JSON interfacing

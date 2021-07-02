@@ -22,34 +22,16 @@ import (
 type Account struct {
 	Address   string          `json:"address" gorm:"primaryKey"`
 	Keys      []keys.Storable `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Tokens    []AccountToken  `json:"-" gorm:"foreignKey:AccountAddress;references:Address;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	CreatedAt time.Time       `json:"createdAt" `
 	UpdatedAt time.Time       `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt  `json:"-" gorm:"index"`
-}
-
-type AccountToken struct {
-	ID             int                 `json:"-" gorm:"primaryKey"`
-	AccountAddress string              `json:"-" gorm:"uniqueIndex:addressname;index;not null"`
-	TokenName      string              `json:"name" gorm:"uniqueIndex:addressname;index;not null"`
-	TokenAddress   string              `json:"address" gorm:"uniqueIndex:addressname;index;not null"`
-	TokenType      templates.TokenType `json:"-"`
-	CreatedAt      time.Time           `json:"-"`
-	UpdatedAt      time.Time           `json:"-"`
-	DeletedAt      gorm.DeletedAt      `json:"-" gorm:"index"`
 }
 
 // New creates a new account on the Flow blockchain.
 // It uses the provided admin account to pay for the creation.
 // It generates a new privatekey and returns it (local key)
 // or a reference to it (Google KMS resource id).
-func New(
-	a *Account,
-	k *keys.Private,
-	ctx context.Context,
-	fc *client.Client,
-	km keys.Manager,
-) error {
+func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km keys.Manager) error {
 	// Get admin account authorizer
 	auth, err := km.AdminAuthorizer(ctx)
 	if err != nil {

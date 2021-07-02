@@ -54,7 +54,7 @@ type TestLogger struct {
 }
 
 func (tl *TestLogger) Write(p []byte) (n int, err error) {
-	tl.t.Log(fmt.Sprintf("%s", p))
+	tl.t.Log(string(p))
 	return len(p), nil
 }
 
@@ -756,7 +756,7 @@ func TestTokenServices(t *testing.T) {
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
-	service := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
@@ -766,26 +766,30 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Fund the account from service account
-		_, _, err = service.CreateFtWithdrawal(
+		_, _, err = tokenService.CreateWithdrawal(
 			context.Background(),
 			true,
-			"FlowToken",
 			cfg.AdminAddress,
-			account.Address,
-			"1.0",
+			tokens.WithdrawalRequest{
+				TokenName: "FlowToken",
+				Recipient: account.Address,
+				FtAmount:  "1.0",
+			},
 		)
 
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		_, transfer, err := service.CreateFtWithdrawal(
+		_, transfer, err := tokenService.CreateWithdrawal(
 			context.Background(),
 			true,
-			"FlowToken",
 			account.Address,
-			cfg.AdminAddress,
-			"1.0",
+			tokens.WithdrawalRequest{
+				TokenName: "FlowToken",
+				Recipient: cfg.AdminAddress,
+				FtAmount:  "1.0",
+			},
 		)
 
 		if err != nil {
@@ -804,13 +808,15 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, tx, err := service.CreateFtWithdrawal(
+		_, tx, err := tokenService.CreateWithdrawal(
 			context.Background(),
 			true,
-			"FlowToken",
 			account.Address,
-			cfg.AdminAddress,
-			"1.0",
+			tokens.WithdrawalRequest{
+				TokenName: "FlowToken",
+				Recipient: cfg.AdminAddress,
+				FtAmount:  "1.0",
+			},
 		)
 
 		if tx == nil {
@@ -832,7 +838,7 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Make sure FUSD is deployed
-		_, _, err := service.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
+		_, _, err := tokenService.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 				t.Fatal(err)
@@ -840,7 +846,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = accountService.SetupToken(ctx, true, tokenName, cfg.AdminAddress)
+		_, _, err = tokenService.Setup(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "vault exists") {
 				t.Fatal(err)
@@ -854,7 +860,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the new account to be able to handle FUSD
-		_, setupTx, err := accountService.SetupToken(ctx, true, tokenName, account.Address)
+		_, setupTx, err := tokenService.Setup(ctx, true, tokenName, account.Address)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -864,7 +870,16 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Create a withdrawal, should error as we can not mint FUSD right now
-		_, _, err = service.CreateFtWithdrawal(ctx, true, tokenName, cfg.AdminAddress, account.Address, "1.0")
+		_, _, err = tokenService.CreateWithdrawal(
+			ctx,
+			true,
+			cfg.AdminAddress,
+			tokens.WithdrawalRequest{
+				TokenName: tokenName,
+				Recipient: account.Address,
+				FtAmount:  "1.0",
+			},
+		)
 		if err != nil {
 			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
 				t.Fatal(err)
@@ -885,7 +900,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the new account to be able to handle the non-existent token
-		_, _, err = accountService.SetupToken(ctx, true, tokenName, account.Address)
+		_, _, err = tokenService.Setup(ctx, true, tokenName, account.Address)
 		if err == nil {
 			t.Fatal("expected an error")
 		}
@@ -926,25 +941,24 @@ func TestTokenHandlers(t *testing.T) {
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
-	service := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
-	tokenHandlers := handlers.NewTokens(logger, service, templates.FT)
-	accountHandlers := handlers.NewAccounts(logger, accountService)
+	tokenHandler := handlers.NewTokens(logger, tokenService)
 
 	router := mux.NewRouter()
-	router.Handle("/{address}/fungible-tokens", accountHandlers.AccountTokens(templates.FT)).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}", accountHandlers.SetupToken()).Methods(http.MethodPost)
-	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandlers.Details()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.CreateWithdrawal()).Methods(http.MethodPost)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandlers.ListWithdrawals()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandlers.GetWithdrawal()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits", tokenHandlers.ListDeposits()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandlers.GetDeposit()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens", tokenHandler.AccountTokens(templates.FT)).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 
 	// Setup tokens
 
 	// Make sure FUSD is deployed
-	_, _, err = service.DeployTokenContractForAccount(context.Background(), true, "FUSD", cfg.AdminAddress)
+	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "FUSD", cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
@@ -962,6 +976,23 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	setupTokenSteps := []httpTestStep{
+		{
+			name:        "Setup FlowToken async",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[0].Address, "FlowToken"),
+			expected:    `(?m)^{"jobId":".+".*}$`,
+			status:      http.StatusCreated,
+		},
+		{
+			name:        "Setup FlowToken sync",
+			sync:        true,
+			method:      http.MethodPost,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s", aa[1].Address, "FlowToken"),
+			expected:    `vault exists`,
+			status:      http.StatusBadRequest,
+		},
 		{
 			name:        "Setup FUSD valid async",
 			method:      http.MethodPost,
@@ -1090,7 +1121,16 @@ func TestTokenHandlers(t *testing.T) {
 		})
 	}
 
-	_, transfer, err := service.CreateFtWithdrawal(context.Background(), true, token.Name, cfg.AdminAddress, account.Address, "1.0")
+	_, transfer, err := tokenService.CreateWithdrawal(
+		context.Background(),
+		true,
+		cfg.AdminAddress,
+		tokens.WithdrawalRequest{
+			TokenName: token.Name,
+			Recipient: account.Address,
+			FtAmount:  "1.0",
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1253,6 +1293,7 @@ func TestNFTDeployment(t *testing.T) {
 	templateService := templates.NewService(templateStore)
 
 	jobStore := jobs.NewGormStore(db)
+	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
@@ -1264,7 +1305,8 @@ func TestNFTDeployment(t *testing.T) {
 	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
+	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
+	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
 	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
