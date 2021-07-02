@@ -48,6 +48,11 @@ type Storable struct {
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
+// Rename the database table to improve database readability
+func (Storable) TableName() string {
+	return "storable_keys"
+}
+
 // Private is an "in flight" account private key meaning its Value should be the actual
 // private key or resource id (unencrypted).
 type Private struct {
