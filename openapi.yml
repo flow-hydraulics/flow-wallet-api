@@ -35,6 +35,21 @@ components:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
 
+    transactionRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        arguments:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              value:
+                type: string
+
     transaction:
       type: object
       properties:
@@ -67,31 +82,7 @@ components:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
 
-    script:
-      type: object
-      properties:
-        code:
-          type: string
-        arguments:
-          type: array
-          items:
-            type: object
-            properties:
-              type:
-                type: string
-              value:
-                type: string
-
-    cadenceValue:
-      type: object
-      properties:
-        Value:
-          type: string
-
-    plainValue:
-      type: string
-
-    token:
+    fungibleToken:
       type: object
       properties:
         name:
@@ -101,7 +92,7 @@ components:
           type: string
           example: "0xf8d6e0586b0a20c7"
 
-    tokenDetails:
+    fungibleTokenDetails:
       type: object
       properties:
         name:
@@ -111,7 +102,17 @@ components:
           type: string
           example: "9999999999.99700000"
 
-    tokenWithdrawal:
+    fungibleTokenWithdrawalRequest:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        amount:
+          type: string
+          example: "1.0"
+
+    fungibleTokenWithdrawal:
       type: object
       properties:
         transactionId:
@@ -133,7 +134,7 @@ components:
           type: string
           example: "2021-06-16T12:05:24.617898+03:00"
 
-    tokenDeposit:
+    fungibleTokenDeposit:
       type: object
       properties:
         transactionId:
@@ -214,8 +215,6 @@ tags:
     description: Create and lists accounts managed by this Wallet API.
   - name: Transactions
     description: Send transactions from accounts managed by this Wallet API.
-  - name: Scripts
-    description: Execute read-only scripts against the blockchain.
   - name: Fungible Tokens
     description: Initialize tokens, withdraw funds and detect deposits of fungible tokens.
   - name: Jobs
@@ -237,6 +236,7 @@ paths:
     get:
       summary: Get all fungible tokens
       description: Get all fungible tokens that are enabled in this instance.
+      operationId: getFungibleTokens
       tags:
         - Fungible Tokens
       responses:
@@ -247,30 +247,12 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/token"
-  /scripts:
-    post:
-      summary: Execute a script on chain
-      tags:
-        - Scripts
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/script"
-      responses:
-        "200":
-          description: Ok
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/cadenceValue"
-                  - $ref: "#/components/schemas/plainValue"
+                  $ref: "#/components/schemas/fungibleToken"
 
   /jobs:
     get:
       summary: List all jobs
+      operationId: getJobs
       tags:
         - Jobs
       parameters:
@@ -291,6 +273,7 @@ paths:
       - $ref: "#/components/parameters/jobId"
     get:
       summary: Get a job
+      operationId: getJob
       tags:
         - Jobs
       responses:
@@ -306,6 +289,7 @@ paths:
     get:
       summary: List all accounts
       description: Get a list of all accounts managed by the wallet service.
+      operationId: getAccounts
       tags:
         - Accounts
       parameters:
@@ -323,6 +307,7 @@ paths:
     post:
       summary: Create an account
       description: Create a new account that will be managed by the wallet service. Returns a job.
+      operationId: createAccount
       tags:
         - Accounts
       responses:
@@ -339,6 +324,7 @@ paths:
     get:
       summary: Get an account
       description: Get the details of a specific account.
+      operationId: getAccountByAddress
       tags:
         - Accounts
       responses:
@@ -355,6 +341,7 @@ paths:
     get:
       summary: List account raw transactions
       description: Get a list of all transactions sent by an account.
+      operationId: getAccountTransactions
       tags:
         - Transactions
       parameters:
@@ -372,13 +359,14 @@ paths:
     post:
       summary: Send a raw transaction
       description: Send a transaction from an account. Returns a job.
+      operationId: sendAccountTransaction
       tags:
         - Transactions
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/script"
+              $ref: "#/components/schemas/transactionRequest"
       responses:
         "201":
           description: Created
@@ -394,6 +382,7 @@ paths:
     get:
       summary: Get a raw transaction
       description: Get the details of a raw transaction sent by an account.
+      operationId: getAccountTransaction
       tags:
         - Transactions
       responses:
@@ -410,6 +399,7 @@ paths:
     get:
       summary: Get account fungible tokens
       description: Get all fungible tokens that are enabled for an account.
+      operationId: getAccountFungibleTokens
       tags:
         - Fungible Tokens
       responses:
@@ -420,7 +410,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/token"
+                  $ref: "#/components/schemas/fungibleToken"
 
   /accounts/{address}/fungible-tokens/{tokenName}:
     parameters:
@@ -429,6 +419,7 @@ paths:
     get:
       summary: Get fungible tokens details for an account
       description: Get details (balance) regarding a fungible token for an account.
+      operationId: getAccountFungibleToken
       tags:
         - Fungible Tokens
       responses:
@@ -439,9 +430,10 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/tokenDetails"
+                  $ref: "#/components/schemas/fungibleTokenDetails"
     post:
       summary: Enable a fungible token for an account
+      operationId: initAccountFungibleToken
       tags:
         - Fungible Tokens
       responses:
@@ -460,6 +452,7 @@ paths:
       - $ref: "#/components/parameters/tokenName"
     get:
       summary: List all withdrawals of a fungible token
+      operationId: getAccountFungibleTokenWithdrawals
       tags:
         - Fungible Tokens
       responses:
@@ -470,11 +463,17 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/tokenWithdrawal"
+                  $ref: "#/components/schemas/fungibleTokenWithdrawal"
     post:
       summary: Create a fungible token withdrawal
+      operationId: createAccountFungibleTokenWithdrawal
       tags:
         - Fungible Tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/fungibleTokenWithdrawalRequest"
       responses:
         "201":
           description: OK
@@ -492,6 +491,7 @@ paths:
       - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a fungible token withdrawal
+      operationId: getAccountFungibleTokenWithdrawal
       tags:
         - Fungible Tokens
       responses:
@@ -500,7 +500,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/tokenWithdrawal"
+                $ref: "#/components/schemas/fungibleTokenWithdrawal"
 
   /accounts/{address}/fungible-tokens/{tokenName}/deposits:
     parameters:
@@ -508,6 +508,7 @@ paths:
       - $ref: "#/components/parameters/tokenName"
     get:
       summary: List all deposits of a fungible token
+      operationId: getAccountFungibleTokenDeposits
       tags:
         - Fungible Tokens
       responses:
@@ -518,7 +519,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/tokenDeposit"
+                  $ref: "#/components/schemas/fungibleTokenDeposit"
 
   /accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}:
     parameters:
@@ -527,6 +528,7 @@ paths:
       - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a fungible token deposit
+      operationId: getAccountFungibleTokenDeposit
       tags:
         - Fungible Tokens
       responses:
@@ -535,4 +537,4 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/tokenDeposit"
+                $ref: "#/components/schemas/fungibleTokenDeposit"
