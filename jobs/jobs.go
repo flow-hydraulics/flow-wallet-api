@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eqlabs/flow-wallet-service/errors"
+	"github.com/eqlabs/flow-wallet-api/errors"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )

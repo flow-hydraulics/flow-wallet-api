@@ -1,8 +1,8 @@
 package accounts
 
 import (
-	"github.com/eqlabs/flow-wallet-service/datastore"
-	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-api/datastore"
+	"github.com/eqlabs/flow-wallet-api/templates"
 )
 
 // Store manages data regarding accounts.

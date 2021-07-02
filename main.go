@@ -12,17 +12,17 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-service/accounts"
-	"github.com/eqlabs/flow-wallet-service/datastore/gorm"
-	"github.com/eqlabs/flow-wallet-service/debug"
-	"github.com/eqlabs/flow-wallet-service/events"
-	"github.com/eqlabs/flow-wallet-service/handlers"
-	"github.com/eqlabs/flow-wallet-service/jobs"
-	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/eqlabs/flow-wallet-service/keys/basic"
-	"github.com/eqlabs/flow-wallet-service/templates"
-	"github.com/eqlabs/flow-wallet-service/tokens"
-	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/eqlabs/flow-wallet-api/accounts"
+	"github.com/eqlabs/flow-wallet-api/datastore/gorm"
+	"github.com/eqlabs/flow-wallet-api/debug"
+	"github.com/eqlabs/flow-wallet-api/events"
+	"github.com/eqlabs/flow-wallet-api/handlers"
+	"github.com/eqlabs/flow-wallet-api/jobs"
+	"github.com/eqlabs/flow-wallet-api/keys"
+	"github.com/eqlabs/flow-wallet-api/keys/basic"
+	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/tokens"
+	"github.com/eqlabs/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
@@ -38,7 +38,7 @@ var (
 type Config struct {
 	Host          string       `env:"HOST"`
 	Port          int          `env:"PORT" envDefault:"3000"`
-	AccessApiHost string       `env:"ACCESS_API_HOST,required"`
+	AccessAPIHost string       `env:"ACCESS_API_HOST,required"`
 	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
@@ -90,7 +90,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// Flow client
 	// TODO: WithInsecure()?
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		ls.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService)
 
 	debugService := debug.Service{
-		RepoUrl:   "https://github.com/eqlabs/flow-wallet-service",
+		RepoUrl:   "https://github.com/eqlabs/flow-wallet-api",
 		Sha1ver:   sha1ver,
 		BuildTime: buildTime,
 	}

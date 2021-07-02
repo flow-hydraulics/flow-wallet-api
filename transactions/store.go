@@ -1,6 +1,6 @@
 package transactions
 
-import "github.com/eqlabs/flow-wallet-service/datastore"
+import "github.com/eqlabs/flow-wallet-api/datastore"
 
 // Store manages data regarding transactions.
 type Store interface {

@@ -1,7 +1,7 @@
 package jobs
 
 import (
-	"github.com/eqlabs/flow-wallet-service/datastore"
+	"github.com/eqlabs/flow-wallet-api/datastore"
 	"github.com/google/uuid"
 )
 

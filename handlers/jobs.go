@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-service/jobs"
+	"github.com/eqlabs/flow-wallet-api/jobs"
 )
 
 // Jobs is a HTTP server for jobs.

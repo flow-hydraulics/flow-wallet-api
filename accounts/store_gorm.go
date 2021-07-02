@@ -1,9 +1,9 @@
 package accounts
 
 import (
-	"github.com/eqlabs/flow-wallet-service/datastore"
-	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-api/datastore"
+	"github.com/eqlabs/flow-wallet-api/keys"
+	"github.com/eqlabs/flow-wallet-api/templates"
 	"gorm.io/gorm"
 )
 

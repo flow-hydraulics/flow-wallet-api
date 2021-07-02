@@ -15,16 +15,16 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-service/accounts"
-	"github.com/eqlabs/flow-wallet-service/datastore/gorm"
-	"github.com/eqlabs/flow-wallet-service/flow_helpers"
-	"github.com/eqlabs/flow-wallet-service/handlers"
-	"github.com/eqlabs/flow-wallet-service/jobs"
-	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/eqlabs/flow-wallet-service/keys/basic"
-	"github.com/eqlabs/flow-wallet-service/templates"
-	"github.com/eqlabs/flow-wallet-service/tokens"
-	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/eqlabs/flow-wallet-api/accounts"
+	"github.com/eqlabs/flow-wallet-api/datastore/gorm"
+	"github.com/eqlabs/flow-wallet-api/flow_helpers"
+	"github.com/eqlabs/flow-wallet-api/handlers"
+	"github.com/eqlabs/flow-wallet-api/jobs"
+	"github.com/eqlabs/flow-wallet-api/keys"
+	"github.com/eqlabs/flow-wallet-api/keys/basic"
+	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/tokens"
+	"github.com/eqlabs/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
@@ -44,7 +44,7 @@ var (
 )
 
 type testConfig struct {
-	AccessApiHost string       `env:"ACCESS_API_HOST,required"`
+	AccessAPIHost string       `env:"ACCESS_API_HOST,required"`
 	AdminAddress  string       `env:"ADMIN_ADDRESS,required"`
 	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
@@ -132,7 +132,7 @@ func TestAccountServices(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestAccountHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +371,7 @@ func TestTransactionHandlers(t *testing.T) {
 
 	// logger = log.New(&TestLogger{t}, "", log.Lshortfile)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -636,7 +636,7 @@ func TestScriptsHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,7 +726,7 @@ func TestTokenServices(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -896,7 +896,7 @@ func TestTokenHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1236,7 +1236,7 @@ func TestNFTDeployment(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	fc, err := client.New(cfg.AccessApiHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-service/errors"
-	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-api/errors"
+	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/gorilla/mux"
 )
 
