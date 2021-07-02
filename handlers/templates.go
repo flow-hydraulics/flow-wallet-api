@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-api/templates"
 )
 
 // Templates is a HTTP server for template management.

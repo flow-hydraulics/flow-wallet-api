@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-service/errors"
+	"github.com/eqlabs/flow-wallet-api/errors"
 )
 
 const SyncHeader = "Use-Sync"

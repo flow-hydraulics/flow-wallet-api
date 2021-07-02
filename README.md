@@ -1,4 +1,4 @@
-# Flow Wallet Service v0.3.1
+# Flow Wallet Api v0.3.1
 
 A custodial wallet service for tokens on the Flow blockchain.
 
@@ -22,7 +22,7 @@ A custodial wallet service for tokens on the Flow blockchain.
 
 Running:
 
-    docker run -d --name flow-wallet-service --env-file .env ghcr.io/eqlabs/flow-wallet-service:0.0.2
+    docker run -d --name flow-wallet-api --env-file .env ghcr.io/eqlabs/flow-wallet-api:0.0.2
 
 ## Developing
 
@@ -121,7 +121,7 @@ Configure the Google KMS client library by setting the environment variable `GOO
 export GOOGLE_APPLICATION_CREDENTIALS="/home/example/path/to/service-account-file.json"
 ```
 
-Configure Google KMS as the key storage for `flow-wallet-service` and set the necessary environment variables;
+Configure Google KMS as the key storage for `flow-wallet-api` and set the necessary environment variables;
 
 | Config variable | Environment variable     | Description      | Default | Examples                    |
 | --------------- | ------------------------ | ---------------- | ------- | --------------------------- |

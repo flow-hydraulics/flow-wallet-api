@@ -1,7 +1,7 @@
 openapi: 3.0.3
 
 info:
-  title: Flow Wallet Service API
+  title: Flow Wallet Api
   version: 0.3.1
 
 servers:
@@ -18,7 +18,7 @@ components:
           Content-Type: application/json
           Connection: close
 
-        ver: https://github.com/eqlabs/flow-wallet-service/commit/
+        ver: https://github.com/eqlabs/flow-wallet-api/commit/
         built on:
         api version called: v1
 

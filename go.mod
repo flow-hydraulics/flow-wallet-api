@@ -1,4 +1,4 @@
-module github.com/eqlabs/flow-wallet-service
+module github.com/eqlabs/flow-wallet-api
 
 go 1.16
 

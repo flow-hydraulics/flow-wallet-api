@@ -1,7 +1,7 @@
 package transactions
 
 import (
-	"github.com/eqlabs/flow-wallet-service/datastore"
+	"github.com/eqlabs/flow-wallet-api/datastore"
 	"gorm.io/gorm"
 )
 

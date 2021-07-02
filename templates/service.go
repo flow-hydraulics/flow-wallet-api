@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-service/flow_helpers"
+	"github.com/eqlabs/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
 )
 

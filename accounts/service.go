@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-service/datastore"
-	"github.com/eqlabs/flow-wallet-service/errors"
-	"github.com/eqlabs/flow-wallet-service/flow_helpers"
-	"github.com/eqlabs/flow-wallet-service/jobs"
-	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/eqlabs/flow-wallet-service/templates"
-	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/eqlabs/flow-wallet-api/datastore"
+	"github.com/eqlabs/flow-wallet-api/errors"
+	"github.com/eqlabs/flow-wallet-api/flow_helpers"
+	"github.com/eqlabs/flow-wallet-api/jobs"
+	"github.com/eqlabs/flow-wallet-api/keys"
+	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/transactions"
 	"github.com/onflow/flow-go-sdk/client"
 )
 

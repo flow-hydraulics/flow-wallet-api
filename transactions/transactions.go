@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/eqlabs/flow-wallet-service/flow_helpers"
-	"github.com/eqlabs/flow-wallet-service/keys"
-	"github.com/eqlabs/flow-wallet-service/templates"
+	"github.com/eqlabs/flow-wallet-api/flow_helpers"
+	"github.com/eqlabs/flow-wallet-api/keys"
+	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"gorm.io/gorm"

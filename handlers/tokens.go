@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-service/templates"
-	"github.com/eqlabs/flow-wallet-service/tokens"
+	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/tokens"
 )
 
 type Tokens struct {

@@ -1,7 +1,7 @@
 package tokens
 
 import (
-	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/eqlabs/flow-wallet-api/transactions"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

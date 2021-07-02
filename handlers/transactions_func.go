@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/eqlabs/flow-wallet-service/errors"
-	"github.com/eqlabs/flow-wallet-service/templates"
-	"github.com/eqlabs/flow-wallet-service/transactions"
+	"github.com/eqlabs/flow-wallet-api/errors"
+	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 )
 
