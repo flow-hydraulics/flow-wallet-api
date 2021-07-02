@@ -2,7 +2,6 @@ package accounts
 
 import (
 	"github.com/eqlabs/flow-wallet-api/datastore"
-	"github.com/eqlabs/flow-wallet-api/keys"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +10,7 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&Account{}, &keys.Storable{})
+	db.AutoMigrate(&Account{})
 	return &GormStore{db}
 }
 
