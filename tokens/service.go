@@ -158,28 +158,28 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 		return nil, nil, err
 	}
 
+	var arguments []templates.Argument = make([]templates.Argument, 2)
+
 	switch token.Type {
 	case templates.FT:
-		// Continue normal flow
+		// Convert amount to a cadence value
+		c_amount, err := cadence.NewUFix64(request.FtAmount)
+		if err != nil {
+			return nil, nil, err
+		}
+		arguments[0] = c_amount
+		arguments[1] = cadence.NewAddress(flow.HexToAddress(recipient))
 	case templates.NFT:
-		return nil, nil, fmt.Errorf("not yet implemented")
+		arguments[0] = cadence.NewAddress(flow.HexToAddress(recipient))
+		arguments[1] = cadence.NewUInt64(request.NftID)
 	default:
 		return nil, nil, fmt.Errorf("unknown token type")
 	}
 
-	// Convert amount to a cadence value
-	c_amount, err := cadence.NewUFix64(request.FtAmount)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// Raw transfer template
 	raw := templates.Raw{
-		Code: token.Transfer,
-		Arguments: []templates.Argument{
-			c_amount,
-			cadence.NewAddress(flow.HexToAddress(recipient)),
-		},
+		Code:      token.Transfer,
+		Arguments: arguments,
 	}
 
 	// Create the transaction
@@ -189,6 +189,7 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 	t := &TokenTransfer{
 		RecipientAddress: recipient,
 		FtAmount:         request.FtAmount,
+		NftID:            request.NftID,
 		TokenName:        token.Name,
 	}
 

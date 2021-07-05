@@ -22,7 +22,7 @@ type WithdrawalRequest struct {
 	TokenName string `json:"-"`
 	Recipient string `json:"recipient"`
 	FtAmount  string `json:"amount,omitempty"`
-	NftID     string `json:"id,omitempty"`
+	NftID     uint64 `json:"id,omitempty"`
 }
 
 // AccountToken represents a token that is enabled on an account.
@@ -45,7 +45,7 @@ type TokenTransfer struct {
 	Transaction      transactions.Transaction `json:"-" gorm:"foreignKey:TransactionId;references:TransactionId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	RecipientAddress string                   `json:"recipient" gorm:"index"`
 	FtAmount         string                   `json:"amount"`
-	NftID            string                   `json:"id"`
+	NftID            uint64                   `json:"id"`
 	TokenName        string                   `json:"token"`
 	CreatedAt        time.Time                `json:"createdAt"`
 	UpdatedAt        time.Time                `json:"updatedAt"`

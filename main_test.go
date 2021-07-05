@@ -29,6 +29,7 @@ import (
 	"github.com/eqlabs/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"go.uber.org/goleak"
@@ -966,7 +967,7 @@ func TestTokenHandlers(t *testing.T) {
 	// router.Handle("/{address}/non-fungible-tokens", tokenHandler.AccountTokens(templates.NFT)).Methods(http.MethodGet)
 	router.Handle("/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
 	router.Handle("/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
-	// router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
 	// router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
 	// router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
 	// router.Handle("/{address}/non-fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
@@ -1006,8 +1007,8 @@ func TestTokenHandlers(t *testing.T) {
 	balanceBytes, err := ioutil.ReadFile(filepath.Join(basePath, "balance_exampleNFT.cdc"))
 	fatal(t, err)
 
-	// mintBytes, err := ioutil.ReadFile(filepath.Join(basePath, "mint_exampleNFT.cdc"))
-	// fatal(t, err)
+	mintBytes, err := ioutil.ReadFile(filepath.Join(basePath, "mint_exampleNFT.cdc"))
+	fatal(t, err)
 
 	exampleNft := templates.Token{
 		Name:     "ExampleNFT",
@@ -1102,6 +1103,22 @@ func TestTokenHandlers(t *testing.T) {
 		})
 	}
 
+	// Mint ExampleNFTs for account 0
+	mintCode := templates.TokenCode(&exampleNft, string(mintBytes))
+	for i := 0; i < 4; i++ {
+		_, _, err := transactionService.Create(context.Background(), true, cfg.AdminAddress, templates.Raw{
+			Code: mintCode,
+			Arguments: []templates.Argument{
+				cadence.NewAddress(flow.HexToAddress(aa[0].Address)),
+			},
+		}, transactions.General)
+		fatal(t, err)
+	}
+
+	aa0NftDetails, err := tokenService.Details(context.Background(), exampleNft.Name, aa[0].Address)
+	fatal(t, err)
+	aa0NftIDs := aa0NftDetails.Balance.(cadence.Array).Values
+
 	// Token details
 	detailtsSteps := []httpTestStep{
 		{
@@ -1126,6 +1143,14 @@ func TestTokenHandlers(t *testing.T) {
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s", aa[1].Address, exampleNft.Name),
 			expected:    `(?m)^{"name":"ExampleNFT\","balance":{"Values":\[\]}}$`,
+			status:      http.StatusOK,
+		},
+		{
+			name:        "ExampleNFT details",
+			method:      http.MethodGet,
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s", aa[0].Address, exampleNft.Name),
+			expected:    `(?m)^{"name":"ExampleNFT\","balance":{"Values":\[(\d+,)+\d+\]}}$`,
 			status:      http.StatusOK,
 		},
 	}
@@ -1198,6 +1223,16 @@ func TestTokenHandlers(t *testing.T) {
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
 			expected:    "missing decimal point",
 			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "create ExampleNFT withdrawal valid sync",
+			sync:        true,
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","id":%d}`, cfg.AdminAddress, aa0NftIDs[0].ToGoValue())),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", aa[0].Address, exampleNft.Name),
+			expected:    `(?m)^{"transactionId":".+"}$`,
+			status:      http.StatusCreated,
 		},
 	}
 
