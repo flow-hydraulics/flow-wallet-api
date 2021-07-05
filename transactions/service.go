@@ -158,17 +158,11 @@ func (s *Service) Details(tType Type, address, transactionId string) (result Tra
 
 // Execute a script
 func (s *Service) ExecuteScript(ctx context.Context, raw templates.Raw) (cadence.Value, error) {
-	value, err := s.fc.ExecuteScriptAtLatestBlock(
+	return s.fc.ExecuteScriptAtLatestBlock(
 		ctx,
 		[]byte(raw.Code),
 		templates.MustDecodeArgs(raw.Arguments),
 	)
-
-	if err != nil {
-		return cadence.Void{}, err
-	}
-
-	return value, err
 }
 
 func (s *Service) UpdateTransaction(t *Transaction) error {
