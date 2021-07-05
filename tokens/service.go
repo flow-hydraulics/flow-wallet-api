@@ -119,9 +119,8 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 
 	switch token.Type {
 	case templates.FT:
-		// Continue normal flow
 	case templates.NFT:
-		return nil, fmt.Errorf("not yet implemented")
+		// Continue normal flow
 	default:
 		return nil, fmt.Errorf("unknown token type")
 	}
@@ -138,7 +137,7 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 		return nil, err
 	}
 
-	return &Details{TokenName: token.Name, Balance: b.String()}, nil
+	return &Details{TokenName: token.Name, Balance: b}, nil
 }
 
 func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error) {

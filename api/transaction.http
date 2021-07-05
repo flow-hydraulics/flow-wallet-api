@@ -66,3 +66,12 @@ content-type: application/json
   "code":"transaction(greeting: String) { execute { log(greeting.concat(\", World!\")) }}",
   "arguments":[{"type":"String","value":"Hello"}]
 }
+
+### Mint ExampleNFT for admin account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/transactions HTTP/1.1
+content-type: application/json
+
+{
+  "code":"import NonFungibleToken from {{$dotenv ADMIN_ADDRESS}}\nimport ExampleNFT from {{$dotenv ADMIN_ADDRESS}}\ntransaction(recipient: Address) {\n    let minter: &ExampleNFT.NFTMinter\n    prepare(signer: AuthAccount) {\n        self.minter = signer\n            .borrow<&ExampleNFT.NFTMinter>(from: ExampleNFT.MinterStoragePath)\n            ?? panic(\"Could not borrow a reference to the NFT minter\")\n    }\n    execute {\n        let recipient = getAccount(recipient)\n        let receiver = recipient\n            .getCapability(ExampleNFT.CollectionPublicPath)!\n            .borrow<&{NonFungibleToken.CollectionPublic}>()\n            ?? panic(\"Could not get receiver reference to the NFT Collection\")\n        self.minter.mintNFT(recipient: receiver)\n    }\n}\n",
+  "arguments":[{"type":"Address","value":"{{$dotenv ADMIN_ADDRESS}}"}]
+}
