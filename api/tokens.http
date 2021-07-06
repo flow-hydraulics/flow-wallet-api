@@ -79,6 +79,15 @@ content-type: application/json
   "amount":"1.0"
 }
 
+### Create an ExampleNFT withdrawal from admin to custody account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
+content-type: application/json
+
+{
+  "recipient":"{{emulatorCustodyAccount}}",
+  "id":16
+}
+
 ### List FlowToken withdrawals for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
@@ -87,8 +96,22 @@ content-type: application/json
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
+### ExampleNFT withdrawals for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
+content-type: application/json
+
+
 ### Get FlowToken withdrawal details for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
+content-type: application/json
+
+
+### Get ExampleNFT withdrawal details for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals/<transaction_id> HTTP/1.1
+content-type: application/json
+
+### Setup FlowToken on emulator for admin account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
 content-type: application/json
 
 ### Setup FUSD on emulator for admin account
@@ -115,6 +138,10 @@ content-type: application/json
 
 ### Get FUSD details for custody account
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD HTTP/1.1
+content-type: application/json
+
+### Get ExampleNFT details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/non-fungible-tokens/ExampleNFT HTTP/1.1
 content-type: application/json
 
 ### Create a FlowToken withdrawal from custody to admin account

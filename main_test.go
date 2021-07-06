@@ -1234,6 +1234,16 @@ func TestTokenHandlers(t *testing.T) {
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 		},
+		{
+			name:        "create ExampleNFT withdrawal with missing NFT",
+			sync:        true,
+			method:      http.MethodPost,
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","id":%d}`, cfg.AdminAddress, aa0NftIDs[0].ToGoValue())),
+			contentType: "application/json",
+			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", aa[1].Address, exampleNft.Name),
+			expected:    `missing NFT`,
+			status:      http.StatusBadRequest,
+		},
 	}
 
 	for _, s := range createWithdrawalSteps {

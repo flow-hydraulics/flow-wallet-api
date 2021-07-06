@@ -1,6 +1,8 @@
 package tokens
 
 import (
+	"fmt"
+
 	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/transactions"
 	"gorm.io/gorm"
@@ -17,11 +19,11 @@ func NewGormStore(db *gorm.DB) *GormStore {
 	return &GormStore{db}
 }
 
-func (s *GormStore) AccountTokens(address string, tType *templates.TokenType) (att []AccountToken, err error) {
+func (s *GormStore) AccountTokens(address string, tokenType *templates.TokenType) (att []AccountToken, err error) {
 	q := s.db
-	if tType != nil {
+	if tokenType != nil {
 		// Filter by type
-		q = q.Where(&AccountToken{AccountAddress: address, TokenType: *tType})
+		q = q.Where(&AccountToken{AccountAddress: address, TokenType: *tokenType})
 	} else {
 		// Find all
 		q = q.Where(&AccountToken{AccountAddress: address})
@@ -36,65 +38,94 @@ func (s *GormStore) InsertAccountToken(at *AccountToken) error {
 	return s.db.FirstOrCreate(&AccountToken{}, at).Error
 }
 
-func (s *GormStore) InsertFungibleTokenTransfer(t *TokenTransfer) error {
+func (s *GormStore) InsertTokenTransfer(t *TokenTransfer) error {
 	return s.db.Create(t).Error
+}
+
+func tokenToTransferType(token *templates.Token) (*transactions.Type, error) {
+	var txType transactions.Type
+	switch token.Type {
+	case templates.FT:
+		txType = transactions.FtTransfer
+	case templates.NFT:
+		txType = transactions.NftTransfer
+	default:
+		return nil, fmt.Errorf("unknown token type")
+	}
+	return &txType, nil
 }
 
 // TODO: DRY
 
-func (s *GormStore) FungibleTokenWithdrawals(address, tokenName string) (tt []*TokenTransfer, err error) {
-	tType := transactions.FtTransfer // This needs to be here separately
+func (s *GormStore) TokenWithdrawals(address string, token *templates.Token) (tt []*TokenTransfer, err error) {
+	txType, err := tokenToTransferType(token)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
-		Where("transactions.transaction_type = ?", tType).
 		Where("transactions.payer_address = ?", address).
-		Where("token_transfers.token_name = ?", tokenName).
+		Where("transactions.transaction_type = ?", txType).
+		Where("token_transfers.token_name = ?", token.Name).
 		Order("token_transfers.created_at desc").
 		Find(&tt).Error
 	return
 }
 
-func (s *GormStore) FungibleTokenWithdrawal(address, tokenName, transactionId string) (t *TokenTransfer, err error) {
-	tType := transactions.FtTransfer // This needs to be here separately
+func (s *GormStore) TokenWithdrawal(address, transactionId string, token *templates.Token) (t *TokenTransfer, err error) {
+	txType, err := tokenToTransferType(token)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
-		Where("transactions.transaction_type = ?", tType).
 		Where("transactions.payer_address = ?", address).
 		Where("transactions.transaction_id = ?", transactionId).
-		Where("token_transfers.token_name = ?", tokenName).
+		Where("transactions.transaction_type = ?", txType).
+		Where("token_transfers.token_name = ?", token.Name).
 		Order("token_transfers.created_at desc").
 		First(&t).Error
 	return
 }
 
-func (s *GormStore) FungibleTokenDeposits(address, tokenName string) (tt []*TokenTransfer, err error) {
-	tType := transactions.FtTransfer // This needs to be here separately
+func (s *GormStore) TokenDeposits(address string, token *templates.Token) (tt []*TokenTransfer, err error) {
+	txType, err := tokenToTransferType(token)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
-		Where("transactions.transaction_type = ?", tType).
-		Where("token_transfers.token_name = ?", tokenName).
 		Where("token_transfers.recipient_address = ?", address).
+		Where("transactions.transaction_type = ?", txType).
+		Where("token_transfers.token_name = ?", token.Name).
 		Order("token_transfers.created_at desc").
 		Find(&tt).Error
 	return
 }
 
-func (s *GormStore) FungibleTokenDeposit(address, tokenName, transactionId string) (t *TokenTransfer, err error) {
-	tType := transactions.FtTransfer // This needs to be here separately
+func (s *GormStore) TokenDeposit(address, transactionId string, token *templates.Token) (t *TokenTransfer, err error) {
+	txType, err := tokenToTransferType(token)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.db.
 		Preload(clause.Associations).
 		Select("*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
-		Where("token_transfers.token_name = ?", tokenName).
-		Where("transactions.transaction_type = ?", tType).
-		Where("transactions.transaction_id = ?", transactionId).
 		Where("token_transfers.recipient_address = ?", address).
+		Where("transactions.transaction_id = ?", transactionId).
+		Where("transactions.transaction_type = ?", txType).
+		Where("token_transfers.token_name = ?", token.Name).
 		Order("token_transfers.created_at desc").
 		First(&t).Error
 	return

@@ -266,6 +266,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		}()
 
 		// TODO: This won't handle tokens which are enabled after starting the service
+		// TODO: Add NFTs
+
 		// Listen for enabled tokens deposit events
 		tType := templates.FT
 		tokens, err := templateService.ListTokens(&tType)
