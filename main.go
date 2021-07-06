@@ -255,55 +255,39 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 		eventStore := events.NewGormStore(db)
 
-		l := events.
-			NewListener(fc, eventStore, 100).
-			Start()
+		l := events.NewChainListener(fc, eventStore, 100)
 
 		defer func() {
 			ls.Println("Stopping event listener..")
 			l.Stop()
 		}()
 
-		// TODO: This won't handle tokens which are enabled after starting the service
-
-		// Listen for enabled tokens deposit events
-		tokens, err := templateService.ListTokens(nil)
+		// Get all enabled tokens
+		tt, err := templateService.ListTokens(nil)
 		if err != nil {
 			panic(err)
 		}
-		for _, token := range *tokens {
-			switch token.Type {
-			case templates.FT:
-				l.ListenTokenEvent(token, events.TokensDeposited)
-			case templates.NFT:
-				l.ListenTokenEvent(token, events.Deposit)
-			}
+
+		// Listen for enabled tokens deposit events
+		for _, token := range *tt {
+			l.AddType(templates.DepositEventTypeFromToken(token))
 		}
 
-		go func() {
-			for ee := range l.Events {
-				for _, event := range ee {
-					// Get the token
-					token, err := templateService.TokenFromEvent(event)
-					if err != nil {
-						continue
-					}
+		// Register a handler for token enabled events
+		events.TokenEnabled.Register(&templates.TokenEnabledHandler{ChainListener: l})
 
-					amountOrNftID := event.Value.Fields[0]
-					accountAddress := event.Value.Fields[1]
+		// Register a handler for token disabled events
+		events.TokenDisabled.Register(&templates.TokenDisabledHandler{ChainListener: l})
 
-					// Check if recipient is in database
-					account, err := accountService.Details(accountAddress.String())
-					if err != nil {
-						continue
-					}
+		// Register a handler for chain events
+		events.ChainEvent.Register(&tokens.ChainEventHandler{
+			AccountService:  accountService,
+			ChainListener:   l,
+			TemplateService: templateService,
+			TokenService:    tokenService,
+		})
 
-					if err = tokenService.RegisterDeposit(token, event.TransactionID.Hex(), amountOrNftID.String(), account.Address); err != nil {
-						ls.Printf("error while registering a deposit: %s\n", err)
-					}
-				}
-			}
-		}()
+		l.Start()
 	}
 
 	// Trap interupt or sigterm and gracefully shutdown the server

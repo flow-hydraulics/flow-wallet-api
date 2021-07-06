@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/eqlabs/flow-wallet-api/events"
 	"github.com/eqlabs/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
 )
@@ -51,7 +52,18 @@ func (s *Service) AddToken(t *Token) error {
 	t.Transfer = TokenCode(t, t.Transfer)
 	t.Balance = TokenCode(t, t.Balance)
 
-	return s.store.Insert(t)
+	err = s.store.Insert(t)
+	if err != nil {
+		return err
+	}
+
+	events.TokenEnabled.Trigger(events.TokenEnabledPayload{
+		TokenName:    t.Name,
+		TokenAddress: t.Address,
+		TokenType:    t.Type.String(),
+	})
+
+	return nil
 }
 
 func (s *Service) ListTokens(tType *TokenType) (*[]BasicToken, error) {
@@ -67,7 +79,24 @@ func (s *Service) GetTokenByName(name string) (*Token, error) {
 }
 
 func (s *Service) RemoveToken(id uint64) error {
-	return s.store.Remove(id)
+	// Fetch it first so we can trigger the disable event
+	token, err := s.store.GetById(id)
+	if err != nil {
+		return err
+	}
+
+	err = s.store.Remove(id)
+	if err != nil {
+		return err
+	}
+
+	events.TokenDisabled.Trigger(events.TokenDisabledPayload{
+		TokenName:    token.Name,
+		TokenAddress: token.Address,
+		TokenType:    token.Type.String(),
+	})
+
+	return nil
 }
 
 func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
