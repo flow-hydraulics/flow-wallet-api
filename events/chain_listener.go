@@ -3,10 +3,8 @@ package events
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"gorm.io/gorm"
@@ -14,17 +12,14 @@ import (
 
 // TODO: increase once implementation is somewhat complete
 const (
-	period          = 1 * time.Second
-	chanTimeout     = period / 2
-	TokensDeposited = "TokensDeposited" // FungibleToken
-	Deposit         = "Deposit"         // NonFungibleToken
+	period      = 1 * time.Second
+	chanTimeout = period / 2
 )
 
-type Listener struct {
+type ChainListener struct {
 	ticker  *time.Ticker
 	done    chan bool
 	types   map[string]bool
-	Events  chan []flow.Event
 	fc      *client.Client
 	db      Store
 	maxDiff uint64
@@ -35,17 +30,8 @@ type ListenerStatus struct {
 	LatestHeight uint64
 }
 
-type TimeOutError struct {
-	error
-}
-
-func NewListener(fc *client.Client, db Store, maxDiff uint64) *Listener {
-	return &Listener{nil, make(chan bool), make(map[string]bool), nil, fc, db, maxDiff}
-}
-
-func TypeFromToken(t templates.BasicToken, tokenEvent string) string {
-	address := strings.TrimPrefix(t.Address, "0x")
-	return fmt.Sprintf("A.%s.%s.%s", address, t.Name, tokenEvent)
+func NewChainListener(fc *client.Client, db Store, maxDiff uint64) *ChainListener {
+	return &ChainListener{nil, make(chan bool), make(map[string]bool), fc, db, maxDiff}
 }
 
 func Min(x, y uint64) uint64 {
@@ -55,7 +41,7 @@ func Min(x, y uint64) uint64 {
 	return x
 }
 
-func (l *Listener) process(ctx context.Context, start, end uint64) error {
+func (l *ChainListener) process(ctx context.Context, start, end uint64) error {
 	ee := make([]flow.Event, 0)
 
 	for t := range l.types {
@@ -72,48 +58,31 @@ func (l *Listener) process(ctx context.Context, start, end uint64) error {
 		}
 	}
 
-	select {
-	case l.Events <- ee:
-		// Sent
-		return nil
-	case <-time.After(chanTimeout):
-		// Timed out while waiting for channel
-		return &TimeOutError{}
+	for _, event := range ee {
+		ChainEvent.Trigger(event)
 	}
+
+	return nil
 }
 
-func (l *Listener) handleError(err error) {
-	_, ok := err.(*TimeOutError)
-	if ok {
-		// Ignore timeout errors
-		return
-	}
+func (l *ChainListener) handleError(err error) {
 	fmt.Println(err)
 }
 
-func (l *Listener) AddType(t string) {
+func (l *ChainListener) AddType(t string) {
 	l.types[t] = true
 }
 
-func (l *Listener) RemoveType(t string) {
+func (l *ChainListener) RemoveType(t string) {
 	delete(l.types, t)
 }
 
-func (l *Listener) ListenTokenEvent(t templates.BasicToken, tokenEvent string) {
-	l.AddType(TypeFromToken(t, tokenEvent))
-}
-
-func (l *Listener) RemoveTokenEvent(t templates.BasicToken, tokenEvent string) {
-	l.RemoveType(TypeFromToken(t, tokenEvent))
-}
-
-func (l *Listener) Start() *Listener {
+func (l *ChainListener) Start() *ChainListener {
 	if l.ticker != nil {
 		return l
 	}
 
 	l.ticker = time.NewTicker(period)
-	l.Events = make(chan []flow.Event)
 
 	go func() {
 		ctx := context.Background()
@@ -153,9 +122,8 @@ func (l *Listener) Start() *Listener {
 	return l
 }
 
-func (l *Listener) Stop() {
+func (l *ChainListener) Stop() {
 	l.ticker.Stop()
 	l.done <- true
-	close(l.Events)
 	l.ticker = nil
 }

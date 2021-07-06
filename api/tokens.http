@@ -22,6 +22,8 @@ content-type: application/json
   "balance": "import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\npub fun main(account: Address): [UInt64] {\n    let receiver = getAccount(account).getCapability(ExampleNFT.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()!\n    return receiver.getIDs()\n}\n"
 }
 
+### Disable ExampleNFT
+DELETE http://localhost:3000/v1/tokens/3
 
 ### List all enabled tokens
 GET http://localhost:3000/v1/tokens
@@ -95,7 +97,7 @@ content-type: application/json
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
-### ExampleNFT withdrawals for admin account
+### List ExampleNFT withdrawals for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
 content-type: application/json
 
