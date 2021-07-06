@@ -3,6 +3,7 @@ package tokens
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/eqlabs/flow-wallet-api/accounts"
@@ -322,11 +323,19 @@ func (s *Service) GetDeposit(address, tokenName, transactionId string) (*TokenDe
 	return &d, nil
 }
 
-func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amount, recipient string) error {
+func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amountOrNftID, recipient string) error {
+	var ftAmount string
+	var nftId uint64
+
 	switch token.Type {
 	case templates.FT:
+		ftAmount = amountOrNftID
 	case templates.NFT:
-		// Continue normal flow
+		u, err := strconv.ParseUint(amountOrNftID, 10, 64)
+		if err != nil {
+			return err
+		}
+		nftId = u
 	default:
 		return fmt.Errorf("unsupported token type: %s", token.Type)
 	}
@@ -375,7 +384,8 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amount,
 	t := &TokenTransfer{
 		TransactionId:    tx.TransactionId,
 		RecipientAddress: recipient,
-		FtAmount:         amount,
+		FtAmount:         ftAmount,
+		NftID:            nftId,
 		TokenName:        token.Name,
 	}
 

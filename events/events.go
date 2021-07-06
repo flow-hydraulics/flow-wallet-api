@@ -16,7 +16,8 @@ import (
 const (
 	period          = 1 * time.Second
 	chanTimeout     = period / 2
-	TokensDeposited = "TokensDeposited"
+	TokensDeposited = "TokensDeposited" // FungibleToken
+	Deposit         = "Deposit"         // NonFungibleToken
 )
 
 type Listener struct {

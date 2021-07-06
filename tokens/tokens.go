@@ -22,7 +22,7 @@ type WithdrawalRequest struct {
 	TokenName string `json:"-"`
 	Recipient string `json:"recipient"`
 	FtAmount  string `json:"amount,omitempty"`
-	NftID     uint64 `json:"id,omitempty"`
+	NftID     uint64 `json:"nftId,omitempty"`
 }
 
 // AccountToken represents a token that is enabled on an account.
@@ -38,8 +38,6 @@ type AccountToken struct {
 	DeletedAt      gorm.DeletedAt      `json:"-" gorm:"index"`
 }
 
-// TODO: In a fungible-token transfer the NftID is null (or is it 0?), 0 is a valid NftID
-
 // TokenTransfer is used for database interfacing
 type TokenTransfer struct {
 	ID               uint64                   `json:"-" gorm:"primaryKey"`
@@ -47,7 +45,7 @@ type TokenTransfer struct {
 	Transaction      transactions.Transaction `json:"-" gorm:"foreignKey:TransactionId;references:TransactionId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	RecipientAddress string                   `json:"recipient" gorm:"index"`
 	FtAmount         string                   `json:"amount"`
-	NftID            uint64                   `json:"id"`
+	NftID            uint64                   `json:"nftId"`
 	TokenName        string                   `json:"token"`
 	CreatedAt        time.Time                `json:"createdAt"`
 	UpdatedAt        time.Time                `json:"updatedAt"`
@@ -58,7 +56,7 @@ type TokenTransfer struct {
 type TokenTransferBase struct {
 	TransactionId string    `json:"transactionId"`
 	FtAmount      string    `json:"amount"`
-	NftID         uint64    `json:"id"`
+	NftID         uint64    `json:"nftId"`
 	TokenName     string    `json:"token"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`

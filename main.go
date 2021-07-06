@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -266,37 +265,41 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		}()
 
 		// TODO: This won't handle tokens which are enabled after starting the service
-		// TODO: Add NFTs
 
 		// Listen for enabled tokens deposit events
-		tType := templates.FT
-		tokens, err := templateService.ListTokens(&tType)
+		tokens, err := templateService.ListTokens(nil)
 		if err != nil {
 			panic(err)
 		}
-		for _, t := range *tokens {
-			l.ListenTokenEvent(t, events.TokensDeposited)
+		for _, token := range *tokens {
+			switch token.Type {
+			case templates.FT:
+				l.ListenTokenEvent(token, events.TokensDeposited)
+			case templates.NFT:
+				l.ListenTokenEvent(token, events.Deposit)
+			}
 		}
 
 		go func() {
 			for ee := range l.Events {
-				for _, e := range ee {
-					ss := strings.Split(e.Type, ".")
-					if ss[len(ss)-1] == events.TokensDeposited {
-						t, err := templateService.TokenFromEvent(e)
-						if err != nil {
-							continue
-						}
+				for _, event := range ee {
+					// Get the token
+					token, err := templateService.TokenFromEvent(event)
+					if err != nil {
+						continue
+					}
 
-						// Check if recipient is in database
-						a, err := accountService.Details(e.Value.Fields[1].String())
-						if err != nil {
-							continue
-						}
+					amountOrNftID := event.Value.Fields[0]
+					accountAddress := event.Value.Fields[1]
 
-						if err = tokenService.RegisterDeposit(t, e.TransactionID.Hex(), e.Value.Fields[0].String(), a.Address); err != nil {
-							ls.Printf("error while registering a deposit: %s\n", err)
-						}
+					// Check if recipient is in database
+					account, err := accountService.Details(accountAddress.String())
+					if err != nil {
+						continue
+					}
+
+					if err = tokenService.RegisterDeposit(token, event.TransactionID.Hex(), amountOrNftID.String(), account.Address); err != nil {
+						ls.Printf("error while registering a deposit: %s\n", err)
 					}
 				}
 			}

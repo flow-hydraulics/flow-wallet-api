@@ -56,7 +56,6 @@ content-type: application/json
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
 
-
 ### Get ExampleNFT details for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
 content-type: application/json
@@ -85,7 +84,7 @@ content-type: application/json
 
 {
   "recipient":"{{emulatorCustodyAccount}}",
-  "id":16
+  "nftId":0
 }
 
 ### List FlowToken withdrawals for admin account
@@ -100,11 +99,9 @@ content-type: application/json
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
 content-type: application/json
 
-
 ### Get FlowToken withdrawal details for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
 content-type: application/json
-
 
 ### Get ExampleNFT withdrawal details for admin account
 GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals/<transaction_id> HTTP/1.1
@@ -180,6 +177,10 @@ content-type: application/json
 
 ### List FUSD deposits for custody account
 GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/deposits HTTP/1.1
+content-type: application/json
+
+### List ExampleNFT deposits for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/non-fungible-tokens/ExampleNFT/deposits HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken deposit details for custody account
