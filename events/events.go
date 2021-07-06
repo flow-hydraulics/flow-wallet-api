@@ -16,7 +16,8 @@ import (
 const (
 	period          = 1 * time.Second
 	chanTimeout     = period / 2
-	TokensDeposited = "TokensDeposited"
+	TokensDeposited = "TokensDeposited" // FungibleToken
+	Deposit         = "Deposit"         // NonFungibleToken
 )
 
 type Listener struct {
@@ -31,7 +32,7 @@ type Listener struct {
 
 type ListenerStatus struct {
 	gorm.Model
-	latestHeight uint64
+	LatestHeight uint64
 }
 
 type TimeOutError struct {
@@ -131,14 +132,14 @@ func (l *Listener) Start() *Listener {
 			case <-l.ticker.C:
 				cur, _ := l.fc.GetLatestBlock(ctx, true)
 				curHeight := cur.Height
-				if curHeight > status.latestHeight {
+				if curHeight > status.LatestHeight {
 					// latestHeight has already been checked, add 1
-					start := status.latestHeight + 1
+					start := status.LatestHeight + 1
 					end := Min(start+l.maxDiff, curHeight) // Limit maximum end
 					if err := l.process(ctx, start, end); err != nil {
 						l.handleError(err)
 					} else {
-						status.latestHeight = end
+						status.LatestHeight = end
 						err := l.db.UpdateListenerStatus(status)
 						if err != nil {
 							l.handleError(err)

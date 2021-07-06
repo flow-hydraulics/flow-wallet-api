@@ -75,24 +75,27 @@ func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
 	// A.0ae53cb6e3f42a79.FlowToken.TokensDeposited
 	ss := strings.Split(e.Type, ".")
 
+	// Token address from event
 	eAddress, err := flow_helpers.ValidateAddress(ss[1], s.cfg.ChainId)
 	if err != nil {
 		return nil, err
 	}
 
-	t, err := s.GetTokenByName(ss[2])
+	token, err := s.GetTokenByName(ss[2])
 	if err != nil {
 		return nil, err
 	}
 
-	tAddress, err := flow_helpers.ValidateAddress(t.Address, s.cfg.ChainId)
+	// Token address from database
+	tAddress, err := flow_helpers.ValidateAddress(token.Address, s.cfg.ChainId)
 	if err != nil {
 		return nil, err
 	}
 
+	// Check if addresses match
 	if eAddress != tAddress {
-		return nil, fmt.Errorf("addresses do not match for %s, from event %s, from config %s", t.Name, eAddress, tAddress)
+		return nil, fmt.Errorf("addresses do not match for %s, from event %s, from config %s", token.Name, eAddress, tAddress)
 	}
 
-	return t, nil
+	return token, nil
 }
