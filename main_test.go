@@ -1034,8 +1034,8 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Create a few accounts
-	testAccounts := make([]*accounts.Account, 4)
-	for i := 0; i < 4; i++ {
+	testAccounts := make([]*accounts.Account, 2)
+	for i := 0; i < 2; i++ {
 		_, a, err := accountService.Create(context.Background(), true)
 		if err != nil {
 			t.Fatal(err)
@@ -1126,7 +1126,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	// Mint ExampleNFTs for account 0
 	mintCode := templates.TokenCode(&exampleNft, string(mintBytes))
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		_, _, err := transactionService.Create(context.Background(), true, cfg.AdminAddress, templates.Raw{
 			Code: mintCode,
 			Arguments: []templates.Argument{
