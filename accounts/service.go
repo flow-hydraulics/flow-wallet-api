@@ -49,6 +49,7 @@ func (s *Service) InitAdminAccount() {
 		// Admin account not in database
 		a = Account{Address: s.cfg.AdminAccountAddress}
 		s.store.InsertAccount(&a)
+		// TODO: Enable FlowToken
 	}
 }
 
@@ -103,6 +104,8 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 	}
 
 	err = job.Wait(sync)
+
+	// TODO: Enable FlowToken
 
 	return job, &a, err
 }
