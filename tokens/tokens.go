@@ -22,7 +22,7 @@ type WithdrawalRequest struct {
 	TokenName string `json:"-"`
 	Recipient string `json:"recipient"`
 	FtAmount  string `json:"amount,omitempty"`
-	NftID     string `json:"id,omitempty"`
+	NftID     uint64 `json:"id,omitempty"`
 }
 
 // AccountToken represents a token that is enabled on an account.
@@ -38,6 +38,8 @@ type AccountToken struct {
 	DeletedAt      gorm.DeletedAt      `json:"-" gorm:"index"`
 }
 
+// TODO: In a fungible-token transfer the NftID is null (or is it 0?), 0 is a valid NftID
+
 // TokenTransfer is used for database interfacing
 type TokenTransfer struct {
 	ID               uint64                   `json:"-" gorm:"primaryKey"`
@@ -45,53 +47,55 @@ type TokenTransfer struct {
 	Transaction      transactions.Transaction `json:"-" gorm:"foreignKey:TransactionId;references:TransactionId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	RecipientAddress string                   `json:"recipient" gorm:"index"`
 	FtAmount         string                   `json:"amount"`
-	NftID            string                   `json:"id"`
+	NftID            uint64                   `json:"id"`
 	TokenName        string                   `json:"token"`
 	CreatedAt        time.Time                `json:"createdAt"`
 	UpdatedAt        time.Time                `json:"updatedAt"`
 	DeletedAt        gorm.DeletedAt           `json:"-" gorm:"index"`
 }
 
-// FungibleTokenTransferBase is used for JSON interfacing
-type FungibleTokenTransferBase struct {
+// TokenTransferBase is used for JSON interfacing
+type TokenTransferBase struct {
 	TransactionId string    `json:"transactionId"`
-	Amount        string    `json:"amount"`
+	FtAmount      string    `json:"amount"`
+	NftID         uint64    `json:"id"`
 	TokenName     string    `json:"token"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-// FungibleTokenWithdrawal is used for JSON interfacing
-type FungibleTokenWithdrawal struct {
-	FungibleTokenTransferBase
+// TokenWithdrawal is used for JSON interfacing
+type TokenWithdrawal struct {
+	TokenTransferBase
 	RecipientAddress string `json:"recipient"`
 }
 
-// FungibleTokenDeposit is used for JSON interfacing
-type FungibleTokenDeposit struct {
-	FungibleTokenTransferBase
+// TokenDeposit is used for JSON interfacing
+type TokenDeposit struct {
+	TokenTransferBase
 	PayerAddress string `json:"sender"`
 }
 
-func baseFromTransfer(t *TokenTransfer) FungibleTokenTransferBase {
-	return FungibleTokenTransferBase{
+func baseFromTransfer(t *TokenTransfer) TokenTransferBase {
+	return TokenTransferBase{
 		TransactionId: t.TransactionId,
-		Amount:        t.FtAmount,
+		FtAmount:      t.FtAmount,
+		NftID:         t.NftID,
 		TokenName:     t.TokenName,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}
 }
 
-func (t *TokenTransfer) Withdrawal() FungibleTokenWithdrawal {
-	return FungibleTokenWithdrawal{
+func (t *TokenTransfer) Withdrawal() TokenWithdrawal {
+	return TokenWithdrawal{
 		baseFromTransfer(t),
 		t.RecipientAddress,
 	}
 }
 
-func (t *TokenTransfer) Deposit() FungibleTokenDeposit {
-	return FungibleTokenDeposit{
+func (t *TokenTransfer) Deposit() TokenDeposit {
+	return TokenDeposit{
 		baseFromTransfer(t),
 		t.Transaction.PayerAddress,
 	}
