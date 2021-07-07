@@ -367,7 +367,14 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amountO
 		}
 	}
 
-	// TODO: Add AccountToken for account if it doesn't already exist (it should but just to be sure)
+	// Make sure the token is enabled in the database for the recipient account
+	// We are registering a deposit event, so the token must be setup already for the recipient
+	s.store.InsertAccountToken(&AccountToken{
+		AccountAddress: recipient,
+		TokenAddress:   token.Address,
+		TokenName:      token.Name,
+		TokenType:      token.Type,
+	})
 
 	// Check for existing deposit
 	if _, err := s.store.TokenDeposit(recipient, tx.TransactionId, token); err != nil {
