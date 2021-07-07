@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-api/events"
 	"github.com/eqlabs/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
 )
@@ -57,12 +56,6 @@ func (s *Service) AddToken(t *Token) error {
 		return err
 	}
 
-	events.TokenEnabled.Trigger(events.TokenEnabledPayload{
-		TokenName:    t.Name,
-		TokenAddress: t.Address,
-		TokenType:    t.Type.String(),
-	})
-
 	return nil
 }
 
@@ -79,24 +72,7 @@ func (s *Service) GetTokenByName(name string) (*Token, error) {
 }
 
 func (s *Service) RemoveToken(id uint64) error {
-	// Fetch it first so we can trigger the disable event
-	token, err := s.store.GetById(id)
-	if err != nil {
-		return err
-	}
-
-	err = s.store.Remove(id)
-	if err != nil {
-		return err
-	}
-
-	events.TokenDisabled.Trigger(events.TokenDisabledPayload{
-		TokenName:    token.Name,
-		TokenAddress: token.Address,
-		TokenType:    token.Type.String(),
-	})
-
-	return nil
+	return s.store.Remove(id)
 }
 
 func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
@@ -123,7 +99,7 @@ func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
 
 	// Check if addresses match
 	if eAddress != tAddress {
-		return nil, fmt.Errorf("addresses do not match for %s, from event %s, from config %s", token.Name, eAddress, tAddress)
+		return nil, fmt.Errorf("addresses do not match for %s, from event: %s, from database: %s", token.Name, eAddress, tAddress)
 	}
 
 	return token, nil

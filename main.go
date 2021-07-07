@@ -12,9 +12,9 @@ import (
 
 	"github.com/caarlos0/env/v6"
 	"github.com/eqlabs/flow-wallet-api/accounts"
+	"github.com/eqlabs/flow-wallet-api/chain_events"
 	"github.com/eqlabs/flow-wallet-api/datastore/gorm"
 	"github.com/eqlabs/flow-wallet-api/debug"
-	"github.com/eqlabs/flow-wallet-api/events"
 	"github.com/eqlabs/flow-wallet-api/handlers"
 	"github.com/eqlabs/flow-wallet-api/jobs"
 	"github.com/eqlabs/flow-wallet-api/keys"
@@ -251,43 +251,44 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// Chain event listener
 	if !disableChainEvents {
-		ls.Println("Starting event listener..")
+		ls.Println("Starting chain event listener..")
 
-		eventStore := events.NewGormStore(db)
+		store := chain_events.NewGormStore(db)
+		maxDiff := uint64(100) // maximum number of blocks to check each iteration
+		interval := 10 * time.Second
+		getTypes := func() []string {
+			// Get all enabled tokens
+			tt, err := templateService.ListTokens(nil)
+			if err != nil {
+				panic(err)
+			}
 
-		l := events.NewChainListener(fc, eventStore, 100)
+			types := make([]string, len(*tt))
+
+			// Listen for enabled tokens deposit events
+			for i, token := range *tt {
+				types[i] = templates.DepositEventTypeFromToken(token)
+			}
+
+			return types
+		}
+
+		listener := chain_events.NewListener(fc, store, maxDiff, interval, getTypes)
 
 		defer func() {
 			ls.Println("Stopping event listener..")
-			l.Stop()
+			listener.Stop()
 		}()
 
-		// Get all enabled tokens
-		tt, err := templateService.ListTokens(nil)
-		if err != nil {
-			panic(err)
-		}
-
-		// Listen for enabled tokens deposit events
-		for _, token := range *tt {
-			l.AddType(templates.DepositEventTypeFromToken(token))
-		}
-
-		// Register a handler for token enabled events
-		events.TokenEnabled.Register(&templates.TokenEnabledHandler{ChainListener: l})
-
-		// Register a handler for token disabled events
-		events.TokenDisabled.Register(&templates.TokenDisabledHandler{ChainListener: l})
-
 		// Register a handler for chain events
-		events.ChainEvent.Register(&tokens.ChainEventHandler{
+		chain_events.Event.Register(&tokens.ChainEventHandler{
 			AccountService:  accountService,
-			ChainListener:   l,
+			ChainListener:   listener,
 			TemplateService: templateService,
 			TokenService:    tokenService,
 		})
 
-		l.Start()
+		listener.Start()
 	}
 
 	// Trap interupt or sigterm and gracefully shutdown the server

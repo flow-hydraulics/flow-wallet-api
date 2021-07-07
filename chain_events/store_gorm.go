@@ -1,4 +1,4 @@
-package events
+package chain_events
 
 import (
 	"gorm.io/gorm"
