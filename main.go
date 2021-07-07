@@ -260,8 +260,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		ls.Println("Starting chain event listener..")
 
 		store := chain_events.NewGormStore(db)
-		maxDiff := uint64(100) // maximum number of blocks to check each iteration
-		interval := 10 * time.Second
+		maxDiff := uint64(100)       // maximum number of blocks to check each iteration, TODO: make this configurable
+		interval := 10 * time.Second // TODO: make this configurable
 		getTypes := func() []string {
 			// Get all enabled tokens
 			tt, err := templateService.ListTokens(nil)
