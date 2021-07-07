@@ -91,25 +91,147 @@ components:
     plainValue:
       type: string
 
-    token:
+    fungibleToken:
       type: object
       properties:
+        id:
+          type: number
+          example: 1
         name:
           type: string
           example: "FlowToken"
         address:
           type: string
           example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
 
-    tokenDetails:
+    fungibleTokenDetails:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        name:
+          type: string
+          example: "FlowToken"
+        nameLowerCase:
+          type: string
+          example: "flowToken"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    fungibleTokenEnable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FUSD"
+        nameLowerCase:
+          type: string
+          example: "fusd"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    nonFungibleToken:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 3
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+
+    nonFungibleTokenDetails:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 3
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    nonFungibleTokenEnable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    accountTokenDetails:
       type: object
       properties:
         name:
           type: string
           example: "FlowToken"
         balance:
-          type: string
-          example: "9999999999.99700000"
+          type: number
+          example: 9999999999.99700000
 
     tokenWithdrawal:
       type: object
@@ -220,6 +342,71 @@ paths:
             text/plain:
               schema:
                 $ref: "#/components/schemas/debugInfo"
+  /tokens:
+    get:
+      summary: Get all tokens
+      description: Get all tokens (fungible and non-fungible) that are enabled in this instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  - $ref: "#/components/schemas/fungibleToken"
+                  - $ref: "#/components/schemas/nonFungibleToken"
+    post:
+      summary: Enable a new token
+      description: Enable a new token by sending its name, address and required transaction codes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/fungibleTokenEnable"
+                - $ref: "#/components/schemas/nonFungibleTokenEnable"
+
+      responses:
+        "201":
+          description: OK
+
+  /tokens/{id_or_name}:
+    parameters:
+      - name: id_or_name
+        in: path
+        required: true
+        schema:
+          oneOf:
+            - type: number
+              example: 1
+            - type: string
+              example: "FlowToken"
+    get:
+      summary: Get details for an enabled token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/fungibleTokenDetails"
+                  - $ref: "#/components/schemas/nonFungibleTokenDetails"
+
+  /tokens/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: number
+          example: 1
+
+    delete:
+      summary: Remove a token from the service
+      description: Remove a token, disabling functionality regarding it. Won't affect accounts.
+
 
   /fungible-tokens:
     get:
@@ -233,7 +420,22 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/token"
+                  $ref: "#/components/schemas/fungibleToken"
+
+  /non-fungible-tokens:
+    get:
+      summary: Get all non-fungible tokens
+      description: Get all non-fungible tokens that are enabled in this instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nonFungibleToken"
+
   /scripts:
     post:
       summary: Execute a script on chain
@@ -386,7 +588,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/token"
+                  $ref: "#/components/schemas/fungibleToken"
 
   /accounts/{address}/fungible-tokens/{tokenName}:
     parameters:
@@ -403,7 +605,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/tokenDetails"
+                  $ref: "#/components/schemas/accountTokenDetails"
     post:
       summary: Enable a fungible token for an account
       responses:
