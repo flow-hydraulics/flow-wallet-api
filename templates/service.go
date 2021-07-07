@@ -16,18 +16,19 @@ type Service struct {
 func NewService(store Store) *Service {
 	cfg := parseConfig()
 	// Add all enabled tokens from config as fungible tokens
-	// TODO: Do not try to insert if already exists, will increment next ID every time
-	// TODO: This kind of inserting is done elsewhere, check where and fix
 	for _, t := range cfg.enabledTokens {
+		if _, err := store.GetByName(t.Name); err == nil || !strings.Contains(err.Error(), "record not found") {
+			// Token already in database or we got an error that is not "record not found"
+			continue
+		}
+
 		t.Type = FT
 		t.Setup = FungibleSetupCode(&t)
 		t.Transfer = FungibleTransferCode(&t)
 		t.Balance = FungibleBalanceCode(&t)
-		err := store.Insert(&t)
-		if err != nil {
-			if !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-				panic(err)
-			}
+
+		if err := store.Insert(&t); err != nil {
+			panic(err)
 		}
 	}
 	return &Service{store, cfg}
@@ -51,12 +52,7 @@ func (s *Service) AddToken(t *Token) error {
 	t.Transfer = TokenCode(t, t.Transfer)
 	t.Balance = TokenCode(t, t.Balance)
 
-	err = s.store.Insert(t)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.store.Insert(t)
 }
 
 func (s *Service) ListTokens(tType *TokenType) (*[]BasicToken, error) {
