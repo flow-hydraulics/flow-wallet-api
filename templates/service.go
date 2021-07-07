@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-api/events"
 	"github.com/eqlabs/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
 )
@@ -17,18 +16,24 @@ type Service struct {
 func NewService(store Store) *Service {
 	cfg := parseConfig()
 	// Add all enabled tokens from config as fungible tokens
-	// TODO: Do not try to insert if already exists, will increment next ID every time
-	// TODO: This kind of inserting is done elsewhere, check where and fix
 	for _, t := range cfg.enabledTokens {
+		if _, err := store.GetByName(t.Name); err == nil {
+			// Token already in database
+			continue
+		} else {
+			if !strings.Contains(err.Error(), "record not found") {
+				// We got an error that is not "record not found"
+				panic(err)
+			}
+		}
+
 		t.Type = FT
 		t.Setup = FungibleSetupCode(&t)
 		t.Transfer = FungibleTransferCode(&t)
 		t.Balance = FungibleBalanceCode(&t)
-		err := store.Insert(&t)
-		if err != nil {
-			if !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-				panic(err)
-			}
+
+		if err := store.Insert(&t); err != nil {
+			panic(err)
 		}
 	}
 	return &Service{store, cfg}
@@ -52,18 +57,7 @@ func (s *Service) AddToken(t *Token) error {
 	t.Transfer = TokenCode(t, t.Transfer)
 	t.Balance = TokenCode(t, t.Balance)
 
-	err = s.store.Insert(t)
-	if err != nil {
-		return err
-	}
-
-	events.TokenEnabled.Trigger(events.TokenEnabledPayload{
-		TokenName:    t.Name,
-		TokenAddress: t.Address,
-		TokenType:    t.Type.String(),
-	})
-
-	return nil
+	return s.store.Insert(t)
 }
 
 func (s *Service) ListTokens(tType *TokenType) (*[]BasicToken, error) {
@@ -79,24 +73,7 @@ func (s *Service) GetTokenByName(name string) (*Token, error) {
 }
 
 func (s *Service) RemoveToken(id uint64) error {
-	// Fetch it first so we can trigger the disable event
-	token, err := s.store.GetById(id)
-	if err != nil {
-		return err
-	}
-
-	err = s.store.Remove(id)
-	if err != nil {
-		return err
-	}
-
-	events.TokenDisabled.Trigger(events.TokenDisabledPayload{
-		TokenName:    token.Name,
-		TokenAddress: token.Address,
-		TokenType:    token.Type.String(),
-	})
-
-	return nil
+	return s.store.Remove(id)
 }
 
 func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
@@ -123,7 +100,7 @@ func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
 
 	// Check if addresses match
 	if eAddress != tAddress {
-		return nil, fmt.Errorf("addresses do not match for %s, from event %s, from config %s", token.Name, eAddress, tAddress)
+		return nil, fmt.Errorf("addresses do not match for %s, from event: %s, from database: %s", token.Name, eAddress, tAddress)
 	}
 
 	return token, nil

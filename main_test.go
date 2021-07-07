@@ -1618,12 +1618,13 @@ func TestTemplateHandlers(t *testing.T) {
 			status:      http.StatusBadRequest,
 		},
 		{
+			// Gorm won't return an error if deleting a non-existent entry
 			name:        "Remove not found",
 			method:      http.MethodDelete,
 			contentType: "application/json",
 			url:         "/tokens/100",
-			expected:    `record not found`,
-			status:      http.StatusNotFound,
+			expected:    `100`,
+			status:      http.StatusOK,
 		},
 		{
 			name:        "Remove valid id",

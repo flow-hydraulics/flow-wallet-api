@@ -1,4 +1,4 @@
-package events
+package chain_events
 
 import (
 	"fmt"
@@ -6,19 +6,23 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-var ChainEvent chainEvent
-
-type chainEvent struct {
-	handlers []interface{ Handle(flow.Event) }
+type handler interface {
+	Handle(flow.Event)
 }
 
+type event struct {
+	handlers []handler
+}
+
+var Event event // singleton of type event
+
 // Register adds an event handler for this event
-func (e *chainEvent) Register(handler interface{ Handle(flow.Event) }) {
+func (e *event) Register(handler handler) {
 	e.handlers = append(e.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
-func (e chainEvent) Trigger(payload flow.Event) {
+func (e *event) Trigger(payload flow.Event) {
 	if len(e.handlers) == 0 {
 		fmt.Println("Warning: no listeners for chain events")
 	}
