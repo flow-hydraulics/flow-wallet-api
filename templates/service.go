@@ -17,9 +17,14 @@ func NewService(store Store) *Service {
 	cfg := parseConfig()
 	// Add all enabled tokens from config as fungible tokens
 	for _, t := range cfg.enabledTokens {
-		if _, err := store.GetByName(t.Name); err == nil || !strings.Contains(err.Error(), "record not found") {
-			// Token already in database or we got an error that is not "record not found"
+		if _, err := store.GetByName(t.Name); err == nil {
+			// Token already in database
 			continue
+		} else {
+			if !strings.Contains(err.Error(), "record not found") {
+				// We got an error that is not "record not found"
+				panic(err)
+			}
 		}
 
 		t.Type = FT
