@@ -13,6 +13,7 @@ import (
 	"github.com/eqlabs/flow-wallet-api/keys"
 	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
@@ -48,8 +49,13 @@ func (s *Service) InitAdminAccount() {
 		}
 		// Admin account not in database
 		a = Account{Address: s.cfg.AdminAccountAddress}
-		s.store.InsertAccount(&a)
-		// TODO: Enable FlowToken
+		err := s.store.InsertAccount(&a)
+		if err != nil {
+			panic(err)
+		}
+		AccountAdded.Trigger(AccountAddedPayload{
+			Address: flow.HexToAddress(s.cfg.AdminAccountAddress),
+		})
 	}
 }
 
@@ -89,6 +95,10 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			return "", err
 		}
 
+		AccountAdded.Trigger(AccountAddedPayload{
+			Address: flow.HexToAddress(a.Address),
+		})
+
 		return a.Address, nil
 	})
 
@@ -104,8 +114,6 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 	}
 
 	err = job.Wait(sync)
-
-	// TODO: Enable FlowToken
 
 	return job, &a, err
 }

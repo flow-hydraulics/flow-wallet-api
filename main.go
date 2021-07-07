@@ -140,6 +140,12 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		BuildTime: buildTime,
 	}
 
+	// Register a handler for account added events
+	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{
+		TemplateService: templateService,
+		TokenService:    tokenService,
+	})
+
 	accountService.InitAdminAccount()
 
 	// HTTP handling
