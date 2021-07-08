@@ -7,6 +7,507 @@ info:
 servers:
   - url: http://localhost:3000/v1
 
+paths:
+  /debug:
+    get:
+      summary: Get debug information about the running instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/debugInfo"
+
+# Service tokens
+
+  /tokens:
+    get:
+      summary: Get all tokens
+      description: Get all tokens (fungible and non-fungible) that are enabled in this instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  - $ref: "#/components/schemas/fungibleToken"
+                  - $ref: "#/components/schemas/nonFungibleToken"
+    post:
+      summary: Enable a new token
+      description: Enable a new token by sending its name, address and required cadence transaction codes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/fungibleTokenEnable"
+                - $ref: "#/components/schemas/nonFungibleTokenEnable"
+
+      responses:
+        "201":
+          description: OK
+
+  /tokens/{id_or_name}:
+    parameters:
+      - name: id_or_name
+        in: path
+        required: true
+        schema:
+          oneOf:
+            - type: number
+              example: 1
+            - type: string
+              example: "FlowToken"
+    get:
+      summary: Get details for an enabled token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/fungibleTokenDetails"
+                  - $ref: "#/components/schemas/nonFungibleTokenDetails"
+
+  /tokens/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: number
+          example: 1
+    delete:
+      summary: Remove a token from the service
+      description: Remove a token, disabling functionality regarding it. Won't affect accounts.
+
+
+  /fungible-tokens:
+    get:
+      summary: Get all fungible tokens
+      description: Get all fungible tokens that are enabled in this instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleToken"
+
+  /non-fungible-tokens:
+    get:
+      summary: Get all non-fungible tokens
+      description: Get all non-fungible tokens that are enabled in this instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nonFungibleToken"
+
+# Scripts
+
+  /scripts:
+    post:
+      summary: Execute a script on chain
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/script"
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/cadenceValue"
+                  - $ref: "#/components/schemas/plainValue"
+
+# Jobs
+
+  /jobs:
+    get:
+      summary: List all jobs
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /jobs/{jobId}:
+    parameters:
+      - $ref: "#/components/parameters/jobId"
+    get:
+      summary: Get a job
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: "#/components/schemas/job"
+
+# Account management
+
+  /accounts:
+    get:
+      summary: List all accounts
+      description: Get a list of all accounts managed by the wallet service.
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/account"
+    post:
+      summary: Create an account
+      description: Create a new account that will be managed by the wallet service. Returns a job.
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/job"
+
+  /accounts/{address}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    get:
+      summary: Get an account
+      description: Get the details of a specific account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/account"
+
+# Account transactions
+
+  /accounts/{address}/transactions:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    get:
+      summary: List account raw transactions
+      description: Get a list of all transactions sent by an account.
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/transaction"
+    post:
+      summary: Send a raw transaction
+      description: Send a transaction from an account. Returns a job.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/script"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/job"
+
+  /accounts/{address}/transactions/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get a raw transaction
+      description: Get the details of a raw transaction sent by an account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transaction"
+
+# Account fungible tokens
+
+  /accounts/{address}/fungible-tokens:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    get:
+      summary: Get account fungible tokens
+      description: Get all fungible tokens that are enabled for an account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/accountFungibleToken"
+
+  /accounts/{address}/fungible-tokens/{tokenName}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/fungibleTokenName"
+    get:
+      summary: Get fungible tokens details for an account
+      description: Get details (balance) regarding a fungible token for an account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/accountFungibleTokenDetails"
+    post:
+      summary: Enable a fungible token for an account
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/fungibleTokenName"
+    get:
+      summary: List all withdrawals of a fungible token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleTokenWithdrawal"
+    post:
+      summary: Create a fungible token withdrawal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/fungibleTokenWithdrawalRequest"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/fungibleTokenName"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a fungible token withdrawal
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fungibleTokenWithdrawal"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/deposits:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/fungibleTokenName"
+    get:
+      summary: List all deposits of a fungible token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleTokenDeposit"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/fungibleTokenName"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a fungible token deposit
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fungibleTokenDeposit"
+
+# Account non-fungible tokens
+
+  /accounts/{address}/non-fungible-tokens:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    get:
+      summary: Get account non-fungible tokens
+      description: Get all non-fungible tokens that are enabled for an account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/accountNonFungibleToken"
+
+  /accounts/{address}/non-fungible-tokens/{tokenName}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/nonFungibleTokenName"
+    get:
+      summary: Get non-fungible tokens details for an account
+      description: Get details (balance) regarding a non-fungible token for an account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/accountNonFungibleTokenDetails"
+    post:
+      summary: Enable a non-fungible token for an account
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/nonFungibleTokenName"
+    get:
+      summary: List all withdrawals of a non-fungible token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nonFungibleTokenWithdrawal"
+    post:
+      summary: Create a non-fungible token withdrawal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/nonFungibleTokenWithdrawalRequest"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/nonFungibleTokenName"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a non-fungible token withdrawal
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/nonFungibleTokenWithdrawal"
+
+  /accounts/{address}/non-fungible-tokens/{tokenName}/deposits:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/nonFungibleTokenName"
+    get:
+      summary: List all deposits of a non-fungible token
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nonFungibleTokenDeposit"
+
+  /accounts/{address}/non-fungible-tokens/{tokenName}/deposits/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/nonFungibleTokenName"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a non-fungible token deposit
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/nonFungibleTokenDeposit"
+
 components:
   schemas:
     debugInfo:
@@ -91,7 +592,259 @@ components:
     plainValue:
       type: string
 
-    token:
+    fungibleToken:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        name:
+          type: string
+          example: "FlowToken"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+
+    fungibleTokenDetails:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        name:
+          type: string
+          example: "FlowToken"
+        nameLowerCase:
+          type: string
+          example: "flowToken"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    fungibleTokenEnable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FUSD"
+        nameLowerCase:
+          type: string
+          example: "fusd"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    fungibleTokenWithdrawalRequest:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        amount:
+          type: string
+          example: "1.0"
+
+    fungibleTokenWithdrawal:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        nftId:
+          type: number
+          example: 0
+        token:
+          type: string
+          example: "FlowToken"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+        recipient:
+          type: string
+          example: "0x01cf0e2f2f715450"
+
+    fungibleTokenDeposit:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        nftId:
+          type: number
+          example: 0
+        token:
+          type: string
+          example: "FlowToken"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+        sender:
+          type: string
+          example: "0x01cf0e2f2f715450"
+
+    nonFungibleToken:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 3
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+
+    nonFungibleTokenDetails:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 3
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    nonFungibleTokenEnable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    nonFungibleTokenWithdrawalRequest:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        nftId:
+          type: number
+          example: 2
+
+    nonFungibleTokenWithdrawal:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: ""
+        nftId:
+          type: number
+          example: 2
+        token:
+          type: string
+          example: "ExampleNft"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+        recipient:
+          type: string
+          example: "0x01cf0e2f2f715450"
+
+    nonFungibleTokenDeposit:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: ""
+        nftId:
+          type: number
+          example: 2
+        token:
+          type: string
+          example: "ExampleNFT"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+        sender:
+          type: string
+          example: "0x01cf0e2f2f715450"
+
+    accountFungibleToken:
       type: object
       properties:
         name:
@@ -101,59 +854,39 @@ components:
           type: string
           example: "0xf8d6e0586b0a20c7"
 
-    tokenDetails:
+    accountFungibleTokenDetails:
       type: object
       properties:
         name:
           type: string
           example: "FlowToken"
         balance:
-          type: string
-          example: "9999999999.99700000"
+          type: number
+          example: 9999999999.99700000
 
-    tokenWithdrawal:
+    accountNonFungibleToken:
       type: object
       properties:
-        transactionId:
+        name:
           type: string
-          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
-        amount:
+          example: "ExampleNFT"
+        address:
           type: string
-          example: "1.0"
-        token:
-          type: string
-          example: "FlowToken"
-        recipient:
-          type: string
-          example: "0x01cf0e2f2f715450"
-        createdAt:
-          type: string
-          example: "2021-06-167T12:05:24.613704+03:00"
-        updatedAt:
-          type: string
-          example: "2021-06-16T12:05:24.617898+03:00"
+          example: "0xf8d6e0586b0a20c7"
 
-    tokenDeposit:
+    accountNonFungibleTokenDetails:
       type: object
       properties:
-        transactionId:
+        name:
           type: string
-          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
-        amount:
-          type: string
-          example: "1.0"
-        token:
-          type: string
-          example: "FlowToken"
-        sender:
-          type: string
-          example: "0x01cf0e2f2f715450"
-        createdAt:
-          type: string
-          example: "2021-06-167T12:05:24.613704+03:00"
-        updatedAt:
-          type: string
-          example: "2021-06-16T12:05:24.617898+03:00"
+          example: "ExampleNFT"
+        balance:
+          type: object
+          properties:
+            Values:
+              type: array
+              example: [1,2,3]
+
 
   parameters:
     limit:
@@ -192,14 +925,21 @@ components:
         type: string
         example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
 
-    tokenName:
+    fungibleTokenName:
       name: tokenName
       in: path
       required: true
       schema:
         type: string
-        enum: [FlowToken, FUSD]
-        example: FlowToken
+        example: "FlowToken"
+
+    nonFungibleTokenName:
+      name: tokenName
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "ExampleNFT"
 
     transactionId:
       name: transactionId
@@ -208,283 +948,3 @@ components:
       schema:
         type: string
         example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
-
-paths:
-  /debug:
-    get:
-      summary: Get debug information about the running instance.
-      responses:
-        "200":
-          description: OK
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/debugInfo"
-
-  /fungible-tokens:
-    get:
-      summary: Get all fungible tokens
-      description: Get all fungible tokens that are enabled in this instance.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/token"
-  /scripts:
-    post:
-      summary: Execute a script on chain
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/script"
-      responses:
-        "200":
-          description: Ok
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/cadenceValue"
-                  - $ref: "#/components/schemas/plainValue"
-
-  /jobs:
-    get:
-      summary: List all jobs
-      parameters:
-        - $ref: "#/components/parameters/limit"
-        - $ref: "#/components/parameters/offset"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/job"
-
-  /jobs/{jobId}:
-    parameters:
-      - $ref: "#/components/parameters/jobId"
-    get:
-      summary: Get a job
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                $ref: "#/components/schemas/job"
-
-  /accounts:
-    get:
-      summary: List all accounts
-      description: Get a list of all accounts managed by the wallet service.
-      parameters:
-        - $ref: "#/components/parameters/limit"
-        - $ref: "#/components/parameters/offset"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/account"
-    post:
-      summary: Create an account
-      description: Create a new account that will be managed by the wallet service. Returns a job.
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/job"
-
-  /accounts/{address}:
-    parameters:
-      - $ref: "#/components/parameters/address"
-    get:
-      summary: Get an account
-      description: Get the details of a specific account.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/account"
-
-  /accounts/{address}/transactions:
-    parameters:
-      - $ref: "#/components/parameters/address"
-    get:
-      summary: List account raw transactions
-      description: Get a list of all transactions sent by an account.
-      parameters:
-        - $ref: "#/components/parameters/limit"
-        - $ref: "#/components/parameters/offset"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/transaction"
-    post:
-      summary: Send a raw transaction
-      description: Send a transaction from an account. Returns a job.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/script"
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/job"
-
-  /accounts/{address}/transactions/{transactionId}:
-    parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/transactionId"
-    get:
-      summary: Get a raw transaction
-      description: Get the details of a raw transaction sent by an account.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/transaction"
-
-  /accounts/{address}/fungible-tokens:
-    parameters:
-      - $ref: "#/components/parameters/address"
-    get:
-      summary: Get account fungible tokens
-      description: Get all fungible tokens that are enabled for an account.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/token"
-
-  /accounts/{address}/fungible-tokens/{tokenName}:
-    parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-    get:
-      summary: Get fungible tokens details for an account
-      description: Get details (balance) regarding a fungible token for an account.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/tokenDetails"
-    post:
-      summary: Enable a fungible token for an account
-      responses:
-        "201":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/job"
-
-  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
-    parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-    get:
-      summary: List all withdrawals of a fungible token
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/tokenWithdrawal"
-    post:
-      summary: Create a fungible token withdrawal
-      responses:
-        "201":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/job"
-
-  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
-    parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-      - $ref: "#/components/parameters/transactionId"
-    get:
-      summary: Get details of a fungible token withdrawal
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/tokenWithdrawal"
-
-  /accounts/{address}/fungible-tokens/{tokenName}/deposits:
-    parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-    get:
-      summary: List all deposits of a fungible token
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/tokenDeposit"
-
-  /accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}:
-    parameters:
-      - $ref: "#/components/parameters/address"
-      - $ref: "#/components/parameters/tokenName"
-      - $ref: "#/components/parameters/transactionId"
-    get:
-      summary: Get details of a fungible token deposit
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/tokenDeposit"
