@@ -29,6 +29,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const version = "0.4.0"
+
 var (
 	sha1ver   string // sha1 revision used to build the program
 	buildTime string // when the executable was built
@@ -63,7 +65,7 @@ func main() {
 	flag.Parse()
 
 	if flgVersion {
-		fmt.Printf("Build on %s from sha1 %s\n", buildTime, sha1ver)
+		fmt.Printf("v%s build on %s from sha1 %s\n", version, buildTime, sha1ver)
 		os.Exit(0)
 	}
 
