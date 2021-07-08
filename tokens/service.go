@@ -87,7 +87,7 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 			TokenType:      token.Type,
 		})
 		if err != nil {
-			fmt.Printf("error while adding account token: %s\n", err)
+			fmt.Printf("Error while adding account token: %s\n", err)
 		}
 	}()
 
@@ -207,7 +207,7 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 		}
 		t.TransactionId = tx.TransactionId
 		if err := s.store.InsertTokenTransfer(t); err != nil {
-			fmt.Printf("error while inserting token transfer: %s\n", err)
+			fmt.Printf("Error while inserting token transfer: %s\n", err)
 		}
 	}()
 

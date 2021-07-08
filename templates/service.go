@@ -15,10 +15,13 @@ type Service struct {
 
 func NewService(store Store) *Service {
 	cfg := parseConfig()
+
 	// Add all enabled tokens from config as fungible tokens
 	for _, t := range cfg.enabledTokens {
 		if _, err := store.GetByName(t.Name); err == nil {
 			// Token already in database
+			fmt.Printf("Warning: Skipping %s configuration from environment variables as it already exists in database. ", t.Name)
+			fmt.Printf("Consider removing it from database or from environment variables.\n")
 			continue
 		} else {
 			if !strings.Contains(err.Error(), "record not found") {
@@ -27,15 +30,17 @@ func NewService(store Store) *Service {
 			}
 		}
 
-		t.Type = FT
-		t.Setup = FungibleSetupCode(&t)
-		t.Transfer = FungibleTransferCode(&t)
-		t.Balance = FungibleBalanceCode(&t)
+		// Copy the value so we get an individual pointer, this is important
+		token := t
+		token.Type = FT // We only allow fungible tokens through env variables config
+		token.Setup = FungibleSetupCode(&token)
+		token.Transfer = FungibleTransferCode(&token)
+		token.Balance = FungibleBalanceCode(&token)
 
-		if err := store.Insert(&t); err != nil {
-			panic(err)
-		}
+		// Write to temp storage (memory), instead of database
+		store.InsertTemp(&token)
 	}
+
 	return &Service{store, cfg}
 }
 

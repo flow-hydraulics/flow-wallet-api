@@ -21,7 +21,7 @@ func (h *AccountAddedHandler) Handle(payload accounts.AccountAddedPayload) {
 func (h *AccountAddedHandler) addFlowToken(address string) {
 	token, err := h.TemplateService.GetTokenByName("FlowToken")
 	if err != nil {
-		fmt.Printf("error while adding FlowToken to new account: %s\n", err)
+		fmt.Printf("Error while adding FlowToken to new account: %s\n", err)
 	}
 
 	// No need to setup FlowToken
@@ -33,6 +33,6 @@ func (h *AccountAddedHandler) addFlowToken(address string) {
 		TokenType:      token.Type,
 	})
 	if err != nil {
-		fmt.Printf("error while adding FlowToken to new account: %s\n", err)
+		fmt.Printf("Error while adding FlowToken to new account: %s\n", err)
 	}
 }

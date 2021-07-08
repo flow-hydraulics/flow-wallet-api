@@ -1576,7 +1576,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`\[*{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}*\]`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}.*\]`, cfg.AdminAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1603,7 +1603,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens/1",
-			expected:    `{"id":1,.*"type":"FT"}`,
+			expected:    `{"id":1,.*"type":"Unknown"}`,
 			status:      http.StatusOK,
 		},
 	}
