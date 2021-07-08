@@ -41,7 +41,7 @@ func (h *ChainEventHandler) handleDeposit(event flow.Event) {
 	}
 
 	if err = h.TokenService.RegisterDeposit(token, event.TransactionID.Hex(), amountOrNftID.String(), account.Address); err != nil {
-		fmt.Printf("error while registering a deposit: %s\n", err)
+		fmt.Printf("Error while registering a deposit: %s\n", err)
 		return
 	}
 }
