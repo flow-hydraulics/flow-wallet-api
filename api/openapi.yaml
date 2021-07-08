@@ -7,330 +7,6 @@ info:
 servers:
   - url: http://localhost:3000/v1
 
-components:
-  schemas:
-    debugInfo:
-      type: string
-      example: |
-        url: GET /v1/debug
-        Headers:
-          User-Agent: vscode-restclient
-          Content-Type: application/json
-          Connection: close
-
-        ver: https://github.com/eqlabs/flow-wallet-api/commit/
-        built on:
-        api version called: v1
-
-    account:
-      type: object
-      properties:
-        address:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        createdAt:
-          type: string
-          example: "2021-04-27T05:49:53.211+00:00"
-        updatedAt:
-          type: string
-          example: "2021-04-27T05:49:53.211+00:00"
-
-    transaction:
-      type: object
-      properties:
-        transactionId:
-          type: string
-          example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
-        createdAt:
-          type: string
-          example: "2021-04-27T05:49:53.211+00:00"
-        updatedAt:
-          type: string
-          example: "2021-04-27T05:49:53.211+00:00"
-
-    job:
-      type: object
-      properties:
-        jobId:
-          type: string
-          example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
-        status:
-          type: string
-          example: "Accepted"
-        result:
-          type: string
-          example: ""
-        createdAt:
-          type: string
-          example: "2021-04-27T05:49:53.211+00:00"
-        updatedAt:
-          type: string
-          example: "2021-04-27T05:49:53.211+00:00"
-
-    script:
-      type: object
-      properties:
-        code:
-          type: string
-        arguments:
-          type: array
-          items:
-            type: object
-            properties:
-              type:
-                type: string
-              value:
-                type: string
-
-    cadenceValue:
-      type: object
-      properties:
-        Value:
-          type: string
-
-    plainValue:
-      type: string
-
-    fungibleToken:
-      type: object
-      properties:
-        id:
-          type: number
-          example: 1
-        name:
-          type: string
-          example: "FlowToken"
-        address:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        type:
-          type: string
-          example: "FT"
-
-    fungibleTokenDetails:
-      type: object
-      properties:
-        id:
-          type: number
-          example: 1
-        name:
-          type: string
-          example: "FlowToken"
-        nameLowerCase:
-          type: string
-          example: "flowToken"
-        address:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        type:
-          type: string
-          example: "FT"
-        setup:
-          type: string
-          example: "<cadence transaction code for token setup>"
-        transfer:
-          type: string
-          example: "<cadence transaction code for token transfer>"
-        balance:
-          type: string
-          example: "<cadence script code for token balance>"
-
-    fungibleTokenEnable:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "FUSD"
-        nameLowerCase:
-          type: string
-          example: "fusd"
-        address:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        type:
-          type: string
-          example: "FT"
-        setup:
-          type: string
-          example: "<cadence transaction code for token setup>"
-        transfer:
-          type: string
-          example: "<cadence transaction code for token transfer>"
-        balance:
-          type: string
-          example: "<cadence script code for token balance>"
-
-    nonFungibleToken:
-      type: object
-      properties:
-        id:
-          type: number
-          example: 3
-        name:
-          type: string
-          example: "ExampleNFT"
-        address:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        type:
-          type: string
-          example: "NFT"
-
-    nonFungibleTokenDetails:
-      type: object
-      properties:
-        id:
-          type: number
-          example: 3
-        name:
-          type: string
-          example: "ExampleNFT"
-        address:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        type:
-          type: string
-          example: "NFT"
-        setup:
-          type: string
-          example: "<cadence transaction code for token setup>"
-        transfer:
-          type: string
-          example: "<cadence transaction code for token transfer>"
-        balance:
-          type: string
-          example: "<cadence script code for token balance>"
-
-    nonFungibleTokenEnable:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "ExampleNFT"
-        address:
-          type: string
-          example: "0xf8d6e0586b0a20c7"
-        type:
-          type: string
-          example: "NFT"
-        setup:
-          type: string
-          example: "<cadence transaction code for token setup>"
-        transfer:
-          type: string
-          example: "<cadence transaction code for token transfer>"
-        balance:
-          type: string
-          example: "<cadence script code for token balance>"
-
-    accountTokenDetails:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "FlowToken"
-        balance:
-          type: number
-          example: 9999999999.99700000
-
-    tokenWithdrawal:
-      type: object
-      properties:
-        transactionId:
-          type: string
-          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
-        amount:
-          type: string
-          example: "1.0"
-        token:
-          type: string
-          example: "FlowToken"
-        recipient:
-          type: string
-          example: "0x01cf0e2f2f715450"
-        createdAt:
-          type: string
-          example: "2021-06-167T12:05:24.613704+03:00"
-        updatedAt:
-          type: string
-          example: "2021-06-16T12:05:24.617898+03:00"
-
-    tokenDeposit:
-      type: object
-      properties:
-        transactionId:
-          type: string
-          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
-        amount:
-          type: string
-          example: "1.0"
-        token:
-          type: string
-          example: "FlowToken"
-        sender:
-          type: string
-          example: "0x01cf0e2f2f715450"
-        createdAt:
-          type: string
-          example: "2021-06-167T12:05:24.613704+03:00"
-        updatedAt:
-          type: string
-          example: "2021-06-16T12:05:24.617898+03:00"
-
-  parameters:
-    limit:
-      name: limit
-      description: The maximum number of items to return. -1 disables the limit. If no limit is given (or limit=0) 1000 is used as a default.
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: -1
-        example: 1000
-
-    offset:
-      name: offset
-      description: The number of items to skip before starting to collect the result set.
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 0
-        example: 0
-
-    address:
-      name: address
-      in: path
-      required: true
-      schema:
-        type: string
-        example: "0xf8d6e0586b0a20c7"
-
-    jobId:
-      name: jobId
-      in: path
-      required: true
-      schema:
-        type: string
-        example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
-
-    tokenName:
-      name: tokenName
-      in: path
-      required: true
-      schema:
-        type: string
-        enum: [FlowToken, FUSD]
-        example: FlowToken
-
-    transactionId:
-      name: transactionId
-      in: path
-      required: true
-      schema:
-        type: string
-        example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
-
 paths:
   /debug:
     get:
@@ -690,3 +366,327 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/tokenDeposit"
+
+components:
+  schemas:
+    debugInfo:
+      type: string
+      example: |
+        url: GET /v1/debug
+        Headers:
+          User-Agent: vscode-restclient
+          Content-Type: application/json
+          Connection: close
+
+        ver: https://github.com/eqlabs/flow-wallet-api/commit/
+        built on:
+        api version called: v1
+
+    account:
+      type: object
+      properties:
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    transaction:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    job:
+      type: object
+      properties:
+        jobId:
+          type: string
+          example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
+        status:
+          type: string
+          example: "Accepted"
+        result:
+          type: string
+          example: ""
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    script:
+      type: object
+      properties:
+        code:
+          type: string
+        arguments:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              value:
+                type: string
+
+    cadenceValue:
+      type: object
+      properties:
+        Value:
+          type: string
+
+    plainValue:
+      type: string
+
+    fungibleToken:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        name:
+          type: string
+          example: "FlowToken"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+
+    fungibleTokenDetails:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        name:
+          type: string
+          example: "FlowToken"
+        nameLowerCase:
+          type: string
+          example: "flowToken"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    fungibleTokenEnable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FUSD"
+        nameLowerCase:
+          type: string
+          example: "fusd"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "FT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    nonFungibleToken:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 3
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+
+    nonFungibleTokenDetails:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 3
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    nonFungibleTokenEnable:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "ExampleNFT"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        type:
+          type: string
+          example: "NFT"
+        setup:
+          type: string
+          example: "<cadence transaction code for token setup>"
+        transfer:
+          type: string
+          example: "<cadence transaction code for token transfer>"
+        balance:
+          type: string
+          example: "<cadence script code for token balance>"
+
+    accountTokenDetails:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FlowToken"
+        balance:
+          type: number
+          example: 9999999999.99700000
+
+    tokenWithdrawal:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        token:
+          type: string
+          example: "FlowToken"
+        recipient:
+          type: string
+          example: "0x01cf0e2f2f715450"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+
+    tokenDeposit:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        token:
+          type: string
+          example: "FlowToken"
+        sender:
+          type: string
+          example: "0x01cf0e2f2f715450"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+
+  parameters:
+    limit:
+      name: limit
+      description: The maximum number of items to return. -1 disables the limit. If no limit is given (or limit=0) 1000 is used as a default.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: -1
+        example: 1000
+
+    offset:
+      name: offset
+      description: The number of items to skip before starting to collect the result set.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        example: 0
+
+    address:
+      name: address
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "0xf8d6e0586b0a20c7"
+
+    jobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
+
+    tokenName:
+      name: tokenName
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [FlowToken, FUSD]
+        example: FlowToken
+
+    transactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
