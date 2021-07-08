@@ -30,7 +30,6 @@ rather than a hosted 3rd-party solution.
 
 ### Example use cases
 
-- **Custodial NFT Dapp** — an NFT dapp where each user receives a Flow account that is fully managed by the dapp admin. This application requires that each user account can store and transfer NFTs, but does not need to support fungible token custody.
 - **FLOW/FUSD Hot Wallet** — an application that allows users to convert fiat currency to FLOW or FUSD. A single admin account would be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
 - **Exchange** — a cryptocurrency exchange that is listing FLOW and/or FUSD. Similar to the case above, one or more admin accounts may be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
 - **Web Wallet** — a user-facing wallet application that is compatible with Flow dapps. Each user account would be created and managed by the wallet service.
