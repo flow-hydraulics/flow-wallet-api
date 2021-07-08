@@ -2,17 +2,19 @@ package templates
 
 import (
 	"database/sql"
+	"strings"
 
 	"gorm.io/gorm"
 )
 
 type GormStore struct {
-	db *gorm.DB
+	db        *gorm.DB
+	tempStore map[string]*Token
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
 	db.AutoMigrate(&Token{})
-	return &GormStore{db}
+	return &GormStore{db, make(map[string]*Token)}
 }
 
 func (s *GormStore) Insert(q *Token) error {
@@ -20,8 +22,16 @@ func (s *GormStore) Insert(q *Token) error {
 }
 
 func (s *GormStore) List(tType *TokenType) (*[]BasicToken, error) {
-	var tt = &[]BasicToken{}
 	var err error
+
+	fromTemp := make([]BasicToken, 0, len(s.tempStore))
+	for _, t := range s.tempStore {
+		if tType == nil || t.Type == *tType {
+			fromTemp = append(fromTemp, t.BasicToken())
+		}
+	}
+
+	fromDB := []BasicToken{}
 
 	q := s.db.Model(&Token{})
 
@@ -30,13 +40,15 @@ func (s *GormStore) List(tType *TokenType) (*[]BasicToken, error) {
 		q = q.Where(&Token{Type: *tType})
 	}
 
-	err = q.Find(tt).Error
+	err = q.Find(&fromDB).Error
 
 	if err != nil {
 		return nil, err
 	}
 
-	return tt, nil
+	result := append(fromDB, fromTemp...)
+
+	return &result, nil
 }
 
 func (s *GormStore) GetById(id uint64) (*Token, error) {
@@ -49,14 +61,23 @@ func (s *GormStore) GetById(id uint64) (*Token, error) {
 }
 
 func (s *GormStore) GetByName(name string) (*Token, error) {
-	var token Token
-	err := s.db.Where("UPPER(name) LIKE UPPER(@name)", sql.Named("name", name)).First(&token).Error
-	if err != nil {
+	fromTemp, ok := s.tempStore[strings.ToLower(name)]
+	if ok {
+		return fromTemp, nil
+	}
+
+	var fromDB Token
+	if err := s.db.Where("LOWER(name) LIKE LOWER(@name)", sql.Named("name", name)).First(&fromDB).Error; err != nil {
 		return nil, err
 	}
-	return &token, nil
+
+	return &fromDB, nil
 }
 
 func (s *GormStore) Remove(id uint64) error {
 	return s.db.Delete(&Token{}, id).Error
+}
+
+func (s *GormStore) InsertTemp(token *Token) {
+	s.tempStore[strings.ToLower(token.Name)] = token
 }

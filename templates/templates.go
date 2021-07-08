@@ -10,7 +10,7 @@ import (
 )
 
 type Token struct {
-	ID            uint64    `json:"id"`
+	ID            uint64    `json:"id,omitempty"`
 	Name          string    `json:"name" gorm:"uniqueIndex;not null"` // Declaration name
 	NameLowerCase string    `json:"nameLowerCase,omitempty"`          // For generic fungible token transaction templates
 	Address       string    `json:"address" gorm:"not null"`
@@ -22,7 +22,7 @@ type Token struct {
 
 // BasicToken is a simplifed representation of a Token used in listings
 type BasicToken struct {
-	ID      uint64    `json:"id"`
+	ID      uint64    `json:"id,omitempty"`
 	Name    string    `json:"name"`
 	Address string    `json:"address"`
 	Type    TokenType `json:"type"`
@@ -50,6 +50,15 @@ func makeReplacers(t templateVariables) chainReplacers {
 		r[c] = strings.NewReplacer(vv...)
 	}
 	return r
+}
+
+func (token Token) BasicToken() BasicToken {
+	return BasicToken{
+		ID:      token.ID,
+		Name:    token.Name,
+		Address: token.Address,
+		Type:    token.Type,
+	}
 }
 
 func TokenCode(token *Token, tmplStr string) string {
