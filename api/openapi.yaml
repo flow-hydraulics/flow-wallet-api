@@ -23,8 +23,8 @@ paths:
 
   /tokens:
     get:
-      summary: Get all tokens
-      description: Get all tokens (fungible and non-fungible) that are enabled in this instance.
+      summary: List enabled tokens
+      description: List all tokens (fungible and non-fungible) that are enabled in this instance.
       responses:
         "200":
           description: OK
@@ -62,7 +62,7 @@ paths:
             - type: string
               example: "FlowToken"
     get:
-      summary: Get details for an enabled token
+      summary: Get enabled token details
       responses:
         "200":
           description: OK
@@ -88,8 +88,8 @@ paths:
 
   /fungible-tokens:
     get:
-      summary: Get all fungible tokens
-      description: Get all fungible tokens that are enabled in this instance.
+      summary: List enabled fungible tokens
+      description: List all fungible tokens that are enabled in this instance.
       responses:
         "200":
           description: OK
@@ -102,8 +102,8 @@ paths:
 
   /non-fungible-tokens:
     get:
-      summary: Get all non-fungible tokens
-      description: Get all non-fungible tokens that are enabled in this instance.
+      summary: List enabled non-fungible tokens
+      description: List all non-fungible tokens that are enabled in this instance.
       responses:
         "200":
           description: OK
@@ -170,7 +170,7 @@ paths:
 
   /accounts:
     get:
-      summary: List all accounts
+      summary: List accounts
       description: Get a list of all accounts managed by the wallet service.
       parameters:
         - $ref: "#/components/parameters/limit"
@@ -266,8 +266,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/address"
     get:
-      summary: Get account fungible tokens
-      description: Get all fungible tokens that are enabled for an account.
+      summary: List account fungible tokens
+      description: List fungible tokens that are enabled for an account.
       responses:
         "200":
           description: OK
@@ -283,7 +283,7 @@ paths:
       - $ref: "#/components/parameters/address"
       - $ref: "#/components/parameters/fungibleTokenName"
     get:
-      summary: Get fungible tokens details for an account
+      summary: Get account fungible tokens details
       description: Get details (balance) regarding a fungible token for an account.
       responses:
         "200":
@@ -311,7 +311,7 @@ paths:
       - $ref: "#/components/parameters/address"
       - $ref: "#/components/parameters/fungibleTokenName"
     get:
-      summary: List all withdrawals of a fungible token
+      summary: List accounts withdrawals of a fungible token
       responses:
         "200":
           description: OK
@@ -358,7 +358,7 @@ paths:
       - $ref: "#/components/parameters/address"
       - $ref: "#/components/parameters/fungibleTokenName"
     get:
-      summary: List all deposits of a fungible token
+      summary: List accounts deposits of a fungible token
       responses:
         "200":
           description: OK
@@ -390,8 +390,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/address"
     get:
-      summary: Get account non-fungible tokens
-      description: Get all non-fungible tokens that are enabled for an account.
+      summary: List accounts non-fungible tokens
+      description: List all non-fungible tokens that are enabled for an account.
       responses:
         "200":
           description: OK
@@ -407,7 +407,7 @@ paths:
       - $ref: "#/components/parameters/address"
       - $ref: "#/components/parameters/nonFungibleTokenName"
     get:
-      summary: Get non-fungible tokens details for an account
+      summary: Get account non-fungible token details
       description: Get details (balance) regarding a non-fungible token for an account.
       responses:
         "200":
@@ -435,7 +435,7 @@ paths:
       - $ref: "#/components/parameters/address"
       - $ref: "#/components/parameters/nonFungibleTokenName"
     get:
-      summary: List all withdrawals of a non-fungible token
+      summary: List withdrawals of a non-fungible token
       responses:
         "200":
           description: OK
@@ -482,7 +482,7 @@ paths:
       - $ref: "#/components/parameters/address"
       - $ref: "#/components/parameters/nonFungibleTokenName"
     get:
-      summary: List all deposits of a non-fungible token
+      summary: List deposits of a non-fungible token
       responses:
         "200":
           description: OK
