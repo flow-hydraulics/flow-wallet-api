@@ -1138,7 +1138,8 @@ func TestTokenHandlers(t *testing.T) {
 
 	aa0NftDetails, err := tokenService.Details(context.Background(), exampleNft.Name, testAccounts[0].Address)
 	fatal(t, err)
-	nftIDs := aa0NftDetails.Balance.(cadence.Array).Values
+
+	nftIDs := aa0NftDetails.Balance.CadenceValue.(cadence.Array).Values
 
 	_, testTransferNFT, err := tokenService.CreateWithdrawal(
 		context.Background(),
@@ -1161,7 +1162,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", testAccounts[1].Address, flowToken.Name),
-			expected:    `(?m)^{"name":"FlowToken","balance":\d*\.?\d*}$`,
+			expected:    `(?m)^{"name":"FlowToken","balance":"\d*\.?\d*"}$`,
 			status:      http.StatusOK,
 		},
 		{
@@ -1169,7 +1170,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens/%s", testAccounts[1].Address, fusd.Name),
-			expected:    `(?m)^{"name":"FUSD\","balance":\d*\.?\d*}$`,
+			expected:    `(?m)^{"name":"FUSD\","balance":"\d*\.?\d*"}$`,
 			status:      http.StatusOK,
 		},
 		{
@@ -1177,7 +1178,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s", testAccounts[1].Address, exampleNft.Name),
-			expected:    `(?m)^{"name":"ExampleNFT\","balance":{"Values":\[\d+\]}}$`,
+			expected:    `(?m)^{"name":"ExampleNFT\","balance":\[\d+\]}$`,
 			status:      http.StatusOK,
 		},
 		{
@@ -1185,7 +1186,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s", testAccounts[0].Address, exampleNft.Name),
-			expected:    `(?m)^{"name":"ExampleNFT\","balance":{"Values":\[(\d+,)+\d+\]}}$`,
+			expected:    `(?m)^{"name":"ExampleNFT\","balance":\[(\d+,)+\d+\]}$`,
 			status:      http.StatusOK,
 		},
 	}

@@ -133,12 +133,12 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 		},
 	}
 
-	b, err := s.transactions.ExecuteScript(ctx, r)
+	res, err := s.transactions.ExecuteScript(ctx, r)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Details{TokenName: token.Name, Balance: b}, nil
+	return &Details{TokenName: token.Name, Balance: &Balance{CadenceValue: res}}, nil
 }
 
 func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error) {

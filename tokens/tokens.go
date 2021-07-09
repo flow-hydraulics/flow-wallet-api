@@ -8,14 +8,13 @@ import (
 	"github.com/eqlabs/flow-wallet-api/accounts"
 	"github.com/eqlabs/flow-wallet-api/templates"
 	"github.com/eqlabs/flow-wallet-api/transactions"
-	"github.com/onflow/cadence"
 	"gorm.io/gorm"
 )
 
 type Details struct {
-	TokenName string        `json:"name"`
-	Address   string        `json:"address,omitempty"`
-	Balance   cadence.Value `json:"balance,omitempty"`
+	TokenName string   `json:"name"`
+	Address   string   `json:"address,omitempty"`
+	Balance   *Balance `json:"balance,omitempty"`
 }
 
 type WithdrawalRequest struct {
