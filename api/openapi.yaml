@@ -862,7 +862,7 @@ components:
           example: "FlowToken"
         balance:
           type: number
-          example: 9999999999.99700000
+          example: "1.0"
 
     accountNonFungibleToken:
       type: object
@@ -881,11 +881,9 @@ components:
           type: string
           example: "ExampleNFT"
         balance:
-          type: object
-          properties:
-            Values:
-              type: array
-              example: [1,2,3]
+          type: array
+          example: [1,2,3]
+
 
 
   parameters:
