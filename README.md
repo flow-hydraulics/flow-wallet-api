@@ -1,4 +1,4 @@
-# Flow Wallet API v0.4.0
+# Flow Wallet API v0.4.1
 
 A custodial wallet service for tokens on the Flow blockchain.
 
