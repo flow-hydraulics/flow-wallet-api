@@ -1,0 +1,202 @@
+@emulatorCustodyAccount = 0x0000000000000000
+
+### List all enabled fungible tokens
+GET http://localhost:3000/v1/fungible-tokens
+content-type: application/json
+
+### List all enabled non-fungible tokens
+GET http://localhost:3000/v1/non-fungible-tokens
+content-type: application/json
+
+
+### Enable ExampleNFT
+POST http://localhost:3000/v1/tokens
+content-type: application/json
+
+{
+  "name":"ExampleNFT",
+  "address":"{{$dotenv ADMIN_ADDRESS}}",
+  "type":"NFT",
+  "setup":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction {\n    prepare(signer: AuthAccount) {\n        if signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath) != nil { return }\n        let collection <- ExampleNFT.createEmptyCollection()\n        signer.save(<-collection, to: ExampleNFT.CollectionStoragePath)\n        signer.link<&NonFungibleToken.Collection>(ExampleNFT.CollectionPublicPath, target: ExampleNFT.CollectionStoragePath)\n    }\n}\n",
+  "transfer":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction(recipient: Address, withdrawID: UInt64) {\n    prepare(signer: AuthAccount) {\n        let recipient = getAccount(recipient)\n        let collectionRef = signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath)!\n        let depositRef = recipient.getCapability(ExampleNFT.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()!\n        let nft <- collectionRef.withdraw(withdrawID: withdrawID)\n        depositRef.deposit(token: <-nft)\n    }\n}\n",
+  "balance": "import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\npub fun main(account: Address): [UInt64] {\n    let receiver = getAccount(account).getCapability(ExampleNFT.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()!\n    return receiver.getIDs()\n}\n"
+}
+
+### Disable ExampleNFT
+DELETE http://localhost:3000/v1/tokens/3
+
+### List all enabled tokens
+GET http://localhost:3000/v1/tokens
+content-type: application/json
+
+### Get token details with id
+GET http://localhost:3000/v1/tokens/1
+content-type: application/json
+
+### Get token details with name
+GET http://localhost:3000/v1/tokens/examplenft
+content-type: application/json
+
+### Remove an enabled token
+DELETE http://localhost:3000/v1/tokens/3
+content-type: application/json
+
+
+### Get accounts fungible tokens for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens HTTP/1.1
+content-type: application/json
+
+### Get accounts non-fungible tokens for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens HTTP/1.1
+content-type: application/json
+
+### Get FlowToken details for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
+content-type: application/json
+
+### Get FUSD details for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
+content-type: application/json
+
+### Get ExampleNFT details for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
+content-type: application/json
+
+### Create a FlowToken withdrawal from admin to custody account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
+content-type: application/json
+
+{
+  "recipient":"{{emulatorCustodyAccount}}",
+  "amount":"1.0"
+}
+
+### Create a FUSD withdrawal from admin to custody account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
+content-type: application/json
+
+{
+  "recipient":"{{emulatorCustodyAccount}}",
+  "amount":"1.0"
+}
+
+### Create an ExampleNFT withdrawal from admin to custody account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
+content-type: application/json
+
+{
+  "recipient":"{{emulatorCustodyAccount}}",
+  "nftId":0
+}
+
+### List FlowToken withdrawals for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
+content-type: application/json
+
+### List FUSD withdrawals for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
+content-type: application/json
+
+### List ExampleNFT withdrawals for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
+content-type: application/json
+
+### Get FlowToken withdrawal details for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
+content-type: application/json
+
+### Get ExampleNFT withdrawal details for admin account
+GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals/<transaction_id> HTTP/1.1
+content-type: application/json
+
+### Setup FlowToken on emulator for admin account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
+content-type: application/json
+
+### Setup FUSD on emulator for admin account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
+content-type: application/json
+
+### Setup ExampleNFT on emulator for admin account
+POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
+content-type: application/json
+
+
+
+### Get accounts fungible tokens for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens HTTP/1.1
+content-type: application/json
+
+### Get accounts non-fungible tokens for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/non-fungible-tokens HTTP/1.1
+content-type: application/json
+
+### Get FlowToken details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken HTTP/1.1
+content-type: application/json
+
+### Get FUSD details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD HTTP/1.1
+content-type: application/json
+
+### Get ExampleNFT details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/non-fungible-tokens/ExampleNFT HTTP/1.1
+content-type: application/json
+
+### Create a FlowToken withdrawal from custody to admin account
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
+content-type: application/json
+
+{
+  "recipient":"{{$dotenv ADMIN_ADDRESS}}",
+  "amount":"1.0"
+}
+
+### Create a FUSD withdrawal from custody to admin account
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
+content-type: application/json
+
+{
+  "recipient":"{{$dotenv ADMIN_ADDRESS}}",
+  "amount":"1.0"
+}
+
+### List FlowToken withdrawals for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
+content-type: application/json
+
+### List FUSD withdrawals for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
+content-type: application/json
+
+### Get FlowToken withdrawal details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
+content-type: application/json
+
+### List FlowToken deposits for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/deposits HTTP/1.1
+content-type: application/json
+
+### List FUSD deposits for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/deposits HTTP/1.1
+content-type: application/json
+
+### List ExampleNFT deposits for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/non-fungible-tokens/ExampleNFT/deposits HTTP/1.1
+content-type: application/json
+
+### Get FlowToken deposit details for custody account
+GET http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/deposits/<transaction_id> HTTP/1.1
+content-type: application/json
+
+### Setup FlowToken on emulator for custody account
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flowtoken HTTP/1.1
+content-type: application/json
+
+### Setup FUSD on emulator for custody account
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD HTTP/1.1
+content-type: application/json
+
+### Setup ExampleNFT on emulator for custody account
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/non-fungible-tokens/ExampleNFT HTTP/1.1
+content-type: application/json
