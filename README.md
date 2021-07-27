@@ -139,7 +139,7 @@ Configure the Google KMS client library by setting the environment variable `GOO
 export GOOGLE_APPLICATION_CREDENTIALS="/home/example/path/to/service-account-file.json"
 ```
 
-Configure Google KMS as the key storage for `flow-wallet-service` and set the necessary environment variables:
+Configure Google KMS as the key storage for `flow-wallet-api` and set the necessary environment variables:
 
 | Config variable | Environment variable     | Description      | Default | Examples                    |
 | --------------- | ------------------------ | ---------------- | ------- | --------------------------- |
@@ -183,3 +183,4 @@ The Flow Wallet API is developed and maintained by [Equilibrium](https://equilib
 with support from the Flow core contributors.
 
 <a href="https://equilibrium.co/"><img src="equilibrium.svg" alt="Equilibrium" width="200"/></a>
+

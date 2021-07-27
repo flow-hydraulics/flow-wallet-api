@@ -13,6 +13,7 @@
         "testnet": "0x9a0766d93b6608b7"
       }
     },
+    "NonFungibleToken": "./cadence/contracts/NonFungibleToken.cdc",
     "FlowToken": {
       "source": "./cadence/contracts/FlowToken.cdc",
       "aliases": {
@@ -25,26 +26,22 @@
       "aliases": {
         "testnet": "0xe223d8a629e49c68"
       }
-    }
+    },
+    "ExampleNFT": "./cadence/contracts/ExampleNFT.cdc"
   },
   "deployments": {
     "emulator": {
-      "emulator-account": [ "FUSD" ]
+      "emulator-account": [
+        "FUSD",
+        "NonFungibleToken",
+        "ExampleNFT"
+      ]
     }
   },
   "networks": {
-    "emulator": {
-      "host": "127.0.0.1:3569",
-      "chain": "flow-emulator"
-    },
-    "mainnet": {
-      "host": "access.mainnet.nodes.onflow.org:9000",
-      "chain": "flow-mainnet"
-    },
-    "testnet": {
-      "host": "access.devnet.nodes.onflow.org:9000",
-      "chain": "flow-testnet"
-    }
+    "emulator": "127.0.0.1:3569",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
   },
   "accounts": {
     "emulator-account": {
