@@ -42,6 +42,8 @@ func New(
 		builder.Tx.AddAuthorizer(a.Address)
 	}
 
+	signWithProposer := !proposer.Equals(payer)
+
 	// Authorizers sign the payload
 	// TODO: support multiple keys per account?
 	for _, a := range authorizers {
@@ -50,7 +52,17 @@ func New(
 			continue
 		}
 
+		if a.Equals(proposer) {
+			signWithProposer = false
+		}
+
 		if err := builder.Tx.SignPayload(a.Address, a.Key.Index, a.Signer); err != nil {
+			return err
+		}
+	}
+
+	if signWithProposer {
+		if err := builder.Tx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
 			return err
 		}
 	}

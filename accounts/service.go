@@ -19,13 +19,14 @@ import (
 
 // Service defines the API for account management.
 type Service struct {
-	store        Store
-	km           keys.Manager
-	fc           *client.Client
-	wp           *jobs.WorkerPool
-	transactions *transactions.Service
-	templates    *templates.Service
-	cfg          Config
+	store              Store
+	km                 keys.Manager
+	fc                 *client.Client
+	wp                 *jobs.WorkerPool
+	transactions       *transactions.Service
+	templates          *templates.Service
+	cfg                Config
+	adminProposerCount uint16
 }
 
 // NewService initiates a new account service.
@@ -38,10 +39,10 @@ func NewService(
 	tes *templates.Service,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{store, km, fc, wp, txs, tes, cfg}
+	return &Service{store, km, fc, wp, txs, tes, cfg, 0}
 }
 
-func (s *Service) InitAdminAccount() {
+func (s *Service) InitAdminAccount(ctx context.Context) error {
 	a, err := s.store.Account(s.cfg.AdminAccountAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
@@ -57,6 +58,14 @@ func (s *Service) InitAdminAccount() {
 			Address: flow.HexToAddress(s.cfg.AdminAccountAddress),
 		})
 	}
+
+	keyCount, err := s.km.InitAdminProposerKeys(ctx)
+	s.adminProposerCount = keyCount
+	return err
+}
+
+func (s *Service) GetAdminProposerKeyCount() uint16 {
+	return s.adminProposerCount
 }
 
 // List returns all accounts in the datastore.

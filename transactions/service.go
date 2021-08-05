@@ -74,7 +74,12 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 			return "", err
 		}
 
-		if err := New(t, id, b, tType, a, a, aa); err != nil {
+		proposer, err := s.km.AdminProposer(ctx)
+		if err != nil {
+			return "", err
+		}
+
+		if err := New(t, id, b, tType, proposer, a, aa); err != nil {
 			return t.TransactionId, err
 		}
 

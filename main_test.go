@@ -38,8 +38,10 @@ import (
 )
 
 const (
-	testDbDSN  = "test.db"
-	testDbType = "sqlite"
+	testDbDSN         = "test.db"
+	testDbType        = "sqlite"
+	cadenceTxBasePath = "./cadence/transactions"
+	numProposers      = 3
 )
 
 var (
@@ -71,6 +73,28 @@ type httpTestStep struct {
 	expected    string
 	status      int
 	sync        bool
+}
+
+func InitAdminAccount(ctx context.Context, accService *accounts.Service, txService *transactions.Service, numProposers uint16) error {
+	err := accService.InitAdminAccount(ctx)
+	if err != nil {
+		return err
+	}
+
+	addProposerTx, err := ioutil.ReadFile(filepath.Join(cadenceTxBasePath, "add_proposer.cdc"))
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("add proposer")
+	_, _, err = txService.Create(ctx, true, cfg.AdminAddress, templates.Raw{
+		Code: string(addProposerTx),
+		Arguments: []templates.Argument{
+			cadence.NewUInt16(numProposers),
+		},
+	}, transactions.General)
+
+	return accService.InitAdminAccount(ctx)
 }
 
 func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.ResponseRecorder {
@@ -158,6 +182,7 @@ func TestAccountServices(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
+	txStore := transactions.NewGormStore(db)
 
 	templateStore := templates.NewGormStore(db)
 	templateService := templates.NewService(templateStore)
@@ -169,9 +194,13 @@ func TestAccountServices(t *testing.T) {
 	wp.AddWorker(1)
 
 	service := accounts.NewService(accountStore, km, fc, wp, nil, templateService)
+	txService := transactions.NewService(txStore, km, fc, wp)
 
 	t.Run("admin init", func(t *testing.T) {
-		service.InitAdminAccount()
+		err = InitAdminAccount(context.Background(), service, txService, numProposers)
+		if err != nil {
+			t.Fatal(err)
+		}
 	})
 
 	t.Run("sync create", func(t *testing.T) {
@@ -253,6 +282,7 @@ func TestAccountHandlers(t *testing.T) {
 
 	jobStore := jobs.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
+	txStore := transactions.NewGormStore(db)
 
 	templateStore := templates.NewGormStore(db)
 	templateService := templates.NewService(templateStore)
@@ -265,7 +295,15 @@ func TestAccountHandlers(t *testing.T) {
 
 	store := accounts.NewGormStore(db)
 	service := accounts.NewService(store, km, fc, wp, nil, templateService)
+	txService := transactions.NewService(txStore, km, fc, wp)
 	h := handlers.NewAccounts(logger, service)
+
+	t.Run("admin init", func(t *testing.T) {
+		err = InitAdminAccount(context.Background(), service, txService, numProposers)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	router := mux.NewRouter()
 	router.Handle("/", h.List()).Methods(http.MethodGet)
@@ -286,7 +324,7 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "list db empty",
 			method:   http.MethodGet,
 			url:      "/",
-			expected: `(?m)^\[\]$`,
+			expected: fmt.Sprintf(`(?m)^\[{"address":"%s".*}\]$`, cfg.AdminAddress),
 			status:   http.StatusOK,
 		},
 		{
@@ -768,6 +806,13 @@ func TestTokenServices(t *testing.T) {
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
 	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
+	t.Run("admin init", func(t *testing.T) {
+		err = InitAdminAccount(context.Background(), accountService, transactionService, numProposers)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
 		_, account, err := accountService.Create(context.Background(), true)
@@ -953,6 +998,13 @@ func TestTokenHandlers(t *testing.T) {
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
 	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
+	t.Run("admin init", func(t *testing.T) {
+		err = InitAdminAccount(context.Background(), accountService, transactionService, numProposers)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	tokenHandler := handlers.NewTokens(logger, tokenService)
 
 	router := mux.NewRouter()
@@ -997,18 +1049,17 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// ExampleNFT
-	basePath := "./cadence/transactions"
 
-	setupBytes, err := ioutil.ReadFile(filepath.Join(basePath, "setup_exampleNFT.cdc"))
+	setupBytes, err := ioutil.ReadFile(filepath.Join(cadenceTxBasePath, "setup_exampleNFT.cdc"))
 	fatal(t, err)
 
-	transferBytes, err := ioutil.ReadFile(filepath.Join(basePath, "transfer_exampleNFT.cdc"))
+	transferBytes, err := ioutil.ReadFile(filepath.Join(cadenceTxBasePath, "transfer_exampleNFT.cdc"))
 	fatal(t, err)
 
-	balanceBytes, err := ioutil.ReadFile(filepath.Join(basePath, "balance_exampleNFT.cdc"))
+	balanceBytes, err := ioutil.ReadFile(filepath.Join(cadenceTxBasePath, "balance_exampleNFT.cdc"))
 	fatal(t, err)
 
-	mintBytes, err := ioutil.ReadFile(filepath.Join(basePath, "mint_exampleNFT.cdc"))
+	mintBytes, err := ioutil.ReadFile(filepath.Join(cadenceTxBasePath, "mint_exampleNFT.cdc"))
 	fatal(t, err)
 
 	exampleNft := templates.Token{
