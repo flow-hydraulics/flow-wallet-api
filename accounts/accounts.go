@@ -133,7 +133,6 @@ func AddContract(
 	b.Tx.AddAuthorizer(adminAuth.Address)
 
 	t := transactions.Transaction{}
-	// check here
 	if err := transactions.New(&t, id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
 		return nil, err
 	}

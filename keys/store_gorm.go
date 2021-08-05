@@ -1,8 +1,6 @@
 package keys
 
 import (
-	"fmt"
-
 	"gorm.io/gorm"
 )
 
@@ -27,21 +25,11 @@ func (s *GormStore) Proposer() (i int, err error) {
 	p := Proposer{}
 	err = s.db.Model(&Proposer{}).Order("updated_at asc").First(&p).Error
 	s.db.Save(&p) // Update the UpdatedAt field
-	fmt.Println("proposer fetched")
-	fmt.Println(p.KeyIndex)
-	var ps []Proposer
-	s.db.Find(&ps)
-	fmt.Println("all proposers")
-	for _, i := range ps {
-		fmt.Println(i)
-	}
 	i = p.KeyIndex
 	return
 }
 
 func (s *GormStore) InsertProposer(p Proposer) error {
-	fmt.Println("insert")
-	fmt.Println(p.KeyIndex)
 	return s.db.Create(&p).Error
 }
 

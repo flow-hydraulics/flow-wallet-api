@@ -86,7 +86,6 @@ func InitAdminAccount(ctx context.Context, accService *accounts.Service, txServi
 		return err
 	}
 
-	fmt.Println("add proposer")
 	_, _, err = txService.Create(ctx, true, cfg.AdminAddress, templates.Raw{
 		Code: string(addProposerTx),
 		Arguments: []templates.Argument{
