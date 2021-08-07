@@ -12,21 +12,22 @@ import (
 	"github.com/eqlabs/flow-wallet-api/jobs"
 	"github.com/eqlabs/flow-wallet-api/keys"
 	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/templates/template_strings"
 	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
 
 // Service defines the API for account management.
 type Service struct {
-	store              Store
-	km                 keys.Manager
-	fc                 *client.Client
-	wp                 *jobs.WorkerPool
-	transactions       *transactions.Service
-	templates          *templates.Service
-	cfg                Config
-	adminProposerCount uint16
+	store        Store
+	km           keys.Manager
+	fc           *client.Client
+	wp           *jobs.WorkerPool
+	transactions *transactions.Service
+	templates    *templates.Service
+	cfg          Config
 }
 
 // NewService initiates a new account service.
@@ -39,20 +40,20 @@ func NewService(
 	tes *templates.Service,
 ) *Service {
 	cfg := ParseConfig()
-	return &Service{store, km, fc, wp, txs, tes, cfg, 0}
+	return &Service{store, km, fc, wp, txs, tes, cfg}
 }
 
-func (s *Service) InitAdminAccount(ctx context.Context) error {
+func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.Service) error {
 	a, err := s.store.Account(s.cfg.AdminAccountAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
-			panic(err)
+			return err
 		}
 		// Admin account not in database
 		a = Account{Address: s.cfg.AdminAccountAddress}
 		err := s.store.InsertAccount(&a)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		AccountAdded.Trigger(AccountAddedPayload{
 			Address: flow.HexToAddress(s.cfg.AdminAccountAddress),
@@ -60,12 +61,24 @@ func (s *Service) InitAdminAccount(ctx context.Context) error {
 	}
 
 	keyCount, err := s.km.InitAdminProposerKeys(ctx)
-	s.adminProposerCount = keyCount
-	return err
-}
+	if err != nil {
+		return err
+	}
 
-func (s *Service) GetAdminProposerKeyCount() uint16 {
-	return s.adminProposerCount
+	if keyCount < s.cfg.AdminProposerKeyCount {
+		numProposers := s.cfg.AdminProposerKeyCount - keyCount
+
+		_, _, err = txService.Create(ctx, true, s.cfg.AdminAccountAddress, templates.Raw{
+			Code: template_strings.AddProposerKeyTransaction,
+			Arguments: []templates.Argument{
+				cadence.NewUInt16(numProposers),
+			},
+		}, transactions.General)
+
+		_, err = s.km.InitAdminProposerKeys(ctx)
+	}
+
+	return err
 }
 
 // List returns all accounts in the datastore.

@@ -148,7 +148,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		TokenService:    tokenService,
 	})
 
-	err = accountService.InitAdminAccount(context.Background())
+	err = accountService.InitAdminAccount(context.Background(), transactionService)
 	if err != nil {
 		ls.Fatal(err)
 	}

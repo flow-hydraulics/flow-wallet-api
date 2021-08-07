@@ -75,27 +75,6 @@ type httpTestStep struct {
 	sync        bool
 }
 
-func InitAdminAccount(ctx context.Context, accService *accounts.Service, txService *transactions.Service, numProposers uint16) error {
-	err := accService.InitAdminAccount(ctx)
-	if err != nil {
-		return err
-	}
-
-	addProposerTx, err := ioutil.ReadFile(filepath.Join(cadenceTxBasePath, "add_proposer.cdc"))
-	if err != nil {
-		return err
-	}
-
-	_, _, err = txService.Create(ctx, true, cfg.AdminAddress, templates.Raw{
-		Code: string(addProposerTx),
-		Arguments: []templates.Argument{
-			cadence.NewUInt16(numProposers),
-		},
-	}, transactions.General)
-
-	return accService.InitAdminAccount(ctx)
-}
-
 func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.ResponseRecorder {
 	req, err := http.NewRequest(s.method, s.url, s.body)
 	if err != nil {
@@ -196,7 +175,7 @@ func TestAccountServices(t *testing.T) {
 	txService := transactions.NewService(txStore, km, fc, wp)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = InitAdminAccount(context.Background(), service, txService, numProposers)
+		err = service.InitAdminAccount(context.Background(), txService)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -298,7 +277,7 @@ func TestAccountHandlers(t *testing.T) {
 	h := handlers.NewAccounts(logger, service)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = InitAdminAccount(context.Background(), service, txService, numProposers)
+		err = service.InitAdminAccount(context.Background(), txService)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -806,7 +785,7 @@ func TestTokenServices(t *testing.T) {
 	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = InitAdminAccount(context.Background(), accountService, transactionService, numProposers)
+		err = accountService.InitAdminAccount(context.Background(), transactionService)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -998,7 +977,7 @@ func TestTokenHandlers(t *testing.T) {
 	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = InitAdminAccount(context.Background(), accountService, transactionService, numProposers)
+		err = accountService.InitAdminAccount(context.Background(), transactionService)
 		if err != nil {
 			t.Fatal(err)
 		}
