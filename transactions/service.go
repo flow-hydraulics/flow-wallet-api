@@ -74,9 +74,12 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 			return "", err
 		}
 
-		proposer, err := s.km.AdminProposer(ctx)
-		if err != nil {
-			return "", err
+		proposer := a
+		if address == s.cfg.AdminAccountAddress {
+			proposer, err = s.km.AdminProposer(ctx)
+			if err != nil {
+				return "", err
+			}
 		}
 
 		if err := New(t, id, b, tType, proposer, a, aa); err != nil {
