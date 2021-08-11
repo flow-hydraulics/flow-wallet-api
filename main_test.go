@@ -41,7 +41,6 @@ const (
 	testDbDSN         = "test.db"
 	testDbType        = "sqlite"
 	cadenceTxBasePath = "./cadence/transactions"
-	numProposers      = 3
 )
 
 var (
@@ -52,7 +51,7 @@ var (
 type testConfig struct {
 	AccessAPIHost string       `env:"ACCESS_API_HOST,notEmpty"`
 	AdminAddress  string       `env:"ADMIN_ADDRESS,notEmpty"`
-	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	ChainID       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
 type TestLogger struct {

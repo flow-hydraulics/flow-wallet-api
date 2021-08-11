@@ -86,7 +86,7 @@ func TokenCode(token *Token, tmplStr string) string {
 		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.NameLowerCase),
 	)
 
-	knownAddressesReplacer := knownAddressesReplacers[parseConfig().ChainId]
+	knownAddressesReplacer := knownAddressesReplacers[parseConfig().ChainID]
 
 	code := tmplStr
 

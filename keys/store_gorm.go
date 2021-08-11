@@ -11,7 +11,7 @@ type GormStore struct {
 func NewGormStore(db *gorm.DB) *GormStore {
 	db.Migrator().RenameTable("storables", "storable_keys") // Ignore error
 	db.AutoMigrate(&Storable{})
-	db.AutoMigrate(&Proposer{})
+	db.AutoMigrate(&ProposalKey{})
 	return &GormStore{db}
 }
 
@@ -21,18 +21,18 @@ func (s *GormStore) AccountKey(address string) (k Storable, err error) {
 	return
 }
 
-func (s *GormStore) Proposer() (i int, err error) {
-	p := Proposer{}
-	err = s.db.Model(&Proposer{}).Order("updated_at asc").First(&p).Error
+func (s *GormStore) ProposalKey() (i int, err error) {
+	p := ProposalKey{}
+	err = s.db.Model(&ProposalKey{}).Order("updated_at asc").First(&p).Error
 	s.db.Save(&p) // Update the UpdatedAt field
 	i = p.KeyIndex
 	return
 }
 
-func (s *GormStore) InsertProposer(p Proposer) error {
+func (s *GormStore) InsertProposalKey(p ProposalKey) error {
 	return s.db.Create(&p).Error
 }
 
-func (s *GormStore) DeleteAllProposers() error {
-	return s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&Proposer{}).Error
+func (s *GormStore) DeleteAllProposalKeys() error {
+	return s.db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&ProposalKey{}).Error
 }

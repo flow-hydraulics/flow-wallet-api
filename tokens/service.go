@@ -48,7 +48,7 @@ func NewService(
 
 func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,7 +96,7 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 
 func (s *Service) AccountTokens(address string, tType *templates.TokenType) ([]AccountToken, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (s *Service) AccountTokens(address string, tType *templates.TokenType) ([]A
 // Details is used to get the accounts balance (or similar for NFTs) for a token.
 func (s *Service) Details(ctx context.Context, tokenName, address string) (*Details, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -143,13 +143,13 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 
 func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the sender is a valid address
-	sender, err := flow_helpers.ValidateAddress(sender, s.cfg.ChainId)
+	sender, err := flow_helpers.ValidateAddress(sender, s.cfg.ChainID)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Check if the recipient is a valid address
-	recipient, err := flow_helpers.ValidateAddress(request.Recipient, s.cfg.ChainId)
+	recipient, err := flow_helpers.ValidateAddress(request.Recipient, s.cfg.ChainID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -216,7 +216,7 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 
 func (s *Service) ListTransfers(queryType, address, tokenName string) ([]*TokenTransfer, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (s *Service) ListDeposits(address, tokenName string) ([]*TokenDeposit, erro
 
 func (s *Service) GetTransfer(queryType, address, tokenName, transactionId string) (*TokenTransfer, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amountO
 	}
 
 	// Check if the input address is a valid address
-	recipient, err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainId)
+	recipient, err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainID)
 	if err != nil {
 		return err
 	}
@@ -402,7 +402,7 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amountO
 // DeployTokenContractForAccount is mainly used for testing purposes.
 func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return nil, nil, err
 	}

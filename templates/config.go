@@ -9,7 +9,7 @@ import (
 
 // config struct for templates.
 type config struct {
-	ChainId          flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	ChainID          flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 	EnvEnabledTokens []string     `env:"ENABLED_TOKENS" envSeparator:","`
 	enabledTokens    map[string]Token
 }

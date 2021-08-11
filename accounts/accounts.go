@@ -55,7 +55,7 @@ func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km
 	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
 	b := templates.NewBuilderFromTx(tx)
 
-	proposer, err := km.AdminProposer(ctx)
+	proposer, err := km.AdminProposalKey(ctx)
 	if err != nil {
 		return err
 	}

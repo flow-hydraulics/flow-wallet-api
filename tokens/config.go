@@ -7,7 +7,7 @@ import (
 
 // Config struct for account service.
 type Config struct {
-	ChainId flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	ChainID flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
 // ParseConfig parses environment variables to a valid Config.

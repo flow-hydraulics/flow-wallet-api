@@ -60,23 +60,33 @@ func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.
 		})
 	}
 
-	keyCount, err := s.km.InitAdminProposerKeys(ctx)
+	keyCount, err := s.km.InitAdminProposalKeys(ctx)
 	if err != nil {
 		return err
 	}
 
-	if keyCount < s.cfg.AdminProposerKeyCount {
-		numProposers := s.cfg.AdminProposerKeyCount - keyCount
+	if keyCount < s.cfg.AdminProposalKeyCount {
+		err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount, txService)
+		if err != nil {
+			return err
+		}
 
-		_, _, err = txService.Create(ctx, true, s.cfg.AdminAccountAddress, templates.Raw{
-			Code: template_strings.AddProposerKeyTransaction,
-			Arguments: []templates.Argument{
-				cadence.NewUInt16(numProposers),
-			},
-		}, transactions.General)
-
-		_, err = s.km.InitAdminProposerKeys(ctx)
+		_, err = s.km.InitAdminProposalKeys(ctx)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16, txService *transactions.Service) error {
+	_, _, err := txService.Create(ctx, true, s.cfg.AdminAccountAddress, templates.Raw{
+		Code: template_strings.AddProposalKeyTransaction,
+		Arguments: []templates.Argument{
+			cadence.NewUInt16(count),
+		},
+	}, transactions.General)
 
 	return err
 }
@@ -143,7 +153,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 // Details returns a specific account.
 func (s *Service) Details(address string) (Account, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return Account{}, err
 	}

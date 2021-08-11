@@ -46,7 +46,7 @@ func NewService(store Store) *Service {
 
 func (s *Service) AddToken(t *Token) error {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(t.Address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(t.Address, s.cfg.ChainID)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
 	ss := strings.Split(e.Type, ".")
 
 	// Token address from event
-	eAddress, err := flow_helpers.ValidateAddress(ss[1], s.cfg.ChainId)
+	eAddress, err := flow_helpers.ValidateAddress(ss[1], s.cfg.ChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
 	}
 
 	// Token address from database
-	tAddress, err := flow_helpers.ValidateAddress(token.Address, s.cfg.ChainId)
+	tAddress, err := flow_helpers.ValidateAddress(token.Address, s.cfg.ChainID)
 	if err != nil {
 		return nil, err
 	}

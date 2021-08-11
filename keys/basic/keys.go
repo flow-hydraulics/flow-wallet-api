@@ -149,7 +149,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 	}, nil
 }
 
-func (s *KeyManager) InitAdminProposerKeys(ctx context.Context) (uint16, error) {
+func (s *KeyManager) InitAdminProposalKeys(ctx context.Context) (uint16, error) {
 	adminAddress := flow.HexToAddress(s.cfg.AdminAccountAddress)
 
 	adminAccount, err := s.fc.GetAccount(ctx, adminAddress)
@@ -157,7 +157,7 @@ func (s *KeyManager) InitAdminProposerKeys(ctx context.Context) (uint16, error) 
 		return 0, err
 	}
 
-	err = s.store.DeleteAllProposers()
+	err = s.store.DeleteAllProposalKeys()
 	if err != nil {
 		return 0, err
 	}
@@ -165,7 +165,7 @@ func (s *KeyManager) InitAdminProposerKeys(ctx context.Context) (uint16, error) 
 	var count uint16
 	for _, k := range adminAccount.Keys {
 		if !k.Revoked {
-			err = s.store.InsertProposer(keys.Proposer{
+			err = s.store.InsertProposalKey(keys.ProposalKey{
 				KeyIndex: k.Index,
 			})
 			if err != nil {
@@ -178,10 +178,10 @@ func (s *KeyManager) InitAdminProposerKeys(ctx context.Context) (uint16, error) 
 	return count, nil
 }
 
-func (s *KeyManager) AdminProposer(ctx context.Context) (keys.Authorizer, error) {
+func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, error) {
 	adminAcc := flow.HexToAddress(s.cfg.AdminAccountAddress)
 
-	index, err := s.store.Proposer()
+	index, err := s.store.ProposalKey()
 	if err != nil {
 		return keys.Authorizer{}, err
 	}

@@ -12,12 +12,6 @@ to distribute the FUSD stablecoin.
 This example uses the sample emulator configuration 
 from the root of this repository.
 
-Change to the repository root:
-
-```ls
-cd ../../
-```
-
 Create a configuration file:
 
 ```sh
@@ -41,8 +35,6 @@ flow project deploy -n emulator
 In this directory, install and run the Next.js app:
 
 ```bash
-cd examples/nextjs-fusd-provider
-
 npm install
 
 npm run dev

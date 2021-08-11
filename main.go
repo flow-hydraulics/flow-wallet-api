@@ -40,7 +40,7 @@ type Config struct {
 	Host          string       `env:"HOST"`
 	Port          int          `env:"PORT" envDefault:"3000"`
 	AccessAPIHost string       `env:"ACCESS_API_HOST,notEmpty"`
-	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	ChainID       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
 func main() {
