@@ -700,7 +700,7 @@ func TestScriptsHandlers(t *testing.T) {
 				"arguments":[]
 			}`),
 			contentType: "application/json",
-			expected:    "1000000000000000000",
+			expected:    "100000000000000000",
 			status:      http.StatusOK,
 		},
 		{

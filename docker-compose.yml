@@ -15,6 +15,7 @@ services:
       - "3000:3000"
     env_file:
       - ./.env
+    restart: unless-stopped      
     environment:
       DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
       DATABASE_TYPE: psql
@@ -25,8 +26,10 @@ services:
       - emulator
 
   emulator:
-    image: gcr.io/flow-container-registry/emulator:latest
+    image: gcr.io/flow-container-registry/emulator:v0.23.0
     command: emulator -v
+    ports:
+      - "3569:3569"
     environment:
       - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
