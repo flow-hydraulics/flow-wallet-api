@@ -49,9 +49,10 @@ var (
 )
 
 type testConfig struct {
-	AccessAPIHost string       `env:"ACCESS_API_HOST,notEmpty"`
-	AdminAddress  string       `env:"ADMIN_ADDRESS,notEmpty"`
-	ChainID       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	AccessAPIHost         string       `env:"ACCESS_API_HOST,notEmpty"`
+	AdminAddress          string       `env:"ADMIN_ADDRESS,notEmpty"`
+	ChainID               flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	AdminProposalKeyCount uint16       `env:"ADMIN_PROPOSAL_KEY_COUNT" envDefault:"10"`
 }
 
 type TestLogger struct {
@@ -174,9 +175,25 @@ func TestAccountServices(t *testing.T) {
 	txService := transactions.NewService(txStore, km, fc, wp)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = service.InitAdminAccount(context.Background(), txService)
+		ctx := context.Background()
+		if err := env.Parse(&cfg); err != nil {
+			t.Fatal(err)
+		}
+
+		err = service.InitAdminAccount(ctx, txService)
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		// make sure all requested proposal keys are created
+
+		keyCount, err := km.InitAdminProposalKeys(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if keyCount != cfg.AdminProposalKeyCount {
+			t.Fatal("incorrect number of admin proposal keys")
 		}
 	})
 
