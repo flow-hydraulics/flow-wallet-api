@@ -2,26 +2,34 @@ version: "3.9"
 services:
   db:
     image: postgres:13-alpine
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: postgres
+      - POSTGRES_DB=wallet
+      - POSTGRES_USER=wallet
+      - POSTGRES_PASSWORD=wallet
 
-  adminer:
-    image: adminer
-    restart: always
+  wallet:
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
     ports:
-      - 8081:8080
+      - "3000:3000"
+    env_file:
+      - ./.env
+    restart: unless-stopped      
+    environment:
+      DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
+      DATABASE_TYPE: psql
+      ACCESS_API_HOST: emulator:3569
+      CHAIN_ID: flow-emulator
+    depends_on:
+      - db
+      - emulator
 
   emulator:
-    container_name: flow-emulator
-    image: flow-cli:${FLOW_CLI_VERSION}
+    image: gcr.io/flow-container-registry/emulator:v0.23.0
     command: emulator -v
     ports:
       - "3569:3569"
-      - "8080:8080"
-    volumes:
-      - "./:/app"
     environment:
       - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256

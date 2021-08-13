@@ -1,0 +1,39 @@
+version: "3.3"
+services:
+  wallet:
+    image: gcr.io/flow-container-registry/wallet-api:v0.3.1
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_TYPE=psql
+      - DATABASE_DSN=postgresql://wallet:wallet@db:5432/wallet
+      - ACCESS_API_HOST=emulator:3569
+      - CHAIN_ID=flow-emulator
+      - ADMIN_ADDRESS=${ADMIN_ADDRESS}
+      - ADMIN_PRIVATE_KEY=${ADMIN_PRIVATE_KEY}
+      - DEFAULT_KEY_TYPE=local
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ENABLED_TOKENS=FUSD:${ADMIN_ADDRESS}:fusd,FlowToken:0x0ae53cb6e3f42a79:flow
+    depends_on:
+      - db
+      - emulator
+
+  emulator:
+    image: gcr.io/flow-container-registry/emulator:v0.22.0
+    ports:
+      - "3569:3569"
+      - "8080:8080"
+    environment:
+      - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}
+      - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
+      - FLOW_SERVICEKEYHASHALGO=SHA3_256
+      - FLOW_VERBOSE=true
+
+  db:
+    image: postgres:13-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=wallet
+      - POSTGRES_USER=wallet
+      - POSTGRES_PASSWORD=wallet

@@ -7,34 +7,23 @@
   },
   "contracts": {
     "FungibleToken": {
-      "source": "./cadence/contracts/FungibleToken.cdc",
+      "source": "../../cadence/contracts/FungibleToken.cdc",
       "aliases": {
         "emulator": "0xee82856bf20e2aa6",
         "testnet": "0x9a0766d93b6608b7"
       }
     },
-    "NonFungibleToken": "./cadence/contracts/NonFungibleToken.cdc",
-    "FlowToken": {
-      "source": "./cadence/contracts/FlowToken.cdc",
-      "aliases": {
-        "emulator": "0x0ae53cb6e3f42a79",
-        "testnet": "0x7e60df042a9c0868"
-      }
-    },
     "FUSD": {
-      "source": "./cadence/contracts/FUSD.cdc",
+      "source": "../../cadence/contracts/FUSD.cdc",
       "aliases": {
         "testnet": "0xe223d8a629e49c68"
       }
-    },
-    "ExampleNFT": "./cadence/contracts/ExampleNFT.cdc"
+    }
   },
   "deployments": {
     "emulator": {
       "emulator-account": [
-        "FUSD",
-        "NonFungibleToken",
-        "ExampleNFT"
+        "FUSD"
       ]
     }
   },

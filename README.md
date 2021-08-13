@@ -1,71 +1,88 @@
-# Flow Wallet API v0.4.1
+# Flow Wallet API
 
-A custodial wallet service for tokens on the Flow blockchain.
+> :warning: This software is a work in progress and is not yet intended for production use.
 
-**DISCLAIMER**: This is alpha software. Use at your own risk. We are not responsible for any damages caused by using this software.
+The Flow Wallet API is a REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure. 
+This service can be used by an application that needs to manage Flow user accounts and the assets inside them.
 
-## Basic example setup (testnet)
+## Features
 
-`.env` -file:
+- Create new Flow accounts
+- Securely store account private keys 
+- Send a transaction from an account
+- Transfer fungible tokens (e.g. FLOW, FUSD)
+- Detect fungible token deposits
+- _Transfer NFTs (e.g. FLOW, FUSD) (coming soon)_
+- _Detect NFT deposits (coming soon)_
 
-    ACCESS_API_HOST=https://access-testnet.onflow.org
-    CHAIN_ID=flow-testnet
-    DATABASE_DSN=postgresql://postgres:postgres@db:5432/postgres # replace this
-    DATABASE_TYPE=psql
+View full list of functionality in the [API documentation](https://onflow.github.io/wallet-api/).
 
-    ADMIN_ADDRESS=<your testnet admin account address>
-    ADMIN_PRIVATE_KEY=<your testnet  admin account private key>
-    DEFAULT_KEY_TYPE=local # Will store keys in your database, use "google_kms" if you have that setup
-    ENCRYPTION_KEY=passphrasewhichneedstobe32bytes! # replace this with something that is 32 bytes
+## Background
 
-    ENABLED_TOKENS=FlowToken:0x7e60df042a9c0868:flowToken
+Some application developers may wish to manage Flow accounts in a fully-custodial fashion,
+but without taking on the complexity of building an account management system.
 
-Running:
+An application may need to support custody of fungible tokens (FLOW, FUSD), non-fungible tokens, or both.
 
-    docker run -d --name flow-wallet-api --env-file .env ghcr.io/eqlabs/flow-wallet-api:0.0.2
+For security and/or legal reasons, 
+some developers need to use a custody service running on-premises as part of their existing infrastructure,
+rather than a hosted 3rd-party solution.
 
-## Developing
+### Example use cases
 
-Requirements:
+- **FLOW/FUSD Hot Wallet** — an application that allows users to convert fiat currency to FLOW or FUSD. A single admin account would be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
+- **Exchange** — a cryptocurrency exchange that is listing FLOW and/or FUSD. Similar to the case above, one or more admin accounts may be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
+- **Web Wallet** — a user-facing wallet application that is compatible with Flow dapps. Each user account would be created and managed by the wallet service.
 
-- docker
-- docker-compose
-- golang v1.16+
+## API Specification
 
-Run:
+View the [Wallet API documentation and OpenAPI (Swagger) specification](https://onflow.github.io/wallet-api/).
 
-    cp .env.example .env
-    # edit .env
-    # feel free to use the private key in the example file as it is only for developing
-    # admin address is always the same with flow emulator
-    docker-compose up -d
-    go run main.go
+## Installation
 
-_Note:
-The emulator creates new account addresses deterministically. This means that deleting the emulators docker volume will cause the emulator to start from the beginning and give the same addresses as before possibly ending in duplicate key errors in database._
+The Wallet API is provided as a Docker image:
 
-## Testing
+```sh
+docker pull gcr.io/flow-container-registry/wallet-api:v0.3.1
+```
 
-Requirements:
+### Basic example usage
 
-- docker
-- docker-compose
-- golang v1.16+
+> This setup requires [Docker](https://docs.docker.com/engine/install/) and the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
 
-Run:
+Create a configuration file:
 
-    cp .env.example .env.test
-    # edit .env.test
-    # feel free to use the private key in the example file as it is only for testing
-    # admin address is always the same with flow emulator
-    make build-cli
-    make up
-    make deploy
-    go test -v ./...
+```sh
+cp .env.example .env
+```
+
+Start the Wallet API, Flow Emulator and Postgres:
+
+```sh
+docker-compose up -d
+```
+
+Deploy the FUSD contract to the emulator:
+
+```sh
+flow project deploy -n emulator
+```
+
+You can now access the API at http://localhost:3000/v1/accounts.
+
+Next, see the [FUSD sample app](/examples/nextjs-fusd-provider)
+for an example of how to use this configuration as part of
+a complete application.
+
+Once you're finished, run this to stop the containers:
+
+```sh
+docker-compose down
+```
 
 ## Configuration
 
-### Enabled tokens
+### Enabled fungible tokens
 
 A comma separated list of _fungible tokens_ and their corresponding addresses enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined.
 
@@ -96,14 +113,14 @@ Examples of Database DSN
 
 For more: https://gorm.io/docs/connecting_to_the_database.html
 
-### Google KMS Setup
+### Google KMS setup
 
 Note: In order to use Google KMS for remote key management you'll need a Google Cloud Platform account.
 
 Pre-requisites:
 
-1. Create a new Project if you don't have one already, you'll need the Project ID later.
-2. Enable Cloud Key management Service (KMS) API for the project, Security -> [Cryptographic Keys](https://console.cloud.google.com/security/kms)
+1. Create a new Project if you don't have one already. You'll need the Project ID later.
+2. Enable Cloud Key Management Service (KMS) API for the project, Security -> [Cryptographic Keys](https://console.cloud.google.com/security/kms).
 3. Create a new Key Ring for your wallet (or use an existing Key Ring), Security -> Cryptographic Keys -> [Create Key Ring](https://console.cloud.google.com/security/kms/keyring/create), you'll need the Location ID (or _Location_) and Key Ring ID (or _Name_) later.
 
 Using a Service Account to access the KMS API (see [official docs](https://cloud.google.com/docs/authentication/getting-started) for more);
@@ -114,16 +131,16 @@ Using a Service Account to access the KMS API (see [official docs](https://cloud
    - `cloudkms.cryptoKeyVersions.viewPublicKey`
    - `cloudkms.cryptoKeys.create`
 3. After creating the Service Account, select Manage Keys from the Actions menu in the Service Account listing.
-4. Create a new key, Add Key -> Create new key, and select JSON as the key type
-5. Save the JSON file
+4. Create a new key, Add Key -> Create New key, and select JSON as the key type.
+5. Save the JSON file.
 
-Configure the Google KMS client library by setting the environment variable `GOOGLE_APPLICATION_CREDENTIALS`;
+Configure the Google KMS client library by setting the environment variable `GOOGLE_APPLICATION_CREDENTIALS`:
 
 ```
 export GOOGLE_APPLICATION_CREDENTIALS="/home/example/path/to/service-account-file.json"
 ```
 
-Configure Google KMS as the key storage for `flow-wallet-api` and set the necessary environment variables;
+Configure Google KMS as the key storage for `flow-wallet-api` and set the necessary environment variables:
 
 | Config variable | Environment variable     | Description      | Default | Examples                    |
 | --------------- | ------------------------ | ---------------- | ------- | --------------------------- |
@@ -134,28 +151,38 @@ Configure Google KMS as the key storage for `flow-wallet-api` and set the necess
 
 ### All possible environment variables
 
-    HOST=
-    PORT=3000
-    ACCESS_API_HOST=localhost:3569
+```
+HOST=
+PORT=3000
+ACCESS_API_HOST=localhost:3569
 
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken
+ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
 
-    DATABASE_DSN=wallet.db
-    DATABASE_TYPE=sqlite
+DATABASE_DSN=wallet.db
+DATABASE_TYPE=sqlite
 
-    ADMIN_ADDRESS=
-    ADMIN_KEY_INDEX=0
-    ADMIN_KEY_TYPE=local
-    ADMIN_PRIVATE_KEY=
-    CHAIN_ID=flow-emulator
-    DEFAULT_KEY_TYPE=local
-    DEFAULT_KEY_INDEX=0
-    DEFAULT_KEY_WEIGHT=-1
-    DEFAULT_SIGN_ALGO=ECDSA_P256
-    DEFAULT_HASH_ALGO=SHA3_256
-    ENCRYPTION_KEY=
+ADMIN_ADDRESS=
+ADMIN_KEY_INDEX=0
+ADMIN_KEY_TYPE=local
+ADMIN_PRIVATE_KEY=
+CHAIN_ID=flow-emulator
+DEFAULT_KEY_TYPE=local
+DEFAULT_KEY_INDEX=0
+DEFAULT_KEY_WEIGHT=-1
+DEFAULT_SIGN_ALGO=ECDSA_P256
+DEFAULT_HASH_ALGO=SHA3_256
+ENCRYPTION_KEY=
 
-    GOOGLE_APPLICATION_CREDENTIALS=
-    GOOGLE_KMS_PROJECT_ID=
-    GOOGLE_KMS_LOCATION_ID=
-    GOOGLE_KMS_KEYRING_ID=
+GOOGLE_APPLICATION_CREDENTIALS=
+GOOGLE_KMS_PROJECT_ID=
+GOOGLE_KMS_LOCATION_ID=
+GOOGLE_KMS_KEYRING_ID=
+```
+
+## Credit
+
+The Flow Wallet API is developed and maintained by [Equilibrium](https://equilibrium.co/),
+with support from the Flow core contributors.
+
+<a href="https://equilibrium.co/"><img src="equilibrium.svg" alt="Equilibrium" width="200"/></a>
+

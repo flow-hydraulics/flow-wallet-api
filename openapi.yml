@@ -1,0 +1,540 @@
+openapi: 3.0.0
+
+info:
+  title: Flow Wallet API
+  version: 0.3.1
+
+servers:
+  - url: http://localhost:3000/v1
+
+components:
+  schemas:
+    debugInfo:
+      type: string
+      example: |
+        url: GET /v1/debug
+        Headers:
+          User-Agent: vscode-restclient
+          Content-Type: application/json
+          Connection: close
+
+        ver: https://github.com/eqlabs/flow-wallet-api/commit/
+        built on:
+        api version called: v1
+
+    account:
+      type: object
+      properties:
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    transactionRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        arguments:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              value:
+                type: string
+
+    transaction:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    job:
+      type: object
+      properties:
+        jobId:
+          type: string
+          example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
+        status:
+          type: string
+          example: "Accepted"
+        result:
+          type: string
+          example: ""
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    fungibleToken:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FlowToken"
+        address:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+
+    fungibleTokenDetails:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "FlowToken"
+        balance:
+          type: string
+          example: "9999999999.99700000"
+
+    fungibleTokenWithdrawalRequest:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: "0xf8d6e0586b0a20c7"
+        amount:
+          type: string
+          example: "1.0"
+
+    fungibleTokenWithdrawal:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        token:
+          type: string
+          example: "FlowToken"
+        recipient:
+          type: string
+          example: "0x01cf0e2f2f715450"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+
+    fungibleTokenDeposit:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
+        amount:
+          type: string
+          example: "1.0"
+        token:
+          type: string
+          example: "FlowToken"
+        sender:
+          type: string
+          example: "0x01cf0e2f2f715450"
+        createdAt:
+          type: string
+          example: "2021-06-167T12:05:24.613704+03:00"
+        updatedAt:
+          type: string
+          example: "2021-06-16T12:05:24.617898+03:00"
+
+  parameters:
+    limit:
+      name: limit
+      description: The maximum number of items to return. -1 disables the limit. If no limit is given (or limit=0) 1000 is used as a default.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: -1
+        example: 1000
+
+    offset:
+      name: offset
+      description: The number of items to skip before starting to collect the result set.
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        example: 0
+
+    address:
+      name: address
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "0xf8d6e0586b0a20c7"
+
+    jobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "717c25c2-4b54-4588-8f83-72f37ae1a0e8"
+
+    tokenName:
+      name: tokenName
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [FlowToken, FUSD]
+        example: FlowToken
+
+    transactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+
+tags:
+  - name: Accounts
+    description: Create and lists accounts managed by this Wallet API.
+  - name: Transactions
+    description: Send transactions from accounts managed by this Wallet API.
+  - name: Fungible Tokens
+    description: Initialize tokens, withdraw funds and detect deposits of fungible tokens.
+  - name: Jobs
+    description: View the status of asynchronous tasks being completed by the Wallet API.
+
+paths:
+  /debug:
+    get:
+      summary: Get debug information about the running instance.
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/debugInfo"
+
+  /fungible-tokens:
+    get:
+      summary: Get all fungible tokens
+      description: Get all fungible tokens that are enabled in this instance.
+      operationId: getFungibleTokens
+      tags:
+        - Fungible Tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleToken"
+
+  /jobs:
+    get:
+      summary: List all jobs
+      operationId: getJobs
+      tags:
+        - Jobs
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /jobs/{jobId}:
+    parameters:
+      - $ref: "#/components/parameters/jobId"
+    get:
+      summary: Get a job
+      operationId: getJob
+      tags:
+        - Jobs
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: "#/components/schemas/job"
+
+  /accounts:
+    get:
+      summary: List all accounts
+      description: Get a list of all accounts managed by the wallet service.
+      operationId: getAccounts
+      tags:
+        - Accounts
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/account"
+    post:
+      summary: Create an account
+      description: Create a new account that will be managed by the wallet service. Returns a job.
+      operationId: createAccount
+      tags:
+        - Accounts
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/job"
+
+  /accounts/{address}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    get:
+      summary: Get an account
+      description: Get the details of a specific account.
+      operationId: getAccountByAddress
+      tags:
+        - Accounts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/account"
+
+  /accounts/{address}/transactions:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    get:
+      summary: List account raw transactions
+      description: Get a list of all transactions sent by an account.
+      operationId: getAccountTransactions
+      tags:
+        - Transactions
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/transaction"
+    post:
+      summary: Send a raw transaction
+      description: Send a transaction from an account. Returns a job.
+      operationId: sendAccountTransaction
+      tags:
+        - Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/transactionRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/job"
+
+  /accounts/{address}/transactions/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get a raw transaction
+      description: Get the details of a raw transaction sent by an account.
+      operationId: getAccountTransaction
+      tags:
+        - Transactions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transaction"
+
+  /accounts/{address}/fungible-tokens:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    get:
+      summary: Get account fungible tokens
+      description: Get all fungible tokens that are enabled for an account.
+      operationId: getAccountFungibleTokens
+      tags:
+        - Fungible Tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleToken"
+
+  /accounts/{address}/fungible-tokens/{tokenName}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+    get:
+      summary: Get fungible tokens details for an account
+      description: Get details (balance) regarding a fungible token for an account.
+      operationId: getAccountFungibleToken
+      tags:
+        - Fungible Tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleTokenDetails"
+    post:
+      summary: Enable a fungible token for an account
+      operationId: initAccountFungibleToken
+      tags:
+        - Fungible Tokens
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+    get:
+      summary: List all withdrawals of a fungible token
+      operationId: getAccountFungibleTokenWithdrawals
+      tags:
+        - Fungible Tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleTokenWithdrawal"
+    post:
+      summary: Create a fungible token withdrawal
+      operationId: createAccountFungibleTokenWithdrawal
+      tags:
+        - Fungible Tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/fungibleTokenWithdrawalRequest"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/job"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a fungible token withdrawal
+      operationId: getAccountFungibleTokenWithdrawal
+      tags:
+        - Fungible Tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fungibleTokenWithdrawal"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/deposits:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+    get:
+      summary: List all deposits of a fungible token
+      operationId: getAccountFungibleTokenDeposits
+      tags:
+        - Fungible Tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/fungibleTokenDeposit"
+
+  /accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+      - $ref: "#/components/parameters/tokenName"
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get details of a fungible token deposit
+      operationId: getAccountFungibleTokenDeposit
+      tags:
+        - Fungible Tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/fungibleTokenDeposit"

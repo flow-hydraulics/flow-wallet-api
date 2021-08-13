@@ -29,6 +29,11 @@ type Manager interface {
 	AdminAuthorizer(context.Context) (Authorizer, error)
 	// UserAuthorizer returns an Authorizer for the given address.
 	UserAuthorizer(ctx context.Context, address flow.Address) (Authorizer, error)
+	// InitAdminProposalKeys will init the admin proposal keys in the database
+	// and return current count.
+	InitAdminProposalKeys(ctx context.Context) (uint16, error)
+	// AdminProposalKey returns Authorizer to be used as proposer.
+	AdminProposalKey(ctx context.Context) (Authorizer, error)
 }
 
 // Storable struct represents a storable account private key.
@@ -53,6 +58,17 @@ func (Storable) TableName() string {
 	return "storable_keys"
 }
 
+type ProposalKey struct {
+	ID        int `json:"-" gorm:"primaryKey"`
+	KeyIndex  int `gorm:"unique"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (ProposalKey) TableName() string {
+	return "proposal_keys"
+}
+
 // Private is an "in flight" account private key meaning its Value should be the actual
 // private key or resource id (unencrypted).
 type Private struct {
@@ -68,4 +84,8 @@ type Authorizer struct {
 	Address flow.Address
 	Key     *flow.AccountKey
 	Signer  crypto.Signer
+}
+
+func (a *Authorizer) Equals(t Authorizer) bool {
+	return a.Address.Hex() == t.Address.Hex() && a.Key.Index == t.Key.Index
 }

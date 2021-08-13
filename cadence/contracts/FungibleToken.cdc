@@ -188,6 +188,7 @@ pub contract interface FungibleToken {
                 from.isInstance(self.getType()):
                     "Cannot deposit an incompatible token type"
             }
+
             post {
                 self.balance == before(self.balance) + before(from.balance):
                     "New Vault balance must be the sum of the previous balance and the deposited Vault"
