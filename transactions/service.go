@@ -47,7 +47,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		// Check if the input is a valid address
-		address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+		address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 		if err != nil {
 			return "", err
 		}
@@ -74,7 +74,15 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 			return "", err
 		}
 
-		if err := New(t, id, b, tType, a, a, aa); err != nil {
+		proposer := a
+		if address == s.cfg.AdminAccountAddress {
+			proposer, err = s.km.AdminProposalKey(ctx)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		if err := New(t, id, b, tType, proposer, a, aa); err != nil {
 			return t.TransactionId, err
 		}
 
@@ -119,7 +127,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 // List returns all transactions in the datastore for a given account.
 func (s *Service) List(tType Type, address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return []Transaction{}, err
 	}
@@ -132,7 +140,7 @@ func (s *Service) List(tType Type, address string, limit, offset int) ([]Transac
 // Details returns a specific transaction.
 func (s *Service) Details(tType Type, address, transactionId string) (result Transaction, err error) {
 	// Check if the input is a valid address
-	address, err = flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err = flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return
 	}

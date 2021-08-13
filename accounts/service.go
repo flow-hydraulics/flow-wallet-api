@@ -12,7 +12,9 @@ import (
 	"github.com/eqlabs/flow-wallet-api/jobs"
 	"github.com/eqlabs/flow-wallet-api/keys"
 	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/eqlabs/flow-wallet-api/templates/template_strings"
 	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )
@@ -41,22 +43,52 @@ func NewService(
 	return &Service{store, km, fc, wp, txs, tes, cfg}
 }
 
-func (s *Service) InitAdminAccount() {
+func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.Service) error {
 	a, err := s.store.Account(s.cfg.AdminAccountAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
-			panic(err)
+			return err
 		}
 		// Admin account not in database
 		a = Account{Address: s.cfg.AdminAccountAddress}
 		err := s.store.InsertAccount(&a)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		AccountAdded.Trigger(AccountAddedPayload{
 			Address: flow.HexToAddress(s.cfg.AdminAccountAddress),
 		})
 	}
+
+	keyCount, err := s.km.InitAdminProposalKeys(ctx)
+	if err != nil {
+		return err
+	}
+
+	if keyCount < s.cfg.AdminProposalKeyCount {
+		err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount, txService)
+		if err != nil {
+			return err
+		}
+
+		_, err = s.km.InitAdminProposalKeys(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16, txService *transactions.Service) error {
+	_, _, err := txService.Create(ctx, true, s.cfg.AdminAccountAddress, templates.Raw{
+		Code: template_strings.AddProposalKeyTransaction,
+		Arguments: []templates.Argument{
+			cadence.NewUInt16(count),
+		},
+	}, transactions.General)
+
+	return err
 }
 
 // List returns all accounts in the datastore.
@@ -121,7 +153,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 // Details returns a specific account.
 func (s *Service) Details(address string) (Account, error) {
 	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainId)
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
 		return Account{}, err
 	}

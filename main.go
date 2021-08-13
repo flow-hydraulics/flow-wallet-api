@@ -40,7 +40,7 @@ type Config struct {
 	Host          string       `env:"HOST"`
 	Port          int          `env:"PORT" envDefault:"3000"`
 	AccessAPIHost string       `env:"ACCESS_API_HOST,notEmpty"`
-	ChainId       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+	ChainID       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 }
 
 func main() {
@@ -148,7 +148,10 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		TokenService:    tokenService,
 	})
 
-	accountService.InitAdminAccount()
+	err = accountService.InitAdminAccount(context.Background(), transactionService)
+	if err != nil {
+		ls.Fatal(err)
+	}
 
 	// HTTP handling
 

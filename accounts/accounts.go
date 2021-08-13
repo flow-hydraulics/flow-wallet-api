@@ -55,8 +55,13 @@ func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km
 	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
 	b := templates.NewBuilderFromTx(tx)
 
+	proposer, err := km.AdminProposalKey(ctx)
+	if err != nil {
+		return err
+	}
+
 	t := transactions.Transaction{}
-	if err := transactions.New(&t, id, b, transactions.General, auth, auth, nil); err != nil {
+	if err := transactions.New(&t, id, b, transactions.General, proposer, auth, nil); err != nil {
 		return err
 	}
 

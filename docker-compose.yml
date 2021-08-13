@@ -1,39 +1,36 @@
-version: "3.3"
+version: "3.9"
 services:
+  db:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_DB=wallet
+      - POSTGRES_USER=wallet
+      - POSTGRES_PASSWORD=wallet
+
   wallet:
-    image: gcr.io/flow-container-registry/wallet-api:v0.3.1
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - ./.env
+    restart: unless-stopped      
     environment:
-      - DATABASE_TYPE=psql
-      - DATABASE_DSN=postgresql://wallet:wallet@db:5432/wallet
-      - ACCESS_API_HOST=emulator:3569
-      - CHAIN_ID=flow-emulator
-      - ADMIN_ADDRESS=${ADMIN_ADDRESS}
-      - ADMIN_PRIVATE_KEY=${ADMIN_PRIVATE_KEY}
-      - DEFAULT_KEY_TYPE=local
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - ENABLED_TOKENS=FUSD:${ADMIN_ADDRESS}:fusd,FlowToken:0x0ae53cb6e3f42a79:flow
+      DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
+      DATABASE_TYPE: psql
+      ACCESS_API_HOST: emulator:3569
+      CHAIN_ID: flow-emulator
     depends_on:
       - db
       - emulator
 
   emulator:
-    image: gcr.io/flow-container-registry/emulator:v0.22.0
+    image: gcr.io/flow-container-registry/emulator:v0.23.0
+    command: emulator -v
     ports:
       - "3569:3569"
-      - "8080:8080"
     environment:
       - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
       - FLOW_SERVICEKEYHASHALGO=SHA3_256
-      - FLOW_VERBOSE=true
-
-  db:
-    image: postgres:13-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=wallet
-      - POSTGRES_USER=wallet
-      - POSTGRES_PASSWORD=wallet
