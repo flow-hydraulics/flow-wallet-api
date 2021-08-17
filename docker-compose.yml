@@ -2,6 +2,8 @@ version: "3.9"
 services:
   db:
     image: postgres:13-alpine
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_DB=wallet
       - POSTGRES_USER=wallet
@@ -11,11 +13,12 @@ services:
     build:
       context: .
       dockerfile: ./docker/wallet/Dockerfile
+      network: host # docker build sometimes has problems fetching from alpine's CDN
     ports:
       - "3000:3000"
     env_file:
       - ./.env
-    restart: unless-stopped      
+    restart: unless-stopped
     environment:
       DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
       DATABASE_TYPE: psql
