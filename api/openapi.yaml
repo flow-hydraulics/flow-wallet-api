@@ -7,10 +7,29 @@ info:
 servers:
   - url: http://localhost:3000/v1
 
+tags:
+  - name: Accounts
+    description: Create and lists accounts managed by this Wallet API.
+  - name: Transactions
+    description: Send transactions from accounts managed by this Wallet API.
+  - name: Scripts
+    description: Run zero-cost Cadence scripts to read on-chain data.
+  - name: Fungible Tokens
+    description: Initialize tokens, withdraw funds and detect deposits of fungible tokens.
+  - name: Non-Fungible Tokens
+    description: Initialize non-fungible tokens, transfer NFTs and detect deposits of NFTs.
+  - name: Jobs
+    description: View the status of asynchronous tasks being completed by the Wallet API.
+  - name: Debugging
+    description: View useful debugging information about the Wallet API.
+
 paths:
   /debug:
     get:
       summary: Get debug information about the running instance.
+      operationId: getInstanceDebugInfo
+      tags:
+        - Debugging
       responses:
         "200":
           description: OK
@@ -19,12 +38,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/debugInfo"
 
+
 # Service tokens
 
   /tokens:
     get:
       summary: List enabled tokens
       description: List all tokens (fungible and non-fungible) that are enabled in this instance.
+      operationId: listEnabledTokens
+      tags:
+        - Fungible Tokens
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -33,12 +57,16 @@ paths:
               schema:
                 type: array
                 items:
-                  - $ref: "#/components/schemas/fungibleToken"
-                  - $ref: "#/components/schemas/nonFungibleToken"
+                  oneOf:
+                    - $ref: "#/components/schemas/fungibleToken"
+                    - $ref: "#/components/schemas/nonFungibleToken"
     post:
       summary: Enable a new token
-      description: Enable a new token by sending its name, address and required cadence transaction codes
-
+      description: Enable a new token by sending its name, address and required Cadence transaction codes
+      operationId: enableNewToken
+      tags:
+        - Fungible Tokens
+        - Non-Fungible Tokens
       requestBody:
         content:
           application/json:
@@ -46,7 +74,6 @@ paths:
               oneOf:
                 - $ref: "#/components/schemas/fungibleTokenEnable"
                 - $ref: "#/components/schemas/nonFungibleTokenEnable"
-
       responses:
         "201":
           description: OK
@@ -64,6 +91,10 @@ paths:
               example: "FlowToken"
     get:
       summary: Get enabled token details
+      operationId: getEnabledTokenDetails
+      tags:
+        - Fungible Tokens
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -85,12 +116,28 @@ paths:
     delete:
       summary: Remove a token from the service
       description: Remove a token, disabling functionality regarding it. Won't affect accounts.
+      operationId: removeToken
+      tags:
+        - Fungible Tokens
+        - Non-Fungible Tokens
+      responses:
+        "200":
+          description: Removal OK.
+          content:
+            application/json:
+              schema:
+                type: integer
 
+
+# Fungible Tokens
 
   /fungible-tokens:
     get:
       summary: List enabled fungible tokens
       description: List all fungible tokens that are enabled in this instance.
+      operationId: listEnabledFungibleTokens
+      tags:
+        - Fungible Tokens
       responses:
         "200":
           description: OK
@@ -101,10 +148,16 @@ paths:
                 items:
                   $ref: "#/components/schemas/fungibleToken"
 
+
+# Non-Fungible Tokens
+
   /non-fungible-tokens:
     get:
       summary: List enabled non-fungible tokens
       description: List all non-fungible tokens that are enabled in this instance.
+      operationId: listEnabledNonFungibleTokens
+      tags:
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -115,16 +168,24 @@ paths:
                 items:
                   $ref: "#/components/schemas/nonFungibleToken"
 
+
 # Scripts
 
   /scripts:
     post:
       summary: Execute a script on chain
+      operationId: executeScriptOnChain
+      tags:
+        - Scripts
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/script"
+              allOf:
+                - $ref: "#/components/schemas/script"
+                - example:
+                    code: 'pub fun main(): Int { return 1 }'
+                    arguments: []
       responses:
         "200":
           description: Ok
@@ -135,11 +196,15 @@ paths:
                   - $ref: "#/components/schemas/cadenceValue"
                   - $ref: "#/components/schemas/plainValue"
 
+
 # Jobs
 
   /jobs:
     get:
       summary: List all jobs
+      operationId: listAllJobs
+      tags:
+        - Jobs
       parameters:
         - $ref: "#/components/parameters/limit"
         - $ref: "#/components/parameters/offset"
@@ -157,7 +222,10 @@ paths:
     parameters:
       - $ref: "#/components/parameters/jobId"
     get:
-      summary: Get a job
+      summary: Get job details
+      operationId: getJobDetails
+      tags:
+        - Jobs
       responses:
         "200":
           description: OK
@@ -167,12 +235,16 @@ paths:
                 type: object
                 $ref: "#/components/schemas/job"
 
+
 # Account management
 
   /accounts:
     get:
       summary: List accounts
       description: Get a list of all accounts managed by the wallet service.
+      operationId: listAllAccounts
+      tags:
+        - Accounts
       parameters:
         - $ref: "#/components/parameters/limit"
         - $ref: "#/components/parameters/offset"
@@ -188,6 +260,9 @@ paths:
     post:
       summary: Create an account
       description: Create a new account that will be managed by the wallet service. Returns a job.
+      operationId: createAccount
+      tags:
+        - Accounts
       parameters:
         - $ref: "#/components/parameters/sync"
       responses:
@@ -206,6 +281,9 @@ paths:
     get:
       summary: Get an account
       description: Get the details of a specific account.
+      operationId: getAccountDetails
+      tags:
+        - Accounts
       responses:
         "200":
           description: OK
@@ -213,6 +291,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/account"
+
 
 # Account transactions
 
@@ -222,6 +301,10 @@ paths:
     get:
       summary: List account raw transactions
       description: Get a list of all transactions sent by an account.
+      operationId: listAccountRawTransactions
+      tags:
+        - Accounts
+        - Transactions
       parameters:
         - $ref: "#/components/parameters/limit"
         - $ref: "#/components/parameters/offset"
@@ -237,6 +320,10 @@ paths:
     post:
       summary: Send a raw transaction
       description: Send a transaction from an account. Returns a job, or the account information when synchronous mode is enabled.
+      operationId: sendRawTransaction
+      tags:
+        - Accounts
+        - Transactions
       parameters:
         - $ref: "#/components/parameters/sync"
       requestBody:
@@ -261,6 +348,10 @@ paths:
     get:
       summary: Get a raw transaction
       description: Get the details of a raw transaction sent by an account.
+      operationId: getRawTransactionDetails
+      tags:
+        - Accounts
+        - Transactions
       responses:
         "200":
           description: OK
@@ -268,6 +359,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/transaction"
+
 
 # Account fungible tokens
 
@@ -277,6 +369,10 @@ paths:
     get:
       summary: List account fungible tokens
       description: List fungible tokens that are enabled for an account.
+      operationId: listAccountFungibleTokens
+      tags:
+        - Accounts
+        - Fungible Tokens
       responses:
         "200":
           description: OK
@@ -294,6 +390,10 @@ paths:
     get:
       summary: Get account fungible tokens details
       description: Get details (balance) regarding a fungible token for an account.
+      operationId: getAccountFungibleTokenDetails
+      tags:
+        - Accounts
+        - Fungible Tokens
       responses:
         "200":
           description: OK
@@ -305,6 +405,10 @@ paths:
                   $ref: "#/components/schemas/accountFungibleTokenDetails"
     post:
       summary: Enable a fungible token for an account
+      operationId: enableFungibleTokenForAccount
+      tags:
+        - Accounts
+        - Fungible Tokens
       parameters:
         - $ref: "#/components/parameters/sync"
       responses:
@@ -324,6 +428,10 @@ paths:
       - $ref: "#/components/parameters/fungibleTokenName"
     get:
       summary: List accounts withdrawals of a fungible token
+      operationId: listAccountFungibleTokenWithdrawals
+      tags:
+        - Accounts
+        - Fungible Tokens
       responses:
         "200":
           description: OK
@@ -335,6 +443,10 @@ paths:
                   $ref: "#/components/schemas/fungibleTokenWithdrawal"
     post:
       summary: Create a fungible token withdrawal
+      operationId: createFungibleTokenWithdrawal
+      tags:
+        - Accounts
+        - Fungible Tokens
       requestBody:
         content:
           application/json:
@@ -360,6 +472,11 @@ paths:
       - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a fungible token withdrawal
+      operationId: getFungibleTokenWithdrawalDetails
+      tags:
+        - Accounts
+        - Fungible Tokens
+        - Transactions
       responses:
         "200":
           description: OK
@@ -374,6 +491,10 @@ paths:
       - $ref: "#/components/parameters/fungibleTokenName"
     get:
       summary: List accounts deposits of a fungible token
+      operationId: listAccountFungibleTokenDeposits
+      tags:
+        - Accounts
+        - Fungible Tokens
       responses:
         "200":
           description: OK
@@ -391,6 +512,10 @@ paths:
       - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a fungible token deposit
+      operationId: getFungibleTokenDepositDetails
+      tags:
+        - Accounts
+        - Fungible Tokens
       responses:
         "200":
           description: OK
@@ -398,6 +523,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/fungibleTokenDeposit"
+
 
 # Account non-fungible tokens
 
@@ -407,6 +533,10 @@ paths:
     get:
       summary: List accounts non-fungible tokens
       description: List all non-fungible tokens that are enabled for an account.
+      operationId: listAccountNonFungibleTokens
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -424,6 +554,10 @@ paths:
     get:
       summary: Get account non-fungible token details
       description: Get details (balance) regarding a non-fungible token for an account.
+      operationId: listAccountNonFungibleTokenDetails
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -435,6 +569,10 @@ paths:
                   $ref: "#/components/schemas/accountNonFungibleTokenDetails"
     post:
       summary: Enable a non-fungible token for an account
+      operationId: enableNonFungibleTokenForAccount
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       parameters:
         - $ref: "#/components/parameters/sync"
       responses:
@@ -453,6 +591,10 @@ paths:
       - $ref: "#/components/parameters/nonFungibleTokenName"
     get:
       summary: List withdrawals of a non-fungible token
+      operationId: listNonFungibleTokenWithdrawals
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -464,6 +606,10 @@ paths:
                   $ref: "#/components/schemas/nonFungibleTokenWithdrawal"
     post:
       summary: Create a non-fungible token withdrawal
+      operationId: createNonFungibleTokenWithdrawal
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       requestBody:
         content:
           application/json:
@@ -488,6 +634,10 @@ paths:
       - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a non-fungible token withdrawal
+      operationId: getNonFungibleTokenWithdrawalDetails
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -502,6 +652,10 @@ paths:
       - $ref: "#/components/parameters/nonFungibleTokenName"
     get:
       summary: List deposits of a non-fungible token
+      operationId: listNonFungibleTokenDeposits
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -519,6 +673,10 @@ paths:
       - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get details of a non-fungible token deposit
+      operationId: getNonFungibleTokenDepositDetails
+      tags:
+        - Accounts
+        - Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -904,6 +1062,8 @@ components:
           example: "ExampleNFT"
         balance:
           type: array
+          items:
+            type: integer
           example: [1,2,3]
 
 
