@@ -1,6 +1,3 @@
-
-current_dir = $(shell pwd)
-
 .PHONY: dev
 dev:
 	docker-compose up -d db emulator
