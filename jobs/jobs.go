@@ -55,15 +55,23 @@ func NewWorkerPool(l *log.Logger, db Store, capacity uint, workerCount uint) *Wo
 
 	pool := &WorkerPool{l, wg, db, jobChan, capacity, workerCount}
 
-	pool.initWorkers()
+	pool.startWorkers()
 
 	return pool
 }
 
-func (p *WorkerPool) initWorkers() {
+func (p *WorkerPool) startWorkers() {
 	for i := uint(0); i < p.workerCount; i++ {
 		p.wg.Add(1)
-		go p.newWorker()
+		go func() {
+			defer p.wg.Done()
+			for job := range p.jobChan {
+				if job == nil {
+					break
+				}
+				p.process(job)
+			}
+		}()
 	}
 }
 
@@ -92,16 +100,6 @@ func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
 func (p *WorkerPool) Stop() {
 	close(p.jobChan)
 	p.wg.Wait()
-}
-
-func (p *WorkerPool) newWorker() {
-	defer p.wg.Done()
-	for job := range p.jobChan {
-		if job == nil {
-			return
-		}
-		p.process(job)
-	}
 }
 
 func (p *WorkerPool) tryEnqueue(job *Job) bool {
