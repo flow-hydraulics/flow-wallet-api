@@ -8,14 +8,14 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[Unknown-0]
+	_ = x[NotSpecified-0]
 	_ = x[FT-1]
 	_ = x[NFT-2]
 }
 
-const _TokenType_name = "UnknownFTNFT"
+const _TokenType_name = "NotSpecifiedFTNFT"
 
-var _TokenType_index = [...]uint8{0, 7, 9, 12}
+var _TokenType_index = [...]uint8{0, 12, 14, 17}
 
 func (i TokenType) String() string {
 	if i < 0 || i >= TokenType(len(_TokenType_index)-1) {

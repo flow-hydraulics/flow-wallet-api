@@ -36,7 +36,7 @@ func (s *Templates) AddTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	handleJsonResponse(rw, http.StatusCreated, newToken)
 }
 
-func (s *Templates) MakeListTokensFunc(tType *templates.TokenType) http.HandlerFunc {
+func (s *Templates) MakeListTokensFunc(tType templates.TokenType) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		tokens, err := s.service.ListTokens(tType)
 		if err != nil {

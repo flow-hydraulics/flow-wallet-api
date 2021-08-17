@@ -65,7 +65,7 @@ func (s *Service) AddToken(t *Token) error {
 	return s.store.Insert(t)
 }
 
-func (s *Service) ListTokens(tType *TokenType) (*[]BasicToken, error) {
+func (s *Service) ListTokens(tType TokenType) (*[]BasicToken, error) {
 	return s.store.List(tType)
 }
 

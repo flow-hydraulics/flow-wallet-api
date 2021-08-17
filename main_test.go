@@ -1559,7 +1559,7 @@ func TestTemplateHandlers(t *testing.T) {
 
 	router := mux.NewRouter()
 	router.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)
-	router.Handle("/tokens", templateHandler.ListTokens(nil)).Methods(http.MethodGet)
+	router.Handle("/tokens", templateHandler.ListTokens(templates.NotSpecified)).Methods(http.MethodGet)
 	router.Handle("/tokens/{id_or_name}", templateHandler.GetToken()).Methods(http.MethodGet)
 	router.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)
 
@@ -1605,7 +1605,7 @@ func TestTemplateHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
@@ -1622,7 +1622,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"Unknown"}.*\]`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, cfg.AdminAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1649,7 +1649,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens/1",
-			expected:    `{"id":1,.*"type":"Unknown"}`,
+			expected:    `{"id":1,.*"type":"NotSpecified"}`,
 			status:      http.StatusOK,
 		},
 	}
@@ -1689,7 +1689,7 @@ func TestTemplateHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"Unknown"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{

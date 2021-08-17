@@ -21,12 +21,12 @@ func (s *GormStore) Insert(q *Token) error {
 	return s.db.Omit("ID").Create(q).Error
 }
 
-func (s *GormStore) List(tType *TokenType) (*[]BasicToken, error) {
+func (s *GormStore) List(tType TokenType) (*[]BasicToken, error) {
 	var err error
 
 	fromTemp := make([]BasicToken, 0, len(s.tempStore))
 	for _, t := range s.tempStore {
-		if tType == nil || t.Type == *tType {
+		if tType == NotSpecified || t.Type == tType {
 			fromTemp = append(fromTemp, t.BasicToken())
 		}
 	}
@@ -35,9 +35,9 @@ func (s *GormStore) List(tType *TokenType) (*[]BasicToken, error) {
 
 	q := s.db.Model(&Token{})
 
-	if tType != nil {
+	if tType != NotSpecified {
 		// Filter by type
-		q = q.Where(&Token{Type: *tType})
+		q = q.Where(&Token{Type: tType})
 	}
 
 	err = q.Find(&fromDB).Error
