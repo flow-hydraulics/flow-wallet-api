@@ -56,6 +56,9 @@ components:
         transactionId:
           type: string
           example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+        transactionType:
+          type: string
+          example: "ftsetup"
         createdAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
