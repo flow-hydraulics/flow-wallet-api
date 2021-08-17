@@ -167,9 +167,8 @@ func TestAccountServices(t *testing.T) {
 
 	km := basic.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(nil, jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
-	wp.AddWorker(1)
 
 	service := accounts.NewService(accountStore, km, fc, wp, nil, templateService)
 	txService := transactions.NewService(txStore, km, fc, wp)
@@ -283,9 +282,8 @@ func TestAccountHandlers(t *testing.T) {
 
 	km := basic.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(nil, jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
-	wp.AddWorker(1)
 
 	store := accounts.NewGormStore(db)
 	service := accounts.NewService(store, km, fc, wp, nil, templateService)
@@ -434,9 +432,8 @@ func TestTransactionHandlers(t *testing.T) {
 
 	km := basic.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(nil, jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
-	wp.AddWorker(1)
 
 	store := transactions.NewGormStore(db)
 	service := transactions.NewService(store, km, fc, wp)
@@ -792,9 +789,8 @@ func TestTokenServices(t *testing.T) {
 
 	km := basic.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(nil, jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
-	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
@@ -984,9 +980,8 @@ func TestTokenHandlers(t *testing.T) {
 
 	km := basic.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(nil, jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
-	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
@@ -1526,9 +1521,8 @@ func TestNFTDeployment(t *testing.T) {
 
 	km := basic.NewKeyManager(keyStore, fc)
 
-	wp := jobs.NewWorkerPool(nil, jobStore)
+	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
-	wp.AddWorker(1)
 
 	transactionService := transactions.NewService(transactionStore, km, fc, wp)
 	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)

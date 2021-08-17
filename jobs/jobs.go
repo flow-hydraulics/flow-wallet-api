@@ -12,15 +12,12 @@ import (
 )
 
 type WorkerPool struct {
-	log     *log.Logger
-	wg      *sync.WaitGroup
-	workers []*Worker
-	store   Store
-}
-
-type Worker struct {
-	pool    *WorkerPool
-	jobChan *chan *Job
+	log         *log.Logger
+	wg          *sync.WaitGroup
+	store       Store
+	jobChan     chan *Job
+	capacity    uint
+	workerCount uint
 }
 
 type Job struct {
@@ -52,19 +49,22 @@ func (j *Job) Wait(wait bool) error {
 	return nil
 }
 
-func NewWorkerPool(l *log.Logger, db Store) *WorkerPool {
-	return &WorkerPool{l, &sync.WaitGroup{}, []*Worker{}, db}
+func NewWorkerPool(l *log.Logger, db Store, capacity uint, workerCount uint) *WorkerPool {
+	wg := &sync.WaitGroup{}
+	jobChan := make(chan *Job, capacity)
+
+	pool := &WorkerPool{l, wg, db, jobChan, capacity, workerCount}
+
+	pool.initWorkers()
+
+	return pool
 }
 
-func (p *WorkerPool) AddWorker(capacity uint) {
-	if len(p.workers) > 0 {
-		panic("multiple workers not supported yet")
+func (p *WorkerPool) initWorkers() {
+	for i := uint(0); i < p.workerCount; i++ {
+		p.wg.Add(1)
+		go p.newWorker()
 	}
-	p.wg.Add(1)
-	jobChan := make(chan *Job, capacity)
-	worker := &Worker{p, &jobChan}
-	p.workers = append(p.workers, worker)
-	go worker.start()
 }
 
 func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
@@ -73,16 +73,7 @@ func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
 		return job, err
 	}
 
-	worker, err := p.AvailableWorker()
-	if err != nil {
-		job.Status = NoAvailableWorkers
-		if err := p.store.UpdateJob(job); err != nil {
-			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
-		}
-		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
-	}
-
-	if !worker.tryEnqueue(job) {
+	if !p.tryEnqueue(job) {
 		job.Status = QueueFull
 		if err := p.store.UpdateJob(job); err != nil {
 			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
@@ -98,56 +89,46 @@ func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
 	return job, nil
 }
 
-func (p *WorkerPool) AvailableWorker() (*Worker, error) {
-	// TODO: support multiple workers, use load balancing
-	if len(p.workers) < 1 {
-		return nil, fmt.Errorf("no available workers")
-	}
-	return p.workers[0], nil
-}
-
 func (p *WorkerPool) Stop() {
-	for _, w := range p.workers {
-		close(*w.jobChan)
-	}
+	close(p.jobChan)
 	p.wg.Wait()
 }
 
-func (w *Worker) start() {
-	defer w.pool.wg.Done()
-	for job := range *w.jobChan {
+func (p *WorkerPool) newWorker() {
+	defer p.wg.Done()
+	for job := range p.jobChan {
 		if job == nil {
 			return
 		}
-		w.process(job)
+		p.process(job)
 	}
 }
 
-func (w *Worker) tryEnqueue(job *Job) bool {
+func (p *WorkerPool) tryEnqueue(job *Job) bool {
 	select {
-	case *w.jobChan <- job:
+	case p.jobChan <- job:
 		return true
 	default:
 		return false
 	}
 }
 
-func (w *Worker) process(job *Job) {
+func (p *WorkerPool) process(job *Job) {
 	result, err := job.Do()
 	job.Result = result
 	if err != nil {
-		if w.pool.log != nil {
-			w.pool.log.Printf("[Job %s] Error while processing job: %s\n", job.ID, err)
+		if p.log != nil {
+			p.log.Printf("[Job %s] Error while processing job: %s\n", job.ID, err)
 		}
 		job.Status = Error
 		job.Error = err.Error()
-		if err := w.pool.store.UpdateJob(job); err != nil {
-			w.pool.log.Println("WARNING: Could not update DB entry for Job", job.ID)
+		if err := p.store.UpdateJob(job); err != nil {
+			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return
 	}
 	job.Status = Complete
-	if err := w.pool.store.UpdateJob(job); err != nil {
-		w.pool.log.Println("WARNING: Could not update DB entry for Job", job.ID)
+	if err := p.store.UpdateJob(job); err != nil {
+		p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
 	}
 }
