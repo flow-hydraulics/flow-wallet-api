@@ -89,6 +89,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	ls := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
 	lj := log.New(os.Stdout, "[JOBS] ", log.LstdFlags|log.Lshortfile)
 
+	ls.Printf("Starting server (v%s)...\n", version)
+
 	// Flow client
 	// TODO: WithInsecure()?
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
