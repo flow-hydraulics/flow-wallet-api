@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-api/templates/template_strings"
+	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/onflow/flow-go-sdk"
 )
 

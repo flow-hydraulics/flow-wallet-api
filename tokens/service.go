@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-api/accounts"
-	"github.com/eqlabs/flow-wallet-api/flow_helpers"
-	"github.com/eqlabs/flow-wallet-api/jobs"
-	"github.com/eqlabs/flow-wallet-api/keys"
-	"github.com/eqlabs/flow-wallet-api/templates"
-	"github.com/eqlabs/flow-wallet-api/templates/template_strings"
-	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
+	"github.com/flow-hydraulics/flow-wallet-api/jobs"
+	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
+	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -94,7 +94,7 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 	return job, tx, err
 }
 
-func (s *Service) AccountTokens(address string, tType *templates.TokenType) ([]AccountToken, error) {
+func (s *Service) AccountTokens(address string, tType templates.TokenType) ([]AccountToken, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {

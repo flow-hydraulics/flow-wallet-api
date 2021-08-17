@@ -3,8 +3,8 @@ package tokens
 import (
 	"fmt"
 
-	"github.com/eqlabs/flow-wallet-api/templates"
-	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -19,11 +19,11 @@ func NewGormStore(db *gorm.DB) *GormStore {
 	return &GormStore{db}
 }
 
-func (s *GormStore) AccountTokens(address string, tokenType *templates.TokenType) (att []AccountToken, err error) {
+func (s *GormStore) AccountTokens(address string, tokenType templates.TokenType) (att []AccountToken, err error) {
 	q := s.db
-	if tokenType != nil {
+	if tokenType != templates.NotSpecified {
 		// Filter by type
-		q = q.Where(&AccountToken{AccountAddress: address, TokenType: *tokenType})
+		q = q.Where(&AccountToken{AccountAddress: address, TokenType: tokenType})
 	} else {
 		// Find all
 		q = q.Where(&AccountToken{AccountAddress: address})

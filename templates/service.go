@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-api/flow_helpers"
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
 )
 
@@ -65,7 +65,7 @@ func (s *Service) AddToken(t *Token) error {
 	return s.store.Insert(t)
 }
 
-func (s *Service) ListTokens(tType *TokenType) (*[]BasicToken, error) {
+func (s *Service) ListTokens(tType TokenType) (*[]BasicToken, error) {
 	return s.store.List(tType)
 }
 

@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
 )
 
 // Templates is a HTTP server for template management.
@@ -22,7 +22,7 @@ func (s *Templates) AddToken() http.Handler {
 	return UseJson(h)
 }
 
-func (s *Templates) ListTokens(tType *templates.TokenType) http.Handler {
+func (s *Templates) ListTokens(tType templates.TokenType) http.Handler {
 	return s.MakeListTokensFunc(tType)
 }
 

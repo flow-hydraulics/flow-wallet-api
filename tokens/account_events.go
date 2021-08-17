@@ -3,9 +3,9 @@ package tokens
 import (
 	"fmt"
 
-	"github.com/eqlabs/flow-wallet-api/accounts"
-	"github.com/eqlabs/flow-wallet-api/flow_helpers"
-	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
 )
 
 type AccountAddedHandler struct {

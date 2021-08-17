@@ -11,17 +11,17 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-api/accounts"
-	"github.com/eqlabs/flow-wallet-api/chain_events"
-	"github.com/eqlabs/flow-wallet-api/datastore/gorm"
-	"github.com/eqlabs/flow-wallet-api/debug"
-	"github.com/eqlabs/flow-wallet-api/handlers"
-	"github.com/eqlabs/flow-wallet-api/jobs"
-	"github.com/eqlabs/flow-wallet-api/keys"
-	"github.com/eqlabs/flow-wallet-api/keys/basic"
-	"github.com/eqlabs/flow-wallet-api/templates"
-	"github.com/eqlabs/flow-wallet-api/tokens"
-	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
+	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
+	"github.com/flow-hydraulics/flow-wallet-api/debug"
+	"github.com/flow-hydraulics/flow-wallet-api/handlers"
+	"github.com/flow-hydraulics/flow-wallet-api/jobs"
+	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/tokens"
+	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
@@ -89,6 +89,8 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	ls := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
 	lj := log.New(os.Stdout, "[JOBS] ", log.LstdFlags|log.Lshortfile)
 
+	ls.Printf("Starting server (v%s)...\n", version)
+
 	// Flow client
 	// TODO: WithInsecure()?
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
@@ -137,7 +139,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
 	debugService := debug.Service{
-		RepoUrl:   "https://github.com/eqlabs/flow-wallet-api",
+		RepoUrl:   "https://github.com/flow-hydraulics/flow-wallet-api",
 		Sha1ver:   sha1ver,
 		BuildTime: buildTime,
 	}
@@ -174,23 +176,25 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	rv.Handle("/jobs/{jobId}", jobsHandler.Details()).Methods(http.MethodGet) // details
 
 	// Token templates
-	rv.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)             // create
-	rv.Handle("/tokens", templateHandler.ListTokens(nil)).Methods(http.MethodGet)         // list
-	rv.Handle("/tokens/{id_or_name}", templateHandler.GetToken()).Methods(http.MethodGet) // details
-	rv.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)   // delete
+	rv.Handle("/tokens", templateHandler.ListTokens(templates.NotSpecified)).Methods(http.MethodGet) // list
+	rv.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)                        // create
+	rv.Handle("/tokens/{id_or_name}", templateHandler.GetToken()).Methods(http.MethodGet)            // details
+	rv.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)              // delete
+
+	// List enabled tokens by type
+	rv.Handle("/fungible-tokens", templateHandler.ListTokens(templates.FT)).Methods(http.MethodGet)      // list
+	rv.Handle("/non-fungible-tokens", templateHandler.ListTokens(templates.NFT)).Methods(http.MethodGet) // list
 
 	// Account
-	ra := rv.PathPrefix("/accounts").Subrouter()
-	ra.Handle("", accountHandler.List()).Methods(http.MethodGet)              // list
-	ra.Handle("", accountHandler.Create()).Methods(http.MethodPost)           // create
-	ra.Handle("/{address}", accountHandler.Details()).Methods(http.MethodGet) // details
+	rv.Handle("/accounts", accountHandler.List()).Methods(http.MethodGet)              // list
+	rv.Handle("/accounts", accountHandler.Create()).Methods(http.MethodPost)           // create
+	rv.Handle("/accounts/{address}", accountHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account raw transactions
 	if !disableRawTx {
-		rt := rv.PathPrefix("/accounts/{address}/transactions").Subrouter()
-		rt.Handle("", transactionHandler.List()).Methods(http.MethodGet)                    // list
-		rt.Handle("", transactionHandler.Create()).Methods(http.MethodPost)                 // create
-		rt.Handle("/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
+		rv.Handle("/accounts/{address}/transactions", transactionHandler.List()).Methods(http.MethodGet)                    // list
+		rv.Handle("/accounts/{address}/transactions", transactionHandler.Create()).Methods(http.MethodPost)                 // create
+		rv.Handle("/accounts/{address}/transactions/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
 	} else {
 		ls.Println("raw transactions disabled")
 	}
@@ -200,41 +204,28 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// Fungible tokens
 	if !disableFt {
-		tokenType := templates.FT
-
-		// List enabled tokens
-		rv.Handle("/fungible-tokens", templateHandler.ListTokens(&tokenType)).Methods(http.MethodGet)
-
-		// Handle "/accounts/{address}/fungible-tokens"
-		rft := ra.PathPrefix("/{address}/fungible-tokens").Subrouter()
-		rft.Handle("", tokenHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
-		rft.Handle("/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
-		rft.Handle("/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
-		rft.Handle("/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/fungible-tokens", tokenHandler.AccountTokens(templates.FT)).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
+		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
+		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
 		ls.Println("fungible tokens disabled")
 	}
 
 	// Non-Fungible tokens
 	if !disableNft {
-		tokenType := templates.NFT
-
-		// List enabled tokens
-		rv.Handle("/non-fungible-tokens", templateHandler.ListTokens(&tokenType)).Methods(http.MethodGet)
-
-		rnft := ra.PathPrefix("/{address}/non-fungible-tokens").Subrouter()
-		rnft.Handle("", tokenHandler.AccountTokens(tokenType)).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
-		rnft.Handle("/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
-		rnft.Handle("/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
-		rnft.Handle("/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/non-fungible-tokens", tokenHandler.AccountTokens(templates.NFT)).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
+		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
+		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
+		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
 		ls.Println("non-fungible tokens disabled")
 	}
@@ -269,7 +260,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 		interval := 10 * time.Second // TODO: make this configurable
 		getTypes := func() []string {
 			// Get all enabled tokens
-			tt, err := templateService.ListTokens(nil)
+			tt, err := templateService.ListTokens(templates.NotSpecified)
 			if err != nil {
 				panic(err)
 			}

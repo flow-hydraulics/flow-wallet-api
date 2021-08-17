@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 )
 
 type Transactions struct {

@@ -6,7 +6,7 @@ import "strings"
 type TokenType int
 
 const (
-	Unknown TokenType = iota
+	NotSpecified TokenType = iota
 	FT
 	NFT
 )
@@ -16,14 +16,14 @@ func (s TokenType) MarshalText() ([]byte, error) {
 }
 
 func (s *TokenType) UnmarshalText(text []byte) error {
-	*s = StatusFromText(string(text))
+	*s = TypeFromText(string(text))
 	return nil
 }
 
-func StatusFromText(text string) TokenType {
+func TypeFromText(text string) TokenType {
 	switch strings.ToLower(text) {
 	default:
-		return Unknown
+		return NotSpecified
 	case "ft":
 		return FT
 	case "nft":
