@@ -11,17 +11,17 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-api/accounts"
-	"github.com/eqlabs/flow-wallet-api/chain_events"
-	"github.com/eqlabs/flow-wallet-api/datastore/gorm"
-	"github.com/eqlabs/flow-wallet-api/debug"
-	"github.com/eqlabs/flow-wallet-api/handlers"
-	"github.com/eqlabs/flow-wallet-api/jobs"
-	"github.com/eqlabs/flow-wallet-api/keys"
-	"github.com/eqlabs/flow-wallet-api/keys/basic"
-	"github.com/eqlabs/flow-wallet-api/templates"
-	"github.com/eqlabs/flow-wallet-api/tokens"
-	"github.com/eqlabs/flow-wallet-api/transactions"
+	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
+	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
+	"github.com/flow-hydraulics/flow-wallet-api/debug"
+	"github.com/flow-hydraulics/flow-wallet-api/handlers"
+	"github.com/flow-hydraulics/flow-wallet-api/jobs"
+	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/tokens"
+	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
@@ -137,7 +137,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
 
 	debugService := debug.Service{
-		RepoUrl:   "https://github.com/eqlabs/flow-wallet-api",
+		RepoUrl:   "https://github.com/flow-hydraulics/flow-wallet-api",
 		Sha1ver:   sha1ver,
 		BuildTime: buildTime,
 	}

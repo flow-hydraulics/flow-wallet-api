@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eqlabs/flow-wallet-api/errors"
+	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 )

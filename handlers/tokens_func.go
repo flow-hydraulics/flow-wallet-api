@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-api/errors"
-	"github.com/eqlabs/flow-wallet-api/templates"
-	"github.com/eqlabs/flow-wallet-api/tokens"
+	"github.com/flow-hydraulics/flow-wallet-api/errors"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/gorilla/mux"
 )
 

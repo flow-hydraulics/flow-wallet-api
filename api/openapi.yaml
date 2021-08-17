@@ -519,7 +519,7 @@ components:
           Content-Type: application/json
           Connection: close
 
-        ver: https://github.com/eqlabs/flow-wallet-api/commit/
+        ver: https://github.com/flow-hydraulics/flow-wallet-api/commit/
         built on:
         api version called: v1
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/eqlabs/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/google/uuid"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"

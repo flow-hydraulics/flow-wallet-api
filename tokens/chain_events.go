@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eqlabs/flow-wallet-api/accounts"
-	"github.com/eqlabs/flow-wallet-api/chain_events"
-	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
 )
 

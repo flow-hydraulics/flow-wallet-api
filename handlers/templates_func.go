@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/eqlabs/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/gorilla/mux"
 )
 

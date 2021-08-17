@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/eqlabs/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 )
 
 // Accounts is a HTTP server for account management.
