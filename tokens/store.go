@@ -5,7 +5,7 @@ import "github.com/flow-hydraulics/flow-wallet-api/templates"
 // Store manages data regarding tokens.
 type Store interface {
 	// List an accounts enabled tokens
-	AccountTokens(address string, tokenType *templates.TokenType) ([]AccountToken, error)
+	AccountTokens(address string, tokenType templates.TokenType) ([]AccountToken, error)
 
 	// Enable a token for an account
 	InsertAccountToken(at *AccountToken) error

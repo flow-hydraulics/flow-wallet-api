@@ -94,7 +94,7 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 	return job, tx, err
 }
 
-func (s *Service) AccountTokens(address string, tType *templates.TokenType) ([]AccountToken, error) {
+func (s *Service) AccountTokens(address string, tType templates.TokenType) ([]AccountToken, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {

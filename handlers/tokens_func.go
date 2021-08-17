@@ -39,7 +39,7 @@ func (s *Tokens) MakeAccountTokensFunc(tType templates.TokenType) http.HandlerFu
 		vars := mux.Vars(r)
 		a := vars["address"]
 
-		res, err := s.service.AccountTokens(a, &tType)
+		res, err := s.service.AccountTokens(a, tType)
 		if err != nil {
 			handleError(rw, s.log, err)
 			return
