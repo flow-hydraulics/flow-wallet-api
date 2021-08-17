@@ -17,7 +17,7 @@ func (s *Tokens) SetupFunc(rw http.ResponseWriter, r *http.Request) {
 	tokenName := vars["tokenName"]
 
 	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SyncHeader) != ""
+	sync := r.FormValue(SyncQueryParameter) != ""
 	job, tx, err := s.service.Setup(r.Context(), sync, tokenName, address)
 	var res interface{}
 	if sync {
@@ -86,7 +86,7 @@ func (s *Tokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	withdrawal.TokenName = tokenName
 
 	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SyncHeader) != ""
+	sync := r.FormValue(SyncQueryParameter) != ""
 	job, tx, err := s.service.CreateWithdrawal(r.Context(), sync, address, withdrawal)
 	var res interface{}
 	if sync {

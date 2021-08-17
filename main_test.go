@@ -86,7 +86,9 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 	}
 
 	if s.sync {
-		req.Header.Set(handlers.SyncHeader, "go ahead")
+		q := req.URL.Query()
+		q.Add(handlers.SyncQueryParameter, "go-ahead")
+		req.URL.RawQuery = q.Encode()
 	}
 
 	rr := httptest.NewRecorder()
@@ -644,7 +646,9 @@ func TestTransactionHandlers(t *testing.T) {
 			}
 
 			if step.sync {
-				req.Header.Set(handlers.SyncHeader, "go ahead")
+				q := req.URL.Query()
+				q.Add(handlers.SyncQueryParameter, "go-ahead")
+				req.URL.RawQuery = q.Encode()
 			}
 
 			rr := httptest.NewRecorder()

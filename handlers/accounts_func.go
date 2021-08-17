@@ -33,7 +33,7 @@ func (s *Accounts) ListFunc(rw http.ResponseWriter, r *http.Request) {
 // It returns a Job JSON representation.
 func (s *Accounts) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	// Decide whether to serve sync or async, default async
-	sync := r.Header.Get(SyncHeader) != ""
+	sync := r.FormValue(SyncQueryParameter) != ""
 	job, acc, err := s.service.Create(r.Context(), sync)
 	var res interface{}
 	if sync {
