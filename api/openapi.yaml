@@ -38,6 +38,7 @@ paths:
     post:
       summary: Enable a new token
       description: Enable a new token by sending its name, address and required cadence transaction codes
+
       requestBody:
         content:
           application/json:
@@ -187,13 +188,17 @@ paths:
     post:
       summary: Create an account
       description: Create a new account that will be managed by the wallet service. Returns a job.
+      parameters:
+        - $ref: "#/components/parameters/sync"
       responses:
         "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/job"
+                oneOf:
+                  - $ref: "#/components/schemas/job"
+                  - $ref: "#/components/schemas/account"
 
   /accounts/{address}:
     parameters:
@@ -231,7 +236,9 @@ paths:
                   $ref: "#/components/schemas/transaction"
     post:
       summary: Send a raw transaction
-      description: Send a transaction from an account. Returns a job.
+      description: Send a transaction from an account. Returns a job, or the account information when synchronous mode is enabled.
+      parameters:
+        - $ref: "#/components/parameters/sync"
       requestBody:
         content:
           application/json:
@@ -243,7 +250,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/job"
+                oneOf:
+                  - $ref: "#/components/schemas/job"
+                  - $ref: "#/components/schemas/account"
 
   /accounts/{address}/transactions/{transactionId}:
     parameters:
@@ -296,15 +305,18 @@ paths:
                   $ref: "#/components/schemas/accountFungibleTokenDetails"
     post:
       summary: Enable a fungible token for an account
+      parameters:
+        - $ref: "#/components/parameters/sync"
       responses:
         "201":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/job"
+                oneOf:
+                  - $ref: "#/components/schemas/job"
+                  - $ref: "#/components/schemas/account"
+
 
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
     parameters:
@@ -328,15 +340,18 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/fungibleTokenWithdrawalRequest"
+      parameters:
+        - $ref: "#/components/parameters/sync"
       responses:
         "201":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/job"
+                oneOf:
+                  - $ref: "#/components/schemas/job"
+                  - $ref: "#/components/schemas/account"
+
 
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
     parameters:
@@ -420,15 +435,17 @@ paths:
                   $ref: "#/components/schemas/accountNonFungibleTokenDetails"
     post:
       summary: Enable a non-fungible token for an account
+      parameters:
+        - $ref: "#/components/parameters/sync"
       responses:
         "201":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/job"
+                oneOf:
+                  - $ref: "#/components/schemas/job"
+                  - $ref: "#/components/schemas/account"
 
   /accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals:
     parameters:
@@ -452,15 +469,17 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/nonFungibleTokenWithdrawalRequest"
+      parameters:
+        - $ref: "#/components/parameters/sync"
       responses:
         "201":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/job"
+                oneOf:
+                  - $ref: "#/components/schemas/job"
+                  - $ref: "#/components/schemas/account"
 
   /accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}:
     parameters:
@@ -542,6 +561,9 @@ components:
         transactionId:
           type: string
           example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+        transactionType:
+          type: string
+          example: "ftsetup"
         createdAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
@@ -946,3 +968,12 @@ components:
       schema:
         type: string
         example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+
+    sync:
+      name: sync
+      description: Use any non-empty value to run the request synchronously.
+      in: query
+      required: false
+      schema:
+        type: string
+        example: "something-non-empty"
