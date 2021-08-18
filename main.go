@@ -41,6 +41,9 @@ type Config struct {
 	Port          int          `env:"PORT" envDefault:"3000"`
 	AccessAPIHost string       `env:"ACCESS_API_HOST,notEmpty"`
 	ChainID       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
+
+	WorkerQueueCapacity uint `env:"WORKER_QUEUE_CAPACITY" envDefault:"1000"`
+	WorkerCount         uint `env:"WORKER_COUNT" envDefault:"100"`
 }
 
 func main() {
@@ -119,14 +122,11 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	tokenStore := tokens.NewGormStore(db)
 
 	// Create a worker pool
-	wp := jobs.NewWorkerPool(lj, jobStore)
+	wp := jobs.NewWorkerPool(lj, jobStore, cfg.WorkerQueueCapacity, cfg.WorkerCount)
 	defer func() {
 		ls.Println("Stopping worker pool..")
 		wp.Stop()
 	}()
-
-	// TODO: make this configurable
-	wp.AddWorker(100) // Add a worker with capacity of 100
 
 	// Key manager
 	km := basic.NewKeyManager(keyStore, fc)
