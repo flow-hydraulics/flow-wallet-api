@@ -5,30 +5,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joho/godotenv"
+	"github.com/onflow/flow-go-sdk"
 )
-
-func TestConfig(t *testing.T) {
-	if err := godotenv.Load("../.env.test"); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg1 := parseConfig()
-	cfg2 := parseConfig()
-
-	if cfg1 != cfg2 {
-		t.Fatal("expected configs to point to the same address")
-	}
-
-	if cfg1.enabledTokens == nil {
-		t.Fatal("expected there to be enabled tokens")
-	}
-}
 
 func TestParsing(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
 		token := &Token{Name: "FlowToken", Address: "test-address", NameLowerCase: "flowToken"}
-		c := FungibleTransferCode(token)
+		c := FungibleTransferCode(flow.Emulator, token)
 		if strings.Contains(c, ".cdc") {
 			t.Error("expected all cadence file references to have been replaced")
 		}
@@ -39,7 +22,7 @@ func TestParsing(t *testing.T) {
 
 	t.Run("FUSD", func(t *testing.T) {
 		token := &Token{Name: "FUSD", Address: "test-address", NameLowerCase: "fusd"}
-		c := FungibleTransferCode(token)
+		c := FungibleTransferCode(flow.Emulator, token)
 		if strings.Contains(c, ".cdc") {
 			t.Error("expected all cadence file references to have been replaced")
 		}
@@ -51,6 +34,7 @@ func TestParsing(t *testing.T) {
 	t.Run("ExampleNFT", func(t *testing.T) {
 		token := &Token{Name: "ExampleNFT", Address: "test-address"}
 		c := TokenCode(
+			flow.Emulator,
 			token,
 			`
 				import NonFungibleToken from "../contracts/NonFungibleToken.cdc"

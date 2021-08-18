@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
@@ -27,11 +28,12 @@ type Service struct {
 	wp           *jobs.WorkerPool
 	transactions *transactions.Service
 	templates    *templates.Service
-	cfg          Config
+	cfg          *configs.Config
 }
 
 // NewService initiates a new account service.
 func NewService(
+	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
 	fc *client.Client,
@@ -39,7 +41,7 @@ func NewService(
 	txs *transactions.Service,
 	tes *templates.Service,
 ) *Service {
-	cfg := ParseConfig()
+	// TODO(latenssi): safeguard against nil config?
 	return &Service{store, km, fc, wp, txs, tes, cfg}
 }
 

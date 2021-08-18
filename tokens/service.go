@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
@@ -31,10 +32,11 @@ type Service struct {
 	transactions *transactions.Service
 	templates    *templates.Service
 	accounts     *accounts.Service
-	cfg          Config
+	cfg          *configs.Config
 }
 
 func NewService(
+	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
 	fc *client.Client,
@@ -42,7 +44,7 @@ func NewService(
 	tes *templates.Service,
 	acs *accounts.Service,
 ) *Service {
-	cfg := ParseConfig()
+	// TODO(latenssi): safeguard against nil config?
 	return &Service{store, km, fc, txs, tes, acs, cfg}
 }
 
@@ -419,7 +421,7 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync boo
 		return nil, nil, err
 	}
 
-	src := templates.TokenCode(token, tmplStr)
+	src := templates.TokenCode(s.cfg.ChainID, token, tmplStr)
 
 	c := flow_templates.Contract{Name: n, Source: src}
 

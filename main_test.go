@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/caarlos0/env/v6"
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/handlers"
@@ -29,7 +29,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -44,16 +43,9 @@ const (
 )
 
 var (
-	testCfg    testConfig
+	testCfg    *configs.Config
 	testLogger *log.Logger
 )
-
-type testConfig struct {
-	AccessAPIHost         string       `env:"ACCESS_API_HOST,notEmpty"`
-	AdminAddress          string       `env:"ADMIN_ADDRESS,notEmpty"`
-	ChainID               flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
-	AdminProposalKeyCount uint16       `env:"ADMIN_PROPOSAL_KEY_COUNT" envDefault:"10"`
-}
 
 type TestLogger struct {
 	t *testing.T
@@ -119,21 +111,16 @@ func fatal(t *testing.T, err error) {
 }
 
 func TestMain(m *testing.M) {
-
-	if err := godotenv.Load(".env.test"); err != nil {
-		log.Println("WARNING: Could not load environment variables from file; ", err)
-	}
-
-	if err := os.Setenv("DATABASE_DSN", testDbDSN); err != nil {
-		panic(err)
-	}
-	if err := os.Setenv("DATABASE_TYPE", testDbType); err != nil {
+	var err error
+	testCfg, err = configs.ParseConfig(".env.test")
+	if err != nil {
 		panic(err)
 	}
 
-	if err := env.Parse(&testCfg); err != nil {
-		panic(err)
-	}
+	// Safety measures
+	testCfg.DatabaseDSN = testDbDSN
+	testCfg.DatabaseType = testDbType
+	testCfg.ChainID = flow.Emulator
 
 	testLogger = log.New(io.Discard, "", log.LstdFlags)
 
@@ -152,7 +139,7 @@ func TestAccountServices(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,21 +152,18 @@ func TestAccountServices(t *testing.T) {
 	txStore := transactions.NewGormStore(db)
 
 	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(testCfg, templateStore)
 
-	km := basic.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(testCfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
-	service := accounts.NewService(accountStore, km, fc, wp, nil, templateService)
-	txService := transactions.NewService(txStore, km, fc, wp)
+	service := accounts.NewService(testCfg, accountStore, km, fc, wp, nil, templateService)
+	txService := transactions.NewService(testCfg, txStore, km, fc, wp)
 
 	t.Run("admin init", func(t *testing.T) {
 		ctx := context.Background()
-		if err := env.Parse(&testCfg); err != nil {
-			t.Fatal(err)
-		}
 
 		err = service.InitAdminAccount(ctx, txService)
 		if err != nil {
@@ -268,7 +252,7 @@ func TestAccountHandlers(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,16 +264,16 @@ func TestAccountHandlers(t *testing.T) {
 	txStore := transactions.NewGormStore(db)
 
 	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(testCfg, templateStore)
 
-	km := basic.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(testCfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
 	store := accounts.NewGormStore(db)
-	service := accounts.NewService(store, km, fc, wp, nil, templateService)
-	txService := transactions.NewService(txStore, km, fc, wp)
+	service := accounts.NewService(testCfg, store, km, fc, wp, nil, templateService)
+	txService := transactions.NewService(testCfg, txStore, km, fc, wp)
 	h := handlers.NewAccounts(testLogger, service)
 
 	t.Run("admin init", func(t *testing.T) {
@@ -318,7 +302,7 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "list db empty",
 			method:   http.MethodGet,
 			url:      "/",
-			expected: fmt.Sprintf(`(?m)^\[{"address":"%s".*}\]$`, testCfg.AdminAddress),
+			expected: fmt.Sprintf(`(?m)^\[{"address":"%s".*}\]$`, testCfg.AdminAccountAddress),
 			status:   http.StatusOK,
 		},
 		{
@@ -419,7 +403,7 @@ func TestTransactionHandlers(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,15 +414,15 @@ func TestTransactionHandlers(t *testing.T) {
 	keyStore := keys.NewGormStore(db)
 
 	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(testCfg, templateStore)
 
-	km := basic.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(testCfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
 	store := transactions.NewGormStore(db)
-	service := transactions.NewService(store, km, fc, wp)
+	service := transactions.NewService(testCfg, store, km, fc, wp)
 	h := handlers.NewTransactions(testLogger, service)
 
 	router := mux.NewRouter()
@@ -451,7 +435,7 @@ func TestTransactionHandlers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tFlow := templates.FungibleTransferCode(token)
+	tFlow := templates.FungibleTransferCode(testCfg.ChainID, token)
 	tFlowBytes, err := json.Marshal(tFlow)
 	if err != nil {
 		t.Fatal(err)
@@ -460,7 +444,7 @@ func TestTransactionHandlers(t *testing.T) {
 	validTransferFlow := fmt.Sprintf(`{
 		"code":%s,
 		"arguments":[{"type":"UFix64","value":"1.0"},{"type":"Address","value":"%s"}]
-	}`, tFlowBytes, testCfg.AdminAddress)
+	}`, tFlowBytes, testCfg.AdminAccountAddress)
 
 	validHello := `{
 		"code":"transaction(greeting: String) { execute { log(greeting.concat(\", World!\")) }}",
@@ -488,7 +472,7 @@ func TestTransactionHandlers(t *testing.T) {
 		{
 			name:     "list db empty",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected: `(?m)^\[\]$`,
 			status:   http.StatusOK,
 		},
@@ -504,7 +488,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -513,7 +497,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -523,7 +507,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    "Unsupported content type",
 			status:      http.StatusUnsupportedMediaType,
 			sync:        true,
@@ -533,7 +517,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validTransferFlow),
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -543,7 +527,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        nil,
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    "empty body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -553,7 +537,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(""),
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    "empty body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -563,7 +547,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader("notvalidobject"),
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    "invalid body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -573,7 +557,7 @@ func TestTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(invalidHello),
-			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected:    "Parsing failed",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -591,28 +575,28 @@ func TestTransactionHandlers(t *testing.T) {
 		{
 			name:     "list db not empty",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions", testCfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions", testCfg.AdminAccountAddress),
 			expected: `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "details invalid id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/invalid-id", testCfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/invalid-id", testCfg.AdminAccountAddress),
 			expected: "not a valid transaction id",
 			status:   http.StatusBadRequest,
 		},
 		{
 			name:     "details unknown id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921", testCfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921", testCfg.AdminAccountAddress),
 			expected: "transaction not found",
 			status:   http.StatusNotFound,
 		},
 		{
 			name:     "details known id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/<id>", testCfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/<id>", testCfg.AdminAccountAddress),
 			expected: `(?m)^{"transactionId":".+"}$`,
 			status:   http.StatusOK,
 		},
@@ -685,7 +669,7 @@ func TestScriptsHandlers(t *testing.T) {
 	}
 	defer fc.Close()
 
-	service := transactions.NewService(nil, nil, fc, nil)
+	service := transactions.NewService(testCfg, nil, nil, fc, nil)
 	h := handlers.NewTransactions(testLogger, service)
 
 	router := mux.NewRouter()
@@ -727,7 +711,7 @@ func TestScriptsHandlers(t *testing.T) {
 			body: strings.NewReader(fmt.Sprintf(`{
 				"code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
 				"arguments":[{"type":"Address","value":"%s"}]
-			}`, testCfg.AdminAddress)),
+			}`, testCfg.AdminAccountAddress)),
 			contentType: "application/json",
 			expected:    "\\d+",
 			status:      http.StatusOK,
@@ -775,7 +759,7 @@ func TestTokenServices(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -789,16 +773,16 @@ func TestTokenServices(t *testing.T) {
 	tokenStore := tokens.NewGormStore(db)
 
 	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(testCfg, templateStore)
 
-	km := basic.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(testCfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
-	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
+	transactionService := transactions.NewService(testCfg, transactionStore, km, fc, wp)
+	accountService := accounts.NewService(testCfg, accountStore, km, fc, wp, transactionService, templateService)
+	tokenService := tokens.NewService(testCfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
 		err = accountService.InitAdminAccount(context.Background(), transactionService)
@@ -818,7 +802,7 @@ func TestTokenServices(t *testing.T) {
 		_, _, err = tokenService.CreateWithdrawal(
 			context.Background(),
 			true,
-			testCfg.AdminAddress,
+			testCfg.AdminAccountAddress,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
 				Recipient: account.Address,
@@ -836,7 +820,7 @@ func TestTokenServices(t *testing.T) {
 			account.Address,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
-				Recipient: testCfg.AdminAddress,
+				Recipient: testCfg.AdminAccountAddress,
 				FtAmount:  "1.0",
 			},
 		)
@@ -863,7 +847,7 @@ func TestTokenServices(t *testing.T) {
 			account.Address,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
-				Recipient: testCfg.AdminAddress,
+				Recipient: testCfg.AdminAccountAddress,
 				FtAmount:  "1.0",
 			},
 		)
@@ -887,7 +871,7 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Make sure FUSD is deployed
-		_, _, err := tokenService.DeployTokenContractForAccount(ctx, true, tokenName, testCfg.AdminAddress)
+		_, _, err := tokenService.DeployTokenContractForAccount(ctx, true, tokenName, testCfg.AdminAccountAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 				t.Fatal(err)
@@ -895,7 +879,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = tokenService.Setup(ctx, true, tokenName, testCfg.AdminAddress)
+		_, _, err = tokenService.Setup(ctx, true, tokenName, testCfg.AdminAccountAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "vault exists") {
 				t.Fatal(err)
@@ -922,7 +906,7 @@ func TestTokenServices(t *testing.T) {
 		_, _, err = tokenService.CreateWithdrawal(
 			ctx,
 			true,
-			testCfg.AdminAddress,
+			testCfg.AdminAccountAddress,
 			tokens.WithdrawalRequest{
 				TokenName: tokenName,
 				Recipient: account.Address,
@@ -966,7 +950,7 @@ func TestTokenHandlers(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -980,16 +964,16 @@ func TestTokenHandlers(t *testing.T) {
 	tokenStore := tokens.NewGormStore(db)
 
 	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(testCfg, templateStore)
 
-	km := basic.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(testCfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
-	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
+	transactionService := transactions.NewService(testCfg, transactionStore, km, fc, wp)
+	accountService := accounts.NewService(testCfg, accountStore, km, fc, wp, transactionService, templateService)
+	tokenService := tokens.NewService(testCfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
 		err = accountService.InitAdminAccount(context.Background(), transactionService)
@@ -1057,7 +1041,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	exampleNft := templates.Token{
 		Name:     "ExampleNFT",
-		Address:  testCfg.AdminAddress,
+		Address:  testCfg.AdminAccountAddress,
 		Type:     templates.NFT,
 		Setup:    string(setupBytes),
 		Transfer: string(transferBytes),
@@ -1095,7 +1079,7 @@ func TestTokenHandlers(t *testing.T) {
 	_, testTransferFT, err := tokenService.CreateWithdrawal(
 		context.Background(),
 		true,
-		testCfg.AdminAddress,
+		testCfg.AdminAccountAddress,
 		tokens.WithdrawalRequest{
 			TokenName: flowToken.Name,
 			Recipient: testAccount.Address,
@@ -1169,9 +1153,9 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Mint ExampleNFTs for account 0
-	mintCode := templates.TokenCode(&exampleNft, string(mintBytes))
+	mintCode := templates.TokenCode(testCfg.ChainID, &exampleNft, string(mintBytes))
 	for i := 0; i < 3; i++ {
-		_, _, err := transactionService.Create(context.Background(), true, testCfg.AdminAddress, templates.Raw{
+		_, _, err := transactionService.Create(context.Background(), true, testCfg.AdminAccountAddress, templates.Raw{
 			Code: mintCode,
 			Arguments: []templates.Argument{
 				cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address)),
@@ -1254,7 +1238,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAccountAddress, flowToken.Name),
 			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -1264,7 +1248,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAccountAddress, flowToken.Name),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -1273,7 +1257,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAccountAddress, flowToken.Name),
 			expected:    "not a valid address",
 			status:      http.StatusBadRequest,
 		},
@@ -1282,7 +1266,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAccountAddress, flowToken.Name),
 			expected:    "missing decimal point",
 			status:      http.StatusBadRequest,
 		},
@@ -1290,7 +1274,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "create ExampleNFT withdrawal valid sync",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, testCfg.AdminAddress, nftIDs[1].ToGoValue())),
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, testCfg.AdminAccountAddress, nftIDs[1].ToGoValue())),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", testAccounts[0].Address, exampleNft.Name),
 			expected:    `(?m)^{"transactionId":".+"}$`,
@@ -1300,7 +1284,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "create ExampleNFT withdrawal with missing NFT",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, testCfg.AdminAddress, nftIDs[1].ToGoValue())),
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, testCfg.AdminAccountAddress, nftIDs[1].ToGoValue())),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", testAccounts[1].Address, exampleNft.Name),
 			expected:    `missing NFT`,
@@ -1314,7 +1298,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "list fungible token withdrawals valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", testCfg.AdminAccountAddress, flowToken.Name),
 			expected:    `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:      http.StatusOK,
 		},
@@ -1338,7 +1322,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get withdrawal details valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", testCfg.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", testCfg.AdminAccountAddress, flowToken.Name, testTransferFT.TransactionId),
 			expected:    fmt.Sprintf(`(?m)^{"transactionId":"%s".*}$`, testTransferFT.TransactionId),
 			status:      http.StatusOK,
 		},
@@ -1350,7 +1334,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get fungible token withdrawal details valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", testCfg.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", testCfg.AdminAccountAddress, flowToken.Name, testTransferFT.TransactionId),
 			expected:    fmt.Sprintf(`(?m)^{"transactionId":"%s".*}$`, testTransferFT.TransactionId),
 			status:      http.StatusOK,
 		},
@@ -1366,7 +1350,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get withdrawal details invalid transaction id",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/invalid-transaction-id", testCfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/invalid-transaction-id", testCfg.AdminAccountAddress, flowToken.Name),
 			expected:    "not a valid transaction id",
 			status:      http.StatusBadRequest,
 		},
@@ -1507,7 +1491,7 @@ func TestNFTDeployment(t *testing.T) {
 	}
 	defer fc.Close()
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1515,7 +1499,7 @@ func TestNFTDeployment(t *testing.T) {
 	defer gorm.Close(db)
 
 	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(testCfg, templateStore)
 
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
@@ -1523,16 +1507,16 @@ func TestNFTDeployment(t *testing.T) {
 	transactionStore := transactions.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
 
-	km := basic.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(testCfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
-	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
+	transactionService := transactions.NewService(testCfg, transactionStore, km, fc, wp)
+	accountService := accounts.NewService(testCfg, accountStore, km, fc, wp, transactionService, templateService)
+	tokenService := tokens.NewService(testCfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
-	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", testCfg.AdminAddress)
+	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", testCfg.AdminAccountAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
@@ -1544,7 +1528,7 @@ func TestTemplateHandlers(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1552,7 +1536,7 @@ func TestTemplateHandlers(t *testing.T) {
 	defer gorm.Close(db)
 
 	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(testCfg, templateStore)
 	templateHandler := handlers.NewTemplates(testLogger, templateService)
 
 	router := mux.NewRouter()
@@ -1582,7 +1566,7 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add with invalid name",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, testCfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, testCfg.AdminAccountAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
 			expected:    `not a valid name: ""`,
@@ -1600,16 +1584,16 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add with valid body",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, testCfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, testCfg.AdminAccountAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, testCfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, testCfg.AdminAccountAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add duplicate",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, testCfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, testCfg.AdminAccountAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
 			expected:    `UNIQUE constraint failed: tokens.name`,
@@ -1620,7 +1604,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, testCfg.AdminAddress),
+			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, testCfg.AdminAccountAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1684,28 +1668,28 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add invalid type",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, testCfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, testCfg.AdminAccountAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, testCfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, testCfg.AdminAccountAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add FT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, testCfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, testCfg.AdminAccountAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, testCfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, testCfg.AdminAccountAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add NFT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, testCfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, testCfg.AdminAccountAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, testCfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, testCfg.AdminAccountAddress),
 			status:      http.StatusCreated,
 		},
 	}
@@ -1739,7 +1723,7 @@ func TestTemplateService(t *testing.T) {
 	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
 	defer goleak.VerifyNone(t, ignoreOpenCensus)
 
-	db, err := gorm.New()
+	db, err := gorm.New(testCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1747,10 +1731,10 @@ func TestTemplateService(t *testing.T) {
 	defer gorm.Close(db)
 
 	store := templates.NewGormStore(db)
-	service := templates.NewService(store)
+	service := templates.NewService(testCfg, store)
 
 	// Add a token for testing
-	token := templates.Token{Name: "RandomTokenName", Address: testCfg.AdminAddress}
+	token := templates.Token{Name: "RandomTokenName", Address: testCfg.AdminAccountAddress}
 	err = service.AddToken(&token)
 	if err != nil {
 		t.Fatal(err)

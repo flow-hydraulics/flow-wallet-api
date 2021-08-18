@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/encryption"
@@ -20,13 +21,17 @@ type KeyManager struct {
 	fc              *client.Client
 	crypter         encryption.Crypter
 	adminAccountKey keys.Private
-	cfg             Config
+	cfg             *configs.Config
 }
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(store keys.Store, fc *client.Client) *KeyManager {
-	cfg := ParseConfig()
+func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *KeyManager {
+	// TODO(latenssi): safeguard against nil config?
+
+	if cfg.DefaultKeyWeight < 0 {
+		cfg.DefaultKeyWeight = flow.AccountKeyWeightThreshold
+	}
 
 	adminAccountKey := keys.Private{
 		Index:    cfg.AdminAccountKeyIndex,
