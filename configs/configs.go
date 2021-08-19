@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"flag"
 	"log"
 
 	"github.com/caarlos0/env/v6"
@@ -10,8 +9,6 @@ import (
 )
 
 type Config struct {
-	PrintVersion bool // Just print the service version and exit
-
 	// -- Feature flags --
 	// Booleans default to false
 	DisableRawTransactions   bool `env:"DISABLE_RAWTX"`
@@ -84,14 +81,6 @@ func ParseConfig(opt *Options) (*Config, error) {
 	if err := env.Parse(&cfg); err != nil {
 		return nil, err
 	}
-
-	// Override config values from flags if provided
-	flag.BoolVar(&cfg.PrintVersion, "version", cfg.PrintVersion, "if true, print version and exit")
-	flag.BoolVar(&cfg.DisableRawTransactions, "disable-raw-tx", cfg.DisableRawTransactions, "disable raw transactions api")
-	flag.BoolVar(&cfg.DisableFungibleTokens, "disable-ft", cfg.DisableFungibleTokens, "disable fungible token api")
-	flag.BoolVar(&cfg.DisableNonFungibleTokens, "disable-nft", cfg.DisableNonFungibleTokens, "disable non-fungible token functionality")
-	flag.BoolVar(&cfg.DisableChainEvents, "disable-events", cfg.DisableChainEvents, "disable chain event listener")
-	flag.Parse()
 
 	return &cfg, nil
 }

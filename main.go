@@ -35,20 +35,29 @@ var (
 )
 
 func main() {
+	var (
+		printVersion bool
+		envFilePath  string
+	)
+
+	// If we should just print the version number and exit
+	flag.BoolVar(&printVersion, "version", false, "if true, print version and exit")
+
 	// Allow configuration of envfile path
 	// If not set, ParseConfig will not try to load variables to environment from a file
-	envFilePath := flag.String("envfile", "", "envfile path")
+	flag.StringVar(&envFilePath, "envfile", "", "envfile path")
+
 	flag.Parse()
 
-	opts := &configs.Options{EnvFilePath: *envFilePath}
+	if printVersion {
+		fmt.Printf("v%s build on %s from sha1 %s\n", version, buildTime, sha1ver)
+		os.Exit(0)
+	}
+
+	opts := &configs.Options{EnvFilePath: envFilePath}
 	cfg, err := configs.ParseConfig(opts)
 	if err != nil {
 		panic(err)
-	}
-
-	if cfg.PrintVersion {
-		fmt.Printf("v%s build on %s from sha1 %s\n", version, buildTime, sha1ver)
-		os.Exit(0)
 	}
 
 	runServer(cfg)

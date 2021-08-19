@@ -2,3 +2,5 @@ ADMIN_ADDRESS=admin-address
 ADMIN_PRIVATE_KEY=admin-private-key
 ENCRYPTION_KEY=encryption-key
 ACCESS_API_HOST=access-api-host
+DISABLE_FT=false
+DISABLE_NFT=true
