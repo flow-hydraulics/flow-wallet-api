@@ -10,6 +10,7 @@ type Config struct {
 	AdminAccountAddress   string       `env:"ADMIN_ADDRESS,notEmpty"`
 	ChainID               flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 	AdminProposalKeyCount uint16       `env:"ADMIN_PROPOSAL_KEY_COUNT" envDefault:"1"`
+	AdminAccountKeyIndex  int          `env:"ADMIN_KEY_INDEX" envDefault:"0"`
 }
 
 // ParseConfig parses environment variables to a valid Config.

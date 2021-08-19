@@ -84,6 +84,7 @@ func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16, txServ
 	_, _, err := txService.Create(ctx, true, s.cfg.AdminAccountAddress, templates.Raw{
 		Code: template_strings.AddProposalKeyTransaction,
 		Arguments: []templates.Argument{
+			cadence.NewInt(s.cfg.AdminAccountKeyIndex),
 			cadence.NewUInt16(count),
 		},
 	}, transactions.General)
