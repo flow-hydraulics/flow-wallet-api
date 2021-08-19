@@ -14,10 +14,10 @@ type Config struct {
 
 	// -- Feature flags --
 	// Booleans default to false
-	DisableRawTx       bool `env:"DISABLE_RAWTX"`
-	DisableFt          bool `env:"DISABLE_FT"`
-	DisableNft         bool `env:"DISABLE_NFT"`
-	DisableChainEvents bool `env:"DISABLE_CHAIN_EVENTS"`
+	DisableRawTransactions   bool `env:"DISABLE_RAWTX"`
+	DisableFungibleTokens    bool `env:"DISABLE_FT"`
+	DisableNonFungibleTokens bool `env:"DISABLE_NFT"`
+	DisableChainEvents       bool `env:"DISABLE_CHAIN_EVENTS"`
 
 	// -- Admin account --
 	AdminAccountAddress  string `env:"ADMIN_ADDRESS,notEmpty"`
@@ -55,7 +55,7 @@ type Config struct {
 	ChainID       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
 
 	// -- Templates --
-	EnvEnabledTokens []string `env:"ENABLED_TOKENS" envSeparator:","`
+	EnabledTokens []string `env:"ENABLED_TOKENS" envSeparator:","`
 
 	// -- Workerpool --
 	// Defines the maximum number of active jobs that can be queued before
@@ -67,11 +67,15 @@ type Config struct {
 	WorkerCount uint `env:"WORKER_COUNT" envDefault:"100"`
 }
 
+type Options struct {
+	EnvFilePath string
+}
+
 // ParseConfig parses environment variables and flags to a valid Config.
-func ParseConfig(envFile string) (*Config, error) {
-	if envFile != "" {
+func ParseConfig(opt *Options) (*Config, error) {
+	if opt != nil && opt.EnvFilePath != "" {
 		// Load variables from a file to the environment of the process
-		if err := godotenv.Load(envFile); err != nil {
+		if err := godotenv.Load(opt.EnvFilePath); err != nil {
 			log.Printf("Could not load environment variables from file.\n%s\nIf running inside a docker container this can be ignored.\n\n", err)
 		}
 	}
@@ -83,9 +87,9 @@ func ParseConfig(envFile string) (*Config, error) {
 
 	// Override config values from flags if provided
 	flag.BoolVar(&cfg.PrintVersion, "version", cfg.PrintVersion, "if true, print version and exit")
-	flag.BoolVar(&cfg.DisableRawTx, "disable-raw-tx", cfg.DisableRawTx, "disable raw transactions api")
-	flag.BoolVar(&cfg.DisableFt, "disable-ft", cfg.DisableFt, "disable fungible token api")
-	flag.BoolVar(&cfg.DisableNft, "disable-nft", cfg.DisableNft, "disable non-fungible token functionality")
+	flag.BoolVar(&cfg.DisableRawTransactions, "disable-raw-tx", cfg.DisableRawTransactions, "disable raw transactions api")
+	flag.BoolVar(&cfg.DisableFungibleTokens, "disable-ft", cfg.DisableFungibleTokens, "disable fungible token api")
+	flag.BoolVar(&cfg.DisableNonFungibleTokens, "disable-nft", cfg.DisableNonFungibleTokens, "disable non-fungible token functionality")
 	flag.BoolVar(&cfg.DisableChainEvents, "disable-events", cfg.DisableChainEvents, "disable chain event listener")
 	flag.Parse()
 

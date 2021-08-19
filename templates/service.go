@@ -33,7 +33,7 @@ func NewService(cfg *configs.Config, store Store) *Service {
 	// TODO(latenssi): safeguard against nil config?
 
 	// Add all enabled tokens from config as fungible tokens
-	for _, t := range parseEnabledTokens(cfg.EnvEnabledTokens) {
+	for _, t := range parseEnabledTokens(cfg.EnabledTokens) {
 		if _, err := store.GetByName(t.Name); err == nil {
 			// Token already in database
 			fmt.Printf("Warning: Skipping %s configuration from environment variables as it already exists in database. ", t.Name)

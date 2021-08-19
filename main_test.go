@@ -111,8 +111,9 @@ func fatal(t *testing.T, err error) {
 }
 
 func TestMain(m *testing.M) {
+	opts := &configs.Options{EnvFilePath: ".env.test"}
 	var err error
-	testCfg, err = configs.ParseConfig(".env.test")
+	testCfg, err = configs.ParseConfig(opts)
 	if err != nil {
 		panic(err)
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -34,7 +35,13 @@ var (
 )
 
 func main() {
-	cfg, err := configs.ParseConfig(".env")
+	// Allow configuration of envfile path
+	// If not set, ParseConfig will not try to load variables to environment from a file
+	envFilePath := flag.String("envfile", "", "envfile path")
+	flag.Parse()
+
+	opts := &configs.Options{EnvFilePath: *envFilePath}
+	cfg, err := configs.ParseConfig(opts)
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +160,7 @@ func runServer(cfg *configs.Config) {
 	rv.Handle("/accounts/{address}", accountHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account raw transactions
-	if !cfg.DisableRawTx {
+	if !cfg.DisableRawTransactions {
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.List()).Methods(http.MethodGet)                    // list
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.Create()).Methods(http.MethodPost)                 // create
 		rv.Handle("/accounts/{address}/transactions/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
@@ -165,7 +172,7 @@ func runServer(cfg *configs.Config) {
 	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost) // create
 
 	// Fungible tokens
-	if !cfg.DisableFt {
+	if !cfg.DisableFungibleTokens {
 		rv.Handle("/accounts/{address}/fungible-tokens", tokenHandler.AccountTokens(templates.FT)).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
@@ -179,7 +186,7 @@ func runServer(cfg *configs.Config) {
 	}
 
 	// Non-Fungible tokens
-	if !cfg.DisableNft {
+	if !cfg.DisableNonFungibleTokens {
 		rv.Handle("/accounts/{address}/non-fungible-tokens", tokenHandler.AccountTokens(templates.NFT)).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
@@ -207,7 +214,7 @@ func runServer(cfg *configs.Config) {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		ls.Printf("Server listening on port %d\n", cfg.Port)
+		ls.Printf("Server listening on %s:%d\n", cfg.Host, cfg.Port)
 		if err := srv.ListenAndServe(); err != nil {
 			ls.Println(err)
 		}
