@@ -1,6 +1,4 @@
-ADMIN_ADDRESS=admin-address
-ADMIN_PRIVATE_KEY=admin-private-key
-ENCRYPTION_KEY=encryption-key
-ACCESS_API_HOST=access-api-host
-DISABLE_FT=false
-DISABLE_NFT=true
+FLOW_WALLET_ADMIN_ADDRESS=admin-address
+FLOW_WALLET_ADMIN_PRIVATE_KEY=admin-private-key
+FLOW_WALLET_ENCRYPTION_KEY=encryption-key
+FLOW_WALLET_ACCESS_API_HOST=access-api-host
