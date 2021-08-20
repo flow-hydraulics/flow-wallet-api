@@ -11,7 +11,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 )
 
-const SyncHeader = "Use-Sync"
+const SyncQueryParameter = "sync"
 
 var EmptyBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("empty body")}
 var InvalidBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
