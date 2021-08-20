@@ -34,9 +34,9 @@ func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *Ke
 	}
 
 	adminAccountKey := keys.Private{
-		Index:    cfg.AdminAccountKeyIndex,
-		Type:     cfg.AdminAccountKeyType,
-		Value:    cfg.AdminAccountKeyValue,
+		Index:    cfg.AdminKeyIndex,
+		Type:     cfg.AdminKeyType,
+		Value:    cfg.AdminPrivateKey,
 		SignAlgo: crypto.StringToSignatureAlgorithm(cfg.DefaultSignAlgo),
 		HashAlgo: crypto.StringToHashAlgorithm(cfg.DefaultHashAlgo),
 	}
@@ -99,7 +99,7 @@ func (s *KeyManager) Load(key keys.Storable) (keys.Private, error) {
 }
 
 func (s *KeyManager) AdminAuthorizer(ctx context.Context) (keys.Authorizer, error) {
-	return s.MakeAuthorizer(ctx, flow.HexToAddress(s.cfg.AdminAccountAddress))
+	return s.MakeAuthorizer(ctx, flow.HexToAddress(s.cfg.AdminAddress))
 }
 
 func (s *KeyManager) UserAuthorizer(ctx context.Context, address flow.Address) (keys.Authorizer, error) {
@@ -109,7 +109,7 @@ func (s *KeyManager) UserAuthorizer(ctx context.Context, address flow.Address) (
 func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (keys.Authorizer, error) {
 	var k keys.Private
 
-	if address == flow.HexToAddress(s.cfg.AdminAccountAddress) {
+	if address == flow.HexToAddress(s.cfg.AdminAddress) {
 		k = s.adminAccountKey
 	} else {
 		// Get the "least recently used" key for this address
@@ -155,7 +155,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 }
 
 func (s *KeyManager) InitAdminProposalKeys(ctx context.Context) (uint16, error) {
-	adminAddress := flow.HexToAddress(s.cfg.AdminAccountAddress)
+	adminAddress := flow.HexToAddress(s.cfg.AdminAddress)
 
 	adminAccount, err := s.fc.GetAccount(ctx, adminAddress)
 	if err != nil {
@@ -184,7 +184,7 @@ func (s *KeyManager) InitAdminProposalKeys(ctx context.Context) (uint16, error) 
 }
 
 func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, error) {
-	adminAcc := flow.HexToAddress(s.cfg.AdminAccountAddress)
+	adminAcc := flow.HexToAddress(s.cfg.AdminAddress)
 
 	index, err := s.store.ProposalKey()
 	if err != nil {

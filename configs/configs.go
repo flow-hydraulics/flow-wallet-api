@@ -17,10 +17,10 @@ type Config struct {
 	DisableChainEvents       bool `env:"DISABLE_CHAIN_EVENTS"`
 
 	// -- Admin account --
-	AdminAccountAddress  string `env:"ADMIN_ADDRESS,notEmpty"`
-	AdminAccountKeyIndex int    `env:"ADMIN_KEY_INDEX" envDefault:"0"`
-	AdminAccountKeyType  string `env:"ADMIN_KEY_TYPE" envDefault:"local"`
-	AdminAccountKeyValue string `env:"ADMIN_PRIVATE_KEY,notEmpty"`
+	AdminAddress    string `env:"ADMIN_ADDRESS,notEmpty"`
+	AdminKeyIndex   int    `env:"ADMIN_KEY_INDEX" envDefault:"0"`
+	AdminKeyType    string `env:"ADMIN_KEY_TYPE" envDefault:"local"`
+	AdminPrivateKey string `env:"ADMIN_PRIVATE_KEY,notEmpty"`
 	// This sets the number of proposal keys to be used on the admin account.
 	// You can increase transaction throughput by using multiple proposal keys for
 	// parallel transaction execution.

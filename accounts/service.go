@@ -46,19 +46,19 @@ func NewService(
 }
 
 func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.Service) error {
-	a, err := s.store.Account(s.cfg.AdminAccountAddress)
+	a, err := s.store.Account(s.cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			return err
 		}
 		// Admin account not in database
-		a = Account{Address: s.cfg.AdminAccountAddress}
+		a = Account{Address: s.cfg.AdminAddress}
 		err := s.store.InsertAccount(&a)
 		if err != nil {
 			return err
 		}
 		AccountAdded.Trigger(AccountAddedPayload{
-			Address: flow.HexToAddress(s.cfg.AdminAccountAddress),
+			Address: flow.HexToAddress(s.cfg.AdminAddress),
 		})
 	}
 
@@ -83,7 +83,7 @@ func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.
 }
 
 func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16, txService *transactions.Service) error {
-	_, _, err := txService.Create(ctx, true, s.cfg.AdminAccountAddress, templates.Raw{
+	_, _, err := txService.Create(ctx, true, s.cfg.AdminAddress, templates.Raw{
 		Code: template_strings.AddProposalKeyTransaction,
 		Arguments: []templates.Argument{
 			cadence.NewInt(s.cfg.AdminAccountKeyIndex),

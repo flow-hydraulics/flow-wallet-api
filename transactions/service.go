@@ -77,7 +77,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		proposer := a
-		if address == s.cfg.AdminAccountAddress {
+		if address == s.cfg.AdminAddress {
 			proposer, err = s.km.AdminProposalKey(ctx)
 			if err != nil {
 				return "", err
