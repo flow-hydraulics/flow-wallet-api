@@ -62,7 +62,7 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (*flow.
 			crypto.StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo),
 			crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo))
 	case keys.AccountKeyTypeGoogleKMS:
-		return google.Generate(ctx, keyIndex, weight)
+		return google.Generate(s.cfg, ctx, keyIndex, weight)
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/caarlos0/env/v6"
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/google/uuid"
 	"github.com/onflow/flow-go-sdk"
@@ -13,24 +13,13 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
 )
 
-type Config struct {
-	ProjectID  string `env:"GOOGLE_KMS_PROJECT_ID"`
-	LocationID string `env:"GOOGLE_KMS_LOCATION_ID"`
-	KeyRingID  string `env:"GOOGLE_KMS_KEYRING_ID"`
-}
-
-func Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *keys.Private, error) {
-	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		return nil, nil, err
-	}
-
+func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *keys.Private, error) {
 	u := uuid.New()
 
 	// Create the new key in Google KMS
 	k, err := AsymKey(
 		ctx,
-		fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", cfg.ProjectID, cfg.LocationID, cfg.KeyRingID),
+		fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", cfg.GoogleKMSProjectID, cfg.GoogleKMSLocationID, cfg.GoogleKMSKeyRingID),
 		fmt.Sprintf("flow-wallet-account-key-%s", u.String()),
 	)
 	if err != nil {

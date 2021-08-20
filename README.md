@@ -2,13 +2,13 @@
 
 > :warning: This software is a work in progress and is not yet intended for production use.
 
-The Flow Wallet API is a REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure. 
+The Flow Wallet API is a REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure.
 This service can be used by an application that needs to manage Flow user accounts and the assets inside them.
 
 ## Features
 
 - Create new Flow accounts
-- Securely store account private keys 
+- Securely store account private keys
 - Send a transaction from an account
 - Transfer fungible tokens (e.g. FLOW, FUSD)
 - Detect fungible token deposits
@@ -24,7 +24,7 @@ but without taking on the complexity of building an account management system.
 
 An application may need to support custody of fungible tokens (FLOW, FUSD), non-fungible tokens, or both.
 
-For security and/or legal reasons, 
+For security and/or legal reasons,
 some developers need to use a custody service running on-premises as part of their existing infrastructure,
 rather than a hosted 3rd-party solution.
 
@@ -92,14 +92,14 @@ A comma separated list of _fungible tokens_ and their corresponding addresses en
 
 Examples:
 
-    ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd
+    FLOW_WALLET_ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd
 
 ### Database
 
-| Config variable | Environment variable | Description                                                                                      | Default     | Examples                  |
-| --------------- | :------------------- | ------------------------------------------------------------------------------------------------ | ----------- | ------------------------- |
-| DatabaseType    | `DATABASE_TYPE`      | Type of database driver                                                                          | `sqlite`    | `sqlite`, `psql`, `mysql` |
-| DatabaseDSN     | `DATABASE_DSN`       | Data source name ([DSN](https://en.wikipedia.org/wiki/Data_source_name)) for database connection | `wallet.db` | See below                 |
+| Config variable | Environment variable        | Description                                                                                      | Default     | Examples                  |
+| --------------- | :-------------------------- | ------------------------------------------------------------------------------------------------ | ----------- | ------------------------- |
+| DatabaseType    | `FLOW_WALLET_DATABASE_TYPE` | Type of database driver                                                                          | `sqlite`    | `sqlite`, `psql`, `mysql` |
+| DatabaseDSN     | `FLOW_WALLET_DATABASE_DSN`  | Data source name ([DSN](https://en.wikipedia.org/wiki/Data_source_name)) for database connection | `wallet.db` | See below                 |
 
 Examples of Database DSN
 
@@ -142,41 +142,49 @@ export GOOGLE_APPLICATION_CREDENTIALS="/home/example/path/to/service-account-fil
 
 Configure Google KMS as the key storage for `flow-wallet-api` and set the necessary environment variables:
 
-| Config variable | Environment variable     | Description      | Default | Examples                    |
-| --------------- | ------------------------ | ---------------- | ------- | --------------------------- |
-| DefaultKeyType  | `DEFAULT_KEY_TYPE`       | Default key type | `local` | `local`, `google_kms`       |
-| ProjectID       | `GOOGLE_KMS_PROJECT_ID`  | GCP Project ID   | -       | `flow-wallet-example`       |
-| LocationID      | `GOOGLE_KMS_LOCATION_ID` | GCP Location ID  | -       | `europe-north1`, `us-west1` |
-| KeyRingID       | `GOOGLE_KMS_KEYRING_ID`  | GCP Key Ring ID  | -       | `example-wallet-keyring`    |
+| Config variable | Environment variable                 | Description      | Default | Examples                    |
+| --------------- | ------------------------------------ | ---------------- | ------- | --------------------------- |
+| DefaultKeyType  | `FLOW_WALLET_DEFAULT_KEY_TYPE`       | Default key type | `local` | `local`, `google_kms`       |
+| ProjectID       | `FLOW_WALLET_GOOGLE_KMS_PROJECT_ID`  | GCP Project ID   | -       | `flow-wallet-example`       |
+| LocationID      | `FLOW_WALLET_GOOGLE_KMS_LOCATION_ID` | GCP Location ID  | -       | `europe-north1`, `us-west1` |
+| KeyRingID       | `FLOW_WALLET_GOOGLE_KMS_KEYRING_ID`  | GCP Key Ring ID  | -       | `example-wallet-keyring`    |
 
 ### All possible environment variables
 
+Refer to [configs/configs.go](configs/configs.go) for details and documentation.
+
 ```
-HOST=
-PORT=3000
-ACCESS_API_HOST=localhost:3569
+FLOW_WALLET_HOST=
+FLOW_WALLET_PORT=3000
+FLOW_WALLET_ACCESS_API_HOST=localhost:3569
 
-ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
+FLOW_WALLET_ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79
 
-DATABASE_DSN=wallet.db
-DATABASE_TYPE=sqlite
+FLOW_WALLET_DATABASE_DSN=wallet.db
+FLOW_WALLET_DATABASE_TYPE=sqlite
 
-ADMIN_ADDRESS=
-ADMIN_KEY_INDEX=0
-ADMIN_KEY_TYPE=local
-ADMIN_PRIVATE_KEY=
-CHAIN_ID=flow-emulator
-DEFAULT_KEY_TYPE=local
-DEFAULT_KEY_INDEX=0
-DEFAULT_KEY_WEIGHT=-1
-DEFAULT_SIGN_ALGO=ECDSA_P256
-DEFAULT_HASH_ALGO=SHA3_256
-ENCRYPTION_KEY=
+FLOW_WALLET_DISABLE_RAWTX
+FLOW_WALLET_DISABLE_FT
+FLOW_WALLET_DISABLE_NFT
+FLOW_WALLET_DISABLE_CHAIN_EVENTS
+
+FLOW_WALLET_ADMIN_ADDRESS=
+FLOW_WALLET_ADMIN_KEY_INDEX=0
+FLOW_WALLET_ADMIN_KEY_TYPE=local
+FLOW_WALLET_ADMIN_PRIVATE_KEY=
+FLOW_WALLET_ADMIN_PROPOSAL_KEY_COUNT=1
+FLOW_WALLET_CHAIN_ID=flow-emulator
+FLOW_WALLET_DEFAULT_KEY_TYPE=local
+FLOW_WALLET_DEFAULT_KEY_INDEX=0
+FLOW_WALLET_DEFAULT_KEY_WEIGHT=-1
+FLOW_WALLET_DEFAULT_SIGN_ALGO=ECDSA_P256
+FLOW_WALLET_DEFAULT_HASH_ALGO=SHA3_256
+FLOW_WALLET_ENCRYPTION_KEY=
 
 GOOGLE_APPLICATION_CREDENTIALS=
-GOOGLE_KMS_PROJECT_ID=
-GOOGLE_KMS_LOCATION_ID=
-GOOGLE_KMS_KEYRING_ID=
+FLOW_WALLET_GOOGLE_KMS_PROJECT_ID=
+FLOW_WALLET_GOOGLE_KMS_LOCATION_ID=
+FLOW_WALLET_GOOGLE_KMS_KEYRING_ID=
 ```
 
 ## Credit
@@ -185,4 +193,3 @@ The Flow Wallet API is developed and maintained by [Equilibrium](https://equilib
 with support from the Flow core contributors.
 
 <a href="https://equilibrium.co/"><img src="equilibrium.svg" alt="Equilibrium" width="200"/></a>
-

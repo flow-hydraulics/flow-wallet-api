@@ -68,6 +68,12 @@ type Config struct {
 	// You can increase the number of workers if you're sending
 	// too many transactions and find that the queue is often backlogged.
 	WorkerCount uint `env:"FLOW_WALLET_WORKER_COUNT" envDefault:"100"`
+
+	// -- Google KMS --
+
+	GoogleKMSProjectID  string `env:"GOOGLE_KMS_PROJECT_ID"`
+	GoogleKMSLocationID string `env:"GOOGLE_KMS_LOCATION_ID"`
+	GoogleKMSKeyRingID  string `env:"GOOGLE_KMS_KEYRING_ID"`
 }
 
 type Options struct {
