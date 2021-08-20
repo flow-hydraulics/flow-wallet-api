@@ -75,9 +75,9 @@ transaction {
 `
 
 const AddProposalKeyTransaction = `
-transaction(numProposalKeys: UInt16) {  
+transaction(adminKeyIndex: Int, numProposalKeys: UInt16) {  
   prepare(account: AuthAccount) {
-    let key = account.keys.get(keyIndex: 0)!
+    let key = account.keys.get(keyIndex: adminKeyIndex)!
     var count: UInt16 = 0
     while count < numProposalKeys {
       account.keys.add(
