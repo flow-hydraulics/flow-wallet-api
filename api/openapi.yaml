@@ -252,7 +252,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/job"
-                  - $ref: "#/components/schemas/account"
+                  - $ref: "#/components/schemas/transaction"
 
   /accounts/{address}/transactions/{transactionId}:
     parameters:
@@ -315,7 +315,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/job"
-                  - $ref: "#/components/schemas/account"
+                  - $ref: "#/components/schemas/transaction"
 
 
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
@@ -350,7 +350,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/job"
-                  - $ref: "#/components/schemas/account"
+                  - $ref: "#/components/schemas/transaction"
 
 
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
@@ -445,7 +445,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/job"
-                  - $ref: "#/components/schemas/account"
+                  - $ref: "#/components/schemas/transaction"
 
   /accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals:
     parameters:
@@ -479,7 +479,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/job"
-                  - $ref: "#/components/schemas/account"
+                  - $ref: "#/components/schemas/transaction"
 
   /accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}:
     parameters:
