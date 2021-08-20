@@ -71,9 +71,9 @@ type Config struct {
 
 	// -- Google KMS --
 
-	GoogleKMSProjectID  string `env:"GOOGLE_KMS_PROJECT_ID"`
-	GoogleKMSLocationID string `env:"GOOGLE_KMS_LOCATION_ID"`
-	GoogleKMSKeyRingID  string `env:"GOOGLE_KMS_KEYRING_ID"`
+	GoogleKMSProjectID  string `env:"FLOW_WALLET_GOOGLE_KMS_PROJECT_ID"`
+	GoogleKMSLocationID string `env:"FLOW_WALLET_GOOGLE_KMS_LOCATION_ID"`
+	GoogleKMSKeyRingID  string `env:"FLOW_WALLET_GOOGLE_KMS_KEYRING_ID"`
 }
 
 type Options struct {
