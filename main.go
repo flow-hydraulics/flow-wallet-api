@@ -10,9 +10,9 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/caarlos0/env/v6"
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
 	"github.com/flow-hydraulics/flow-wallet-api/debug"
 	"github.com/flow-hydraulics/flow-wallet-api/handlers"
@@ -23,8 +23,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
-	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
 )
@@ -36,58 +34,38 @@ var (
 	buildTime string // when the executable was built
 )
 
-type Config struct {
-	Host          string       `env:"HOST"`
-	Port          int          `env:"PORT" envDefault:"3000"`
-	AccessAPIHost string       `env:"ACCESS_API_HOST,notEmpty"`
-	ChainID       flow.ChainID `env:"CHAIN_ID" envDefault:"flow-emulator"`
-
-	WorkerQueueCapacity uint `env:"WORKER_QUEUE_CAPACITY" envDefault:"1000"`
-	WorkerCount         uint `env:"WORKER_COUNT" envDefault:"100"`
-}
-
 func main() {
-	if err := godotenv.Load(".env"); err != nil {
-		log.Printf("Could not load environment variables from file.\n%s\nIf running inside a docker container this can be ignored.\n\n", err)
-	}
-
 	var (
-		flgVersion            bool
-		flgDisableRawTx       bool
-		flgDisableFt          bool
-		flgDisableNft         bool
-		flgDisableChainEvents bool
+		printVersion bool
+		envFilePath  string
 	)
 
-	flag.BoolVar(&flgVersion, "version", false, "if true, print version and exit")
-	flag.BoolVar(&flgDisableRawTx, "disable-raw-tx", false, "disable raw transactions api")
-	flag.BoolVar(&flgDisableFt, "disable-ft", false, "disable fungible token api")
-	flag.BoolVar(&flgDisableNft, "disable-nft", false, "disable non-fungible token functionality")
-	flag.BoolVar(&flgDisableChainEvents, "disable-events", false, "disable chain event listener")
+	// If we should just print the version number and exit
+	flag.BoolVar(&printVersion, "version", false, "if true, print version and exit")
+
+	// Allow configuration of envfile path
+	// If not set, ParseConfig will not try to load variables to environment from a file
+	flag.StringVar(&envFilePath, "envfile", "", "envfile path")
 
 	flag.Parse()
 
-	if flgVersion {
+	if printVersion {
 		fmt.Printf("v%s build on %s from sha1 %s\n", version, buildTime, sha1ver)
 		os.Exit(0)
 	}
 
-	runServer(
-		flgDisableRawTx,
-		flgDisableFt,
-		flgDisableNft,
-		flgDisableChainEvents,
-	)
+	opts := &configs.Options{EnvFilePath: envFilePath}
+	cfg, err := configs.ParseConfig(opts)
+	if err != nil {
+		panic(err)
+	}
+
+	runServer(cfg)
 
 	os.Exit(0)
 }
 
-func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
-	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		panic(err)
-	}
-
+func runServer(cfg *configs.Config) {
 	// Application wide logger
 	ls := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
 	lj := log.New(os.Stdout, "[JOBS] ", log.LstdFlags|log.Lshortfile)
@@ -108,7 +86,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	}()
 
 	// Database
-	db, err := gorm.New()
+	db, err := gorm.New(cfg)
 	if err != nil {
 		ls.Fatal(err)
 	}
@@ -129,14 +107,14 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	}()
 
 	// Key manager
-	km := basic.NewKeyManager(keyStore, fc)
+	km := basic.NewKeyManager(cfg, keyStore, fc)
 
 	// Services
-	templateService := templates.NewService(templateStore)
+	templateService := templates.NewService(cfg, templateStore)
 	jobsService := jobs.NewService(jobStore)
-	transactionService := transactions.NewService(transactionStore, km, fc, wp)
-	accountService := accounts.NewService(accountStore, km, fc, wp, transactionService, templateService)
-	tokenService := tokens.NewService(tokenStore, km, fc, transactionService, templateService, accountService)
+	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, templateService)
+	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	debugService := debug.Service{
 		RepoUrl:   "https://github.com/flow-hydraulics/flow-wallet-api",
@@ -191,7 +169,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	rv.Handle("/accounts/{address}", accountHandler.Details()).Methods(http.MethodGet) // details
 
 	// Account raw transactions
-	if !disableRawTx {
+	if !cfg.DisableRawTransactions {
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.List()).Methods(http.MethodGet)                    // list
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.Create()).Methods(http.MethodPost)                 // create
 		rv.Handle("/accounts/{address}/transactions/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
@@ -203,7 +181,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost) // create
 
 	// Fungible tokens
-	if !disableFt {
+	if !cfg.DisableFungibleTokens {
 		rv.Handle("/accounts/{address}/fungible-tokens", tokenHandler.AccountTokens(templates.FT)).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
@@ -217,7 +195,7 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 	}
 
 	// Non-Fungible tokens
-	if !disableNft {
+	if !cfg.DisableNonFungibleTokens {
 		rv.Handle("/accounts/{address}/non-fungible-tokens", tokenHandler.AccountTokens(templates.NFT)).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
@@ -245,14 +223,14 @@ func runServer(disableRawTx, disableFt, disableNft, disableChainEvents bool) {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		ls.Printf("Server listening on port %d\n", cfg.Port)
+		ls.Printf("Server listening on %s:%d\n", cfg.Host, cfg.Port)
 		if err := srv.ListenAndServe(); err != nil {
 			ls.Println(err)
 		}
 	}()
 
 	// Chain event listener
-	if !disableChainEvents {
+	if !cfg.DisableChainEvents {
 		ls.Println("Starting chain event listener..")
 
 		store := chain_events.NewGormStore(db)

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/encryption"
@@ -20,18 +21,22 @@ type KeyManager struct {
 	fc              *client.Client
 	crypter         encryption.Crypter
 	adminAccountKey keys.Private
-	cfg             Config
+	cfg             *configs.Config
 }
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(store keys.Store, fc *client.Client) *KeyManager {
-	cfg := ParseConfig()
+func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *KeyManager {
+	// TODO(latenssi): safeguard against nil config?
+
+	if cfg.DefaultKeyWeight < 0 {
+		cfg.DefaultKeyWeight = flow.AccountKeyWeightThreshold
+	}
 
 	adminAccountKey := keys.Private{
-		Index:    cfg.AdminAccountKeyIndex,
-		Type:     cfg.AdminAccountKeyType,
-		Value:    cfg.AdminAccountKeyValue,
+		Index:    cfg.AdminKeyIndex,
+		Type:     cfg.AdminKeyType,
+		Value:    cfg.AdminPrivateKey,
 		SignAlgo: crypto.StringToSignatureAlgorithm(cfg.DefaultSignAlgo),
 		HashAlgo: crypto.StringToHashAlgorithm(cfg.DefaultHashAlgo),
 	}
@@ -57,7 +62,7 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (*flow.
 			crypto.StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo),
 			crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo))
 	case keys.AccountKeyTypeGoogleKMS:
-		return google.Generate(ctx, keyIndex, weight)
+		return google.Generate(s.cfg, ctx, keyIndex, weight)
 	}
 }
 
@@ -94,7 +99,7 @@ func (s *KeyManager) Load(key keys.Storable) (keys.Private, error) {
 }
 
 func (s *KeyManager) AdminAuthorizer(ctx context.Context) (keys.Authorizer, error) {
-	return s.MakeAuthorizer(ctx, flow.HexToAddress(s.cfg.AdminAccountAddress))
+	return s.MakeAuthorizer(ctx, flow.HexToAddress(s.cfg.AdminAddress))
 }
 
 func (s *KeyManager) UserAuthorizer(ctx context.Context, address flow.Address) (keys.Authorizer, error) {
@@ -104,7 +109,7 @@ func (s *KeyManager) UserAuthorizer(ctx context.Context, address flow.Address) (
 func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (keys.Authorizer, error) {
 	var k keys.Private
 
-	if address == flow.HexToAddress(s.cfg.AdminAccountAddress) {
+	if address == flow.HexToAddress(s.cfg.AdminAddress) {
 		k = s.adminAccountKey
 	} else {
 		// Get the "least recently used" key for this address
@@ -150,7 +155,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 }
 
 func (s *KeyManager) InitAdminProposalKeys(ctx context.Context) (uint16, error) {
-	adminAddress := flow.HexToAddress(s.cfg.AdminAccountAddress)
+	adminAddress := flow.HexToAddress(s.cfg.AdminAddress)
 
 	adminAccount, err := s.fc.GetAccount(ctx, adminAddress)
 	if err != nil {
@@ -179,7 +184,7 @@ func (s *KeyManager) InitAdminProposalKeys(ctx context.Context) (uint16, error) 
 }
 
 func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, error) {
-	adminAcc := flow.HexToAddress(s.cfg.AdminAccountAddress)
+	adminAcc := flow.HexToAddress(s.cfg.AdminAddress)
 
 	index, err := s.store.ProposalKey()
 	if err != nil {

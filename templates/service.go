@@ -4,20 +4,36 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
 )
 
 type Service struct {
 	store Store
-	cfg   *config
+	cfg   *configs.Config
 }
 
-func NewService(store Store) *Service {
-	cfg := parseConfig()
+func parseEnabledTokens(envEnabledTokens []string) map[string]Token {
+	var enabledTokens = make(map[string]Token, len(envEnabledTokens))
+	for _, s := range envEnabledTokens {
+		ss := strings.Split(s, ":")
+		token := Token{Name: ss[0], Address: ss[1]}
+		if len(ss) > 2 {
+			token.NameLowerCase = ss[2]
+		}
+		// Use all lowercase as the key so we can do case insenstive matchig in URLs
+		key := strings.ToLower(ss[0])
+		enabledTokens[key] = token
+	}
+	return enabledTokens
+}
+
+func NewService(cfg *configs.Config, store Store) *Service {
+	// TODO(latenssi): safeguard against nil config?
 
 	// Add all enabled tokens from config as fungible tokens
-	for _, t := range cfg.enabledTokens {
+	for _, t := range parseEnabledTokens(cfg.EnabledTokens) {
 		if _, err := store.GetByName(t.Name); err == nil {
 			// Token already in database
 			fmt.Printf("Warning: Skipping %s configuration from environment variables as it already exists in database. ", t.Name)
@@ -33,9 +49,9 @@ func NewService(store Store) *Service {
 		// Copy the value so we get an individual pointer, this is important
 		token := t
 		token.Type = FT // We only allow fungible tokens through env variables config
-		token.Setup = FungibleSetupCode(&token)
-		token.Transfer = FungibleTransferCode(&token)
-		token.Balance = FungibleBalanceCode(&token)
+		token.Setup = FungibleSetupCode(cfg.ChainID, &token)
+		token.Transfer = FungibleTransferCode(cfg.ChainID, &token)
+		token.Balance = FungibleBalanceCode(cfg.ChainID, &token)
 
 		// Write to temp storage (memory), instead of database
 		store.InsertTemp(&token)
@@ -58,9 +74,9 @@ func (s *Service) AddToken(t *Token) error {
 	}
 
 	// Received code templates may have values that need replacing
-	t.Setup = TokenCode(t, t.Setup)
-	t.Transfer = TokenCode(t, t.Transfer)
-	t.Balance = TokenCode(t, t.Balance)
+	t.Setup = TokenCode(s.cfg.ChainID, t, t.Setup)
+	t.Transfer = TokenCode(s.cfg.ChainID, t, t.Transfer)
+	t.Balance = TokenCode(s.cfg.ChainID, t, t.Balance)
 
 	return s.store.Insert(t)
 }

@@ -61,7 +61,7 @@ func (token Token) BasicToken() BasicToken {
 	}
 }
 
-func TokenCode(token *Token, tmplStr string) string {
+func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
 
 	// Regex that matches all references to cadence source files
 	// For example:
@@ -86,7 +86,7 @@ func TokenCode(token *Token, tmplStr string) string {
 		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.NameLowerCase),
 	)
 
-	knownAddressesReplacer := knownAddressesReplacers[parseConfig().ChainID]
+	knownAddressesReplacer := knownAddressesReplacers[chainId]
 
 	code := tmplStr
 
@@ -99,14 +99,14 @@ func TokenCode(token *Token, tmplStr string) string {
 	return code
 }
 
-func FungibleTransferCode(token *Token) string {
-	return TokenCode(token, template_strings.GenericFungibleTransfer)
+func FungibleTransferCode(chainId flow.ChainID, token *Token) string {
+	return TokenCode(chainId, token, template_strings.GenericFungibleTransfer)
 }
 
-func FungibleSetupCode(token *Token) string {
-	return TokenCode(token, template_strings.GenericFungibleSetup)
+func FungibleSetupCode(chainId flow.ChainID, token *Token) string {
+	return TokenCode(chainId, token, template_strings.GenericFungibleSetup)
 }
 
-func FungibleBalanceCode(token *Token) string {
-	return TokenCode(token, template_strings.GenericFungibleBalance)
+func FungibleBalanceCode(chainId flow.ChainID, token *Token) string {
+	return TokenCode(chainId, token, template_strings.GenericFungibleBalance)
 }

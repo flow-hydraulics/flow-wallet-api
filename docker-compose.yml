@@ -20,10 +20,10 @@ services:
       - ./.env
     restart: unless-stopped
     environment:
-      DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
-      DATABASE_TYPE: psql
-      ACCESS_API_HOST: emulator:3569
-      CHAIN_ID: flow-emulator
+      FLOW_WALLET_DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
+      FLOW_WALLET_DATABASE_TYPE: psql
+      FLOW_WALLET_ACCESS_API_HOST: emulator:3569
+      FLOW_WALLET_CHAIN_ID: flow-emulator
     depends_on:
       - db
       - emulator
@@ -34,6 +34,6 @@ services:
     ports:
       - "3569:3569"
     environment:
-      - FLOW_SERVICEPRIVATEKEY=${ADMIN_PRIVATE_KEY}
+      - FLOW_SERVICEPRIVATEKEY=${FLOW_WALLET_ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
       - FLOW_SERVICEKEYHASHALGO=SHA3_256

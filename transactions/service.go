@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
@@ -23,17 +24,18 @@ type Service struct {
 	km    keys.Manager
 	fc    *client.Client
 	wp    *jobs.WorkerPool
-	cfg   Config
+	cfg   *configs.Config
 }
 
 // NewService initiates a new transaction service.
 func NewService(
+	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 ) *Service {
-	cfg := ParseConfig()
+	// TODO(latenssi): safeguard against nil config?
 	return &Service{store, km, fc, wp, cfg}
 }
 
@@ -75,7 +77,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		proposer := a
-		if address == s.cfg.AdminAccountAddress {
+		if address == s.cfg.AdminAddress {
 			proposer, err = s.km.AdminProposalKey(ctx)
 			if err != nil {
 				return "", err

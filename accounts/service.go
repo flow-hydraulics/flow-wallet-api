@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
@@ -27,11 +28,12 @@ type Service struct {
 	wp           *jobs.WorkerPool
 	transactions *transactions.Service
 	templates    *templates.Service
-	cfg          Config
+	cfg          *configs.Config
 }
 
 // NewService initiates a new account service.
 func NewService(
+	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
 	fc *client.Client,
@@ -39,24 +41,24 @@ func NewService(
 	txs *transactions.Service,
 	tes *templates.Service,
 ) *Service {
-	cfg := ParseConfig()
+	// TODO(latenssi): safeguard against nil config?
 	return &Service{store, km, fc, wp, txs, tes, cfg}
 }
 
 func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.Service) error {
-	a, err := s.store.Account(s.cfg.AdminAccountAddress)
+	a, err := s.store.Account(s.cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
 			return err
 		}
 		// Admin account not in database
-		a = Account{Address: s.cfg.AdminAccountAddress}
+		a = Account{Address: s.cfg.AdminAddress}
 		err := s.store.InsertAccount(&a)
 		if err != nil {
 			return err
 		}
 		AccountAdded.Trigger(AccountAddedPayload{
-			Address: flow.HexToAddress(s.cfg.AdminAccountAddress),
+			Address: flow.HexToAddress(s.cfg.AdminAddress),
 		})
 	}
 
@@ -81,10 +83,10 @@ func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.
 }
 
 func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16, txService *transactions.Service) error {
-	_, _, err := txService.Create(ctx, true, s.cfg.AdminAccountAddress, templates.Raw{
+	_, _, err := txService.Create(ctx, true, s.cfg.AdminAddress, templates.Raw{
 		Code: template_strings.AddProposalKeyTransaction,
 		Arguments: []templates.Argument{
-			cadence.NewInt(s.cfg.AdminAccountKeyIndex),
+			cadence.NewInt(s.cfg.AdminKeyIndex),
 			cadence.NewUInt16(count),
 		},
 	}, transactions.General)
