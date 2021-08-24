@@ -15,7 +15,7 @@ content-type: application/json
 
 {
   "name":"ExampleNFT",
-  "address":"{{$dotenv ADMIN_ADDRESS}}",
+  "address":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}",
   "type":"NFT",
   "setup":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction {\n    prepare(signer: AuthAccount) {\n        if signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath) != nil { return }\n        let collection <- ExampleNFT.createEmptyCollection()\n        signer.save(<-collection, to: ExampleNFT.CollectionStoragePath)\n        signer.link<&NonFungibleToken.Collection>(ExampleNFT.CollectionPublicPath, target: ExampleNFT.CollectionStoragePath)\n    }\n}\n",
   "transfer":"import NonFungibleToken from \"../contracts/NonFungibleToken.cdc\"\nimport ExampleNFT from \"../contracts/ExampleNFT.cdc\"\ntransaction(recipient: Address, withdrawID: UInt64) {\n    prepare(signer: AuthAccount) {\n        let recipient = getAccount(recipient)\n        let collectionRef = signer.borrow<&ExampleNFT.Collection>(from: ExampleNFT.CollectionStoragePath)!\n        let depositRef = recipient.getCapability(ExampleNFT.CollectionPublicPath)!.borrow<&{NonFungibleToken.CollectionPublic}>()!\n        let nft <- collectionRef.withdraw(withdrawID: withdrawID)\n        depositRef.deposit(token: <-nft)\n    }\n}\n",
@@ -43,27 +43,27 @@ content-type: application/json
 
 
 ### Get accounts fungible tokens for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens HTTP/1.1
 content-type: application/json
 
 ### Get accounts non-fungible tokens for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
 content-type: application/json
 
 ### Get FUSD details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
 
 ### Get ExampleNFT details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
 content-type: application/json
 
 ### Create a FlowToken withdrawal from admin to custody account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
 
 {
@@ -72,7 +72,7 @@ content-type: application/json
 }
 
 ### Create a FUSD withdrawal from admin to custody account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
 {
@@ -81,7 +81,7 @@ content-type: application/json
 }
 
 ### Create an ExampleNFT withdrawal from admin to custody account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
 content-type: application/json
 
 {
@@ -90,35 +90,35 @@ content-type: application/json
 }
 
 ### List FlowToken withdrawals for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
 
 ### List FUSD withdrawals for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
 
 ### List ExampleNFT withdrawals for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
 content-type: application/json
 
 ### Get FlowToken withdrawal details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals/<transaction_id> HTTP/1.1
 content-type: application/json
 
 ### Get ExampleNFT withdrawal details for admin account
-GET http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals/<transaction_id> HTTP/1.1
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals/<transaction_id> HTTP/1.1
 content-type: application/json
 
 ### Setup FlowToken on emulator for admin account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
 content-type: application/json
 
 ### Setup FUSD on emulator for admin account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
 
 ### Setup ExampleNFT on emulator for admin account
-POST http://localhost:3000/v1/accounts/{{$dotenv ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
 content-type: application/json
 
 
@@ -148,7 +148,7 @@ POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-token
 content-type: application/json
 
 {
-  "recipient":"{{$dotenv ADMIN_ADDRESS}}",
+  "recipient":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}",
   "amount":"1.0"
 }
 
@@ -157,7 +157,7 @@ POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-token
 content-type: application/json
 
 {
-  "recipient":"{{$dotenv ADMIN_ADDRESS}}",
+  "recipient":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}",
   "amount":"1.0"
 }
 

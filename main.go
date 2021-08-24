@@ -243,14 +243,15 @@ func runServer(cfg *configs.Config) {
 				panic(err)
 			}
 
-			types := make([]string, len(*tt))
+			token_count := len(*tt)
+			event_types := make([]string, token_count)
 
 			// Listen for enabled tokens deposit events
 			for i, token := range *tt {
-				types[i] = templates.DepositEventTypeFromToken(token)
+				event_types[i] = templates.DepositEventTypeFromToken(token)
 			}
 
-			return types
+			return event_types
 		}
 
 		listener := chain_events.NewListener(fc, store, maxDiff, interval, getTypes)
