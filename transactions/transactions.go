@@ -12,19 +12,26 @@ import (
 	"gorm.io/gorm"
 )
 
+// Transaction is the database model for all transactions.
 type Transaction struct {
-	TransactionId   string                  `json:"transactionId" gorm:"primaryKey"`
-	TransactionType Type                    `json:"transactionType" gorm:"index"`
-	PayerAddress    string                  `json:"-" gorm:"index"`
-	CreatedAt       time.Time               `json:"createdAt"`
-	UpdatedAt       time.Time               `json:"updatedAt"`
-	DeletedAt       gorm.DeletedAt          `json:"-" gorm:"index"`
+	TransactionId   string                  `json:"transactionId" gorm:"column:transaction_id;primaryKey"`
+	TransactionType Type                    `json:"transactionType" gorm:"column:transaction_type;index"`
+	ProposerAddress string                  `json:"-" gorm:"column:proposer_address;index"`
+	CreatedAt       time.Time               `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt       time.Time               `json:"updatedAt" gorm:"column:updated_at"`
+	DeletedAt       gorm.DeletedAt          `json:"-" gorm:"column:deleted_at;index"`
 	Result          *flow.TransactionResult `json:"-" gorm:"-"`
-	flowTx          *flow.Transaction       `json:"-" gorm:"-"`
+	Actual          *flow.Transaction       `json:"-" gorm:"-"`
 }
 
+func (Transaction) TableName() string {
+	return "transactions"
+}
+
+// TODO(latenssi): separate HTTP interface model for transactions
+
 func New(
-	t *Transaction,
+	transaction *Transaction,
 	referenceBlockID flow.Identifier,
 	builder *templates.TransactionBuilder,
 	tType Type,
@@ -42,18 +49,12 @@ func New(
 		builder.Tx.AddAuthorizer(a.Address)
 	}
 
-	signWithProposer := !proposer.Equals(payer)
-
 	// Authorizers sign the payload
-	// TODO: support multiple keys per account?
 	for _, a := range authorizers {
-		// If account is also the payer, it must only sign the envelope
-		if a.Address == payer.Address {
+		// If account is also the payer, it must only sign the envelope,
+		// proposer signing is handled outside this loop as well
+		if a.Equals(payer) || a.Equals(proposer) {
 			continue
-		}
-
-		if a.Equals(proposer) {
-			signWithProposer = false
 		}
 
 		if err := builder.Tx.SignPayload(a.Address, a.Key.Index, a.Signer); err != nil {
@@ -61,38 +62,38 @@ func New(
 		}
 	}
 
-	if signWithProposer {
+	// Proposer signs the payload
+	if !proposer.Equals(payer) {
 		if err := builder.Tx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
 			return err
 		}
 	}
 
 	// Payer signs the envelope
-	// TODO: support multiple keys per account?
 	if err := builder.Tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
 		return err
 	}
 
-	t.PayerAddress = flow_helpers.FormatAddress(payer.Address)
-	t.TransactionType = tType
-	t.flowTx = builder.Tx
+	transaction.ProposerAddress = flow_helpers.FormatAddress(proposer.Address)
+	transaction.TransactionType = tType
+	transaction.Actual = builder.Tx
 
 	return nil
 }
 
 // Send the transaction to the network
 func (t *Transaction) Send(ctx context.Context, fc *client.Client) error {
-	err := fc.SendTransaction(ctx, *t.flowTx)
+	err := fc.SendTransaction(ctx, *t.Actual)
 
 	// Set TransactionId
-	t.TransactionId = t.flowTx.ID().Hex()
+	t.TransactionId = t.Actual.ID().Hex()
 
 	return err
 }
 
 // Wait for the transaction to be sealed
 func (t *Transaction) Wait(ctx context.Context, fc *client.Client) error {
-	result, err := flow_helpers.WaitForSeal(ctx, fc, t.flowTx.ID())
+	result, err := flow_helpers.WaitForSeal(ctx, fc, t.Actual.ID())
 	if err != nil {
 		return err
 	}
@@ -110,6 +111,22 @@ func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client) error 
 	if err := t.Wait(ctx, fc); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (t *Transaction) Hydrate(ctx context.Context, fc *client.Client) error {
+	if t.Actual != nil {
+		// Already hydrated
+		return nil
+	}
+
+	actual, err := fc.GetTransaction(context.Background(), flow.HexToID(t.TransactionId))
+	if err != nil {
+		return err
+	}
+
+	t.Actual = actual
 
 	return nil
 }

@@ -191,8 +191,9 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 	job, tx, err := s.transactions.Create(ctx, runSync, sender, raw, txType)
 
 	// Initialise the transfer object
-	t := &TokenTransfer{
+	transfer := &TokenTransfer{
 		RecipientAddress: recipient,
+		SenderAddress:    sender,
 		FtAmount:         request.FtAmount,
 		NftID:            request.NftID,
 		TokenName:        token.Name,
@@ -207,8 +208,8 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 			// but the client may not have the job id (if using sync)
 			return
 		}
-		t.TransactionId = tx.TransactionId
-		if err := s.store.InsertTokenTransfer(t); err != nil {
+		transfer.TransactionId = tx.TransactionId
+		if err := s.store.InsertTokenTransfer(transfer); err != nil {
 			fmt.Printf("Error while inserting token transfer: %s\n", err)
 		}
 	}()
@@ -325,46 +326,42 @@ func (s *Service) GetDeposit(address, tokenName, transactionId string) (*TokenDe
 	return &d, nil
 }
 
-func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amountOrNftID, recipient string) error {
-	var ftAmount string
-	var nftId uint64
+// RegisterDeposit is an internal API for registering token deposits from on-chain events.
+func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Identifier, recipient accounts.Account, amountOrNftID string) error {
+	var (
+		ftAmount string
+		nftId    uint64
+	)
 
 	switch token.Type {
 	case templates.FT:
 		ftAmount = amountOrNftID
 	case templates.NFT:
-		u, err := strconv.ParseUint(amountOrNftID, 10, 64)
+		var err error
+		nftId, err = strconv.ParseUint(amountOrNftID, 10, 64)
 		if err != nil {
 			return err
 		}
-		nftId = u
 	default:
 		return fmt.Errorf("unsupported token type: %s", token.Type)
 	}
 
-	// Check if the input address is a valid address
-	recipient, err := flow_helpers.ValidateAddress(recipient, s.cfg.ChainID)
-	if err != nil {
-		return err
-	}
-
-	// Check if the transaction id is valid
-	if err := flow_helpers.ValidateTransactionId(transactionId); err != nil {
-		return err
-	}
+	// TODO (latenssi): db lock for transaction; could it also allow "syncing" when running multiple instances?
 
 	// Get existing transaction or create one
-	tx := s.transactions.GetOrCreateTransaction(transactionId)
-	if tx.TransactionType == transactions.Unknown {
+	transaction := s.transactions.GetOrCreateTransaction(transactionId.Hex())
+
+	if transaction.TransactionType == transactions.Unknown {
 		// Transaction was just created
-		// Deposit mostly likely did not originate in this wallet service
-		tx.TransactionType = transactions.FtTransfer
-		flowTx, err := s.fc.GetTransaction(context.Background(), flow.HexToID(tx.TransactionId))
-		if err != nil {
+		// Transfer most likely did not originate in this wallet service
+
+		if err := transaction.Hydrate(context.Background(), s.fc); err != nil {
 			return err
 		}
-		tx.PayerAddress = flow_helpers.FormatAddress(flowTx.Payer)
-		if err := s.transactions.UpdateTransaction(tx); err != nil {
+
+		transaction.TransactionType = transactions.FtTransfer
+		transaction.ProposerAddress = flow_helpers.FormatAddress(transaction.Actual.ProposalKey.Address)
+		if err := s.transactions.UpdateTransaction(transaction); err != nil {
 			return err
 		}
 	}
@@ -372,33 +369,43 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId, amountO
 	// Make sure the token is enabled in the database for the recipient account
 	// We are registering a deposit event, so the token must be setup already for the recipient
 	s.store.InsertAccountToken(&AccountToken{
-		AccountAddress: recipient,
+		AccountAddress: recipient.Address,
 		TokenAddress:   token.Address,
 		TokenName:      token.Name,
 		TokenType:      token.Type,
 	})
 
 	// Check for existing deposit
-	if _, err := s.store.TokenDeposit(recipient, tx.TransactionId, token); err != nil {
+	if _, err := s.store.TokenDeposit(recipient.Address, transaction.TransactionId, token); err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
+			// Error did not contain "record not found"
 			return err
 		}
-		// Deposit not found, continue
+		// Error contains "record not found", proceed
 	} else {
-		// Deposit found, we are done
+		// err == nil, existing deposit found, we are done
 		return nil
 	}
 
+	if err := transaction.Hydrate(context.Background(), s.fc); err != nil {
+		return err
+	}
+
 	// Create and store a new token transfer
-	t := &TokenTransfer{
-		TransactionId:    tx.TransactionId,
-		RecipientAddress: recipient,
+	transfer := &TokenTransfer{
+		TransactionId:    transaction.TransactionId,
+		RecipientAddress: recipient.Address,
+		SenderAddress:    flow_helpers.FormatAddress(transaction.Actual.Authorizers[0]),
 		FtAmount:         ftAmount,
 		NftID:            nftId,
 		TokenName:        token.Name,
 	}
 
-	return s.store.InsertTokenTransfer(t)
+	if err := s.store.InsertTokenTransfer(transfer); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DeployTokenContractForAccount is mainly used for testing purposes.
