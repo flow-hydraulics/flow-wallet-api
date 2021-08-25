@@ -10,12 +10,17 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
+	// Ignore migration errors
+
+	db.Migrator().RenameColumn(&Transaction{}, "payer_address", "proposer_address")
+
 	db.AutoMigrate(&Transaction{})
+
 	return &GormStore{db}
 }
 
 func (s *GormStore) Transactions(tType Type, address string, o datastore.ListOptions) (tt []Transaction, err error) {
-	q := &Transaction{PayerAddress: address, TransactionType: tType}
+	q := &Transaction{ProposerAddress: address, TransactionType: tType}
 	err = s.db.
 		Where(q).
 		Order("created_at desc").
@@ -26,7 +31,7 @@ func (s *GormStore) Transactions(tType Type, address string, o datastore.ListOpt
 }
 
 func (s *GormStore) Transaction(tType Type, address, txId string) (t Transaction, err error) {
-	q := &Transaction{PayerAddress: address, TransactionType: tType, TransactionId: txId}
+	q := &Transaction{ProposerAddress: address, TransactionType: tType, TransactionId: txId}
 	err = s.db.Where(q).First(&t).Error
 	return
 }

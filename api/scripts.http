@@ -23,7 +23,7 @@ content-type: application/json
 
 {
   "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
-  "arguments":[{"type":"Address","value":"{{$dotenv ADMIN_ADDRESS}}"}]
+  "arguments":[{"type":"Address","value":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}"}]
 }
 
 ### Get ExampleNFT balance of admin account (flow-emulator)
@@ -31,6 +31,6 @@ POST http://localhost:3000/v1/scripts HTTP/1.1
 content-type: application/json
 
 {
-  "code":"import NonFungibleToken from {{$dotenv ADMIN_ADDRESS}}\nimport ExampleNFT from {{$dotenv ADMIN_ADDRESS}}\n\npub fun main(account: Address): [UInt64] {\n    let receiver = getAccount(account)\n        .getCapability(ExampleNFT.CollectionPublicPath)!\n        .borrow<&{NonFungibleToken.CollectionPublic}>()\n        ?? panic(\"failed to borrow reference to collection\")\n    return receiver.getIDs()\n}\n",
-  "arguments":[{"type":"Address","value":"{{$dotenv ADMIN_ADDRESS}}"}]
+  "code":"import NonFungibleToken from {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}\nimport ExampleNFT from {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}\n\npub fun main(account: Address): [UInt64] {\n    let receiver = getAccount(account)\n        .getCapability(ExampleNFT.CollectionPublicPath)!\n        .borrow<&{NonFungibleToken.CollectionPublic}>()\n        ?? panic(\"failed to borrow reference to collection\")\n    return receiver.getIDs()\n}\n",
+  "arguments":[{"type":"Address","value":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}"}]
 }

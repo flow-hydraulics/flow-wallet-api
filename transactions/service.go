@@ -39,8 +39,8 @@ func NewService(
 	return &Service{store, km, fc, wp, cfg}
 }
 
-func (s *Service) Create(c context.Context, sync bool, address string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
-	t := &Transaction{}
+func (s *Service) Create(c context.Context, sync bool, proposerAddress string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
+	transaction := &Transaction{}
 
 	job, err := s.wp.AddJob(func() (string, error) {
 		ctx := c
@@ -49,65 +49,75 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 		}
 
 		// Check if the input is a valid address
-		address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
+		proposerAddress, err := flow_helpers.ValidateAddress(proposerAddress, s.cfg.ChainID)
 		if err != nil {
 			return "", err
 		}
 
-		id, err := flow_helpers.LatestBlockId(ctx, s.fc)
+		latestBlockId, err := flow_helpers.LatestBlockId(ctx, s.fc)
 		if err != nil {
 			return "", err
 		}
 
-		a, err := s.km.UserAuthorizer(ctx, flow.HexToAddress(address))
+		var (
+			payer       keys.Authorizer
+			proposer    keys.Authorizer
+			authorizers []keys.Authorizer
+		)
+
+		// Admin should always be the payer of the transaction fees
+		payer, err = s.km.AdminAuthorizer(ctx)
 		if err != nil {
 			return "", err
 		}
 
-		var aa []keys.Authorizer
-
-		// Check if we need to add this account as an authorizer
-		if strings.Contains(raw.Code, ": AuthAccount") {
-			aa = append(aa, a)
-		}
-
-		b, err := templates.NewBuilderFromRaw(raw)
-		if err != nil {
-			return "", err
-		}
-
-		proposer := a
-		if address == s.cfg.AdminAddress {
+		if proposerAddress == s.cfg.AdminAddress {
 			proposer, err = s.km.AdminProposalKey(ctx)
 			if err != nil {
 				return "", err
 			}
+		} else {
+			proposer, err = s.km.UserAuthorizer(ctx, flow.HexToAddress(proposerAddress))
+			if err != nil {
+				return "", err
+			}
+
 		}
 
-		if err := New(t, id, b, tType, proposer, a, aa); err != nil {
-			return t.TransactionId, err
+		// Check if we need to add proposer as an authorizer
+		if strings.Contains(raw.Code, ": AuthAccount") {
+			authorizers = append(authorizers, proposer)
+		}
+
+		builder, err := templates.NewBuilderFromRaw(raw)
+		if err != nil {
+			return "", err
+		}
+
+		if err := New(transaction, latestBlockId, builder, tType, proposer, payer, authorizers); err != nil {
+			return transaction.TransactionId, err
 		}
 
 		// Send the transaction
 
-		if err := t.Send(ctx, s.fc); err != nil {
-			return t.TransactionId, err
+		if err := transaction.Send(ctx, s.fc); err != nil {
+			return transaction.TransactionId, err
 		}
 
 		// Insert to datastore
-		if err := s.store.InsertTransaction(t); err != nil {
-			return t.TransactionId, err
+		if err := s.store.InsertTransaction(transaction); err != nil {
+			return transaction.TransactionId, err
 		}
 
 		// Wait for the transaction to be sealed
-		if err := t.Wait(ctx, s.fc); err != nil {
-			return t.TransactionId, err
+		if err := transaction.Wait(ctx, s.fc); err != nil {
+			return transaction.TransactionId, err
 		}
 
 		// Update in datastore
-		err = s.store.UpdateTransaction(t)
+		err = s.store.UpdateTransaction(transaction)
 
-		return t.TransactionId, err
+		return transaction.TransactionId, err
 	})
 
 	if err != nil {
@@ -123,7 +133,7 @@ func (s *Service) Create(c context.Context, sync bool, address string, raw templ
 
 	err = job.Wait(sync)
 
-	return job, t, err
+	return job, transaction, err
 }
 
 // List returns all transactions in the datastore for a given account.

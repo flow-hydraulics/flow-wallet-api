@@ -18,7 +18,8 @@ type ChainEventHandler struct {
 }
 
 func (h *ChainEventHandler) Handle(event flow.Event) {
-	if strings.Contains(event.Type, "Deposit") {
+	isDeposit := strings.Contains(event.Type, "Deposit")
+	if isDeposit {
 		h.handleDeposit(event)
 	}
 }
@@ -34,13 +35,13 @@ func (h *ChainEventHandler) handleDeposit(event flow.Event) {
 	amountOrNftID := event.Value.Fields[0]
 	accountAddress := event.Value.Fields[1]
 
-	// Check if recipient is in database
+	// Get the target account from database
 	account, err := h.AccountService.Details(accountAddress.String())
 	if err != nil {
 		return
 	}
 
-	if err = h.TokenService.RegisterDeposit(token, event.TransactionID.Hex(), amountOrNftID.String(), account.Address); err != nil {
+	if err = h.TokenService.RegisterDeposit(token, event.TransactionID, account, amountOrNftID.String()); err != nil {
 		fmt.Printf("Error while registering a deposit: %s\n", err)
 		return
 	}
