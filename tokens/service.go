@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
@@ -434,7 +435,9 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync boo
 
 	c := flow_templates.Contract{Name: n, Source: src}
 
-	t, err := accounts.AddContract(ctx, s.fc, s.km, address, c)
+	timeout := time.Duration(s.cfg.TransactionTimeout) * time.Second
+
+	t, err := accounts.AddContract(ctx, s.fc, s.km, address, c, timeout)
 	if err != nil {
 		return nil, t, err
 	}

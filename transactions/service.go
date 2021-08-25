@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
@@ -109,8 +110,10 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 			return transaction.TransactionId, err
 		}
 
+		timeout := time.Duration(s.cfg.TransactionTimeout) * time.Second
+
 		// Wait for the transaction to be sealed
-		if err := transaction.Wait(ctx, s.fc); err != nil {
+		if err := transaction.Wait(ctx, s.fc, timeout); err != nil {
 			return transaction.TransactionId, err
 		}
 

@@ -92,8 +92,8 @@ func (t *Transaction) Send(ctx context.Context, fc *client.Client) error {
 }
 
 // Wait for the transaction to be sealed
-func (t *Transaction) Wait(ctx context.Context, fc *client.Client) error {
-	result, err := flow_helpers.WaitForSeal(ctx, fc, t.Actual.ID())
+func (t *Transaction) Wait(ctx context.Context, fc *client.Client, timeout time.Duration) error {
+	result, err := flow_helpers.WaitForSeal(ctx, fc, t.Actual.ID(), timeout)
 	if err != nil {
 		return err
 	}
@@ -102,13 +102,13 @@ func (t *Transaction) Wait(ctx context.Context, fc *client.Client) error {
 }
 
 // Send the transaction to the network and wait for seal
-func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client) error {
+func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client, timeout time.Duration) error {
 	if err := t.Send(ctx, fc); err != nil {
 		return err
 	}
 
 	// Wait for the transaction to be sealed
-	if err := t.Wait(ctx, fc); err != nil {
+	if err := t.Wait(ctx, fc, timeout); err != nil {
 		return err
 	}
 

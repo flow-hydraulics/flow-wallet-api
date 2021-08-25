@@ -74,6 +74,11 @@ type Config struct {
 	GoogleKMSProjectID  string `env:"FLOW_WALLET_GOOGLE_KMS_PROJECT_ID"`
 	GoogleKMSLocationID string `env:"FLOW_WALLET_GOOGLE_KMS_LOCATION_ID"`
 	GoogleKMSKeyRingID  string `env:"FLOW_WALLET_GOOGLE_KMS_KEYRING_ID"`
+
+	// -- Misc --
+
+	// Duration in seconds to poll for a transaction seal, if 0 poll indefinitely
+	TransactionTimeout uint `env:"FLOW_WALLET_TRANSACTION_TIMEOUT" envDefault:"0"`
 }
 
 type Options struct {

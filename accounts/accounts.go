@@ -31,7 +31,7 @@ type Account struct {
 // It uses the provided admin account to pay for the creation.
 // It generates a new privatekey and returns it (local key)
 // or a reference to it (Google KMS resource id).
-func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km keys.Manager) error {
+func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km keys.Manager, transactionTimeout time.Duration) error {
 	// Get admin account authorizer
 	auth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
@@ -65,7 +65,7 @@ func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km
 		return err
 	}
 
-	if err := t.SendAndWait(ctx, fc); err != nil {
+	if err := t.SendAndWait(ctx, fc, transactionTimeout); err != nil {
 		return err
 	}
 
@@ -95,7 +95,8 @@ func AddContract(
 	fc *client.Client,
 	km keys.Manager,
 	accountAddress string,
-	contract flow_templates.Contract) (*transactions.Transaction, error) {
+	contract flow_templates.Contract,
+	transactionTimeout time.Duration) (*transactions.Transaction, error) {
 
 	// Get admin account authorizer
 	adminAuth, err := km.AdminAuthorizer(ctx)
@@ -137,7 +138,7 @@ func AddContract(
 		return nil, err
 	}
 
-	if err := t.SendAndWait(ctx, fc); err != nil {
+	if err := t.SendAndWait(ctx, fc, transactionTimeout); err != nil {
 		return nil, err
 	}
 
