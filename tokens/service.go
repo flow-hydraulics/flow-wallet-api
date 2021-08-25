@@ -122,6 +122,7 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 
 	switch token.Type {
 	case templates.FT:
+		fallthrough
 	case templates.NFT:
 		// Continue normal flow
 	default:
@@ -292,6 +293,7 @@ func (s *Service) GetTransfer(queryType, address, tokenName, transactionId strin
 
 	switch token.Type {
 	case templates.FT:
+		fallthrough
 	case templates.NFT:
 		// Continue normal flow
 	default:
