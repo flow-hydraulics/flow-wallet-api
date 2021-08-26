@@ -53,7 +53,7 @@ func New(
 	for _, a := range authorizers {
 		// If account is also the payer, it must only sign the envelope,
 		// proposer signing is handled outside this loop as well
-		if a.Equals(payer) || a.Equals(proposer) {
+		if a.Equals(proposer) || a.Equals(payer) {
 			continue
 		}
 
