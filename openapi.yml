@@ -232,7 +232,6 @@ paths:
           content:
             application/json:
               schema:
-                type: object
                 $ref: "#/components/schemas/job"
 
 
@@ -319,7 +318,9 @@ paths:
                   $ref: "#/components/schemas/transaction"
     post:
       summary: Send a raw transaction
-      description: Send a transaction from an account. Returns a job, or the account information when synchronous mode is enabled.
+      description: |-
+        Send a transaction from an account. Returns a job, or the account information when synchronous mode is enabled.
+        NOTE: The transaction code should require _exactly_ one AuthAccount and is assumed to be the account sending the transaction.
       operationId: sendRawTransaction
       tags:
         - Accounts
@@ -1042,7 +1043,7 @@ components:
           example: "FlowToken"
         balance:
           type: number
-          example: "1.0"
+          example: 1.0
 
     accountNonFungibleToken:
       type: object
