@@ -17,12 +17,12 @@ import (
 const hexPrefix = "0x"
 
 // LatestBlockId retuns the flow.Identifier for the latest block in the chain.
-func LatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, error) {
+func LatestBlockId(ctx context.Context, c *client.Client) (*flow.Identifier, error) {
 	block, err := c.GetLatestBlock(ctx, true)
 	if err != nil {
-		return flow.Identifier{}, err
+		return nil, err
 	}
-	return block.ID, nil
+	return &block.ID, nil
 }
 
 // WaitForSeal blocks until
