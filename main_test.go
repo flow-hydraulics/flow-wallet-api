@@ -448,7 +448,7 @@ func TestTransactionHandlers(t *testing.T) {
 	}`, tFlowBytes, testCfg.AdminAddress)
 
 	validHello := `{
-		"code":"transaction(greeting: String) { execute { log(greeting.concat(\", World!\")) }}",
+		"code":"transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}",
 		"arguments":[{"type":"String","value":"Hello"}]
 	}`
 

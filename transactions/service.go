@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
@@ -60,9 +59,8 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 		}
 
 		var (
-			payer       keys.Authorizer
-			proposer    keys.Authorizer
-			authorizers []keys.Authorizer
+			payer    keys.Authorizer
+			proposer keys.Authorizer
 		)
 
 		// Admin should always be the payer of the transaction fees
@@ -84,22 +82,21 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 
 		}
 
-		// Check if we need to add proposer as an authorizer
-		if strings.Contains(raw.Code, ": AuthAccount") {
-			authorizers = append(authorizers, proposer)
-		}
+		// We assume proposer is always the sole authorizer
+		// https://github.com/flow-hydraulics/flow-wallet-api/issues/79
+		authorizers := []keys.Authorizer{proposer}
 
 		builder, err := templates.NewBuilderFromRaw(raw)
 		if err != nil {
 			return "", err
 		}
 
+		// Init a new transaction
 		if err := New(transaction, latestBlockId, builder, tType, proposer, payer, authorizers); err != nil {
 			return transaction.TransactionId, err
 		}
 
 		// Send the transaction
-
 		if err := transaction.Send(ctx, s.fc); err != nil {
 			return transaction.TransactionId, err
 		}
