@@ -34,19 +34,15 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 	var (
 		result *flow.TransactionResult
 		err    error
-		run    bool = true
 	)
 
 	if timeout > 0 {
-		timer := time.NewTimer(timeout)
-		defer timer.Stop()
-		go func() {
-			<-timer.C
-			run = false
-		}()
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 
-	for run {
+	for {
 		result, err = c.GetTransactionResult(ctx, id)
 		if err != nil {
 			return nil, err
@@ -69,8 +65,6 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 
 		time.Sleep(time.Second)
 	}
-
-	return nil, fmt.Errorf("timeout while waiting for seal")
 }
 
 func HexString(str string) string {

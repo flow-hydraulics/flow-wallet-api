@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
@@ -115,9 +114,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			ctx = context.Background()
 		}
 
-		timeout := time.Duration(s.cfg.TransactionTimeout) * time.Second
-
-		if err := New(&a, &k, ctx, s.fc, s.km, timeout); err != nil {
+		if err := New(&a, &k, ctx, s.fc, s.km, s.cfg.TransactionTimeout); err != nil {
 			return "", err
 		}
 

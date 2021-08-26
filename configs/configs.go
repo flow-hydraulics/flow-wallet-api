@@ -2,6 +2,7 @@ package configs
 
 import (
 	"log"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
@@ -77,8 +78,10 @@ type Config struct {
 
 	// -- Misc --
 
-	// Duration in seconds to poll for a transaction seal, if 0 poll indefinitely
-	TransactionTimeout uint `env:"FLOW_WALLET_TRANSACTION_TIMEOUT" envDefault:"0"`
+	// Duration for which to wait for a transaction seal, if 0 wait indefinitely.
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+	// For more info: https://pkg.go.dev/time#ParseDuration
+	TransactionTimeout time.Duration `env:"FLOW_WALLET_TRANSACTION_TIMEOUT" envDefault:"0"`
 }
 
 type Options struct {
