@@ -114,7 +114,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			ctx = context.Background()
 		}
 
-		if err := New(&a, &k, ctx, s.fc, s.km); err != nil {
+		if err := New(&a, &k, ctx, s.fc, s.km, s.cfg.TransactionTimeout); err != nil {
 			return "", err
 		}
 

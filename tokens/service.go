@@ -122,6 +122,7 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 
 	switch token.Type {
 	case templates.FT:
+		fallthrough
 	case templates.NFT:
 		// Continue normal flow
 	default:
@@ -292,6 +293,7 @@ func (s *Service) GetTransfer(queryType, address, tokenName, transactionId strin
 
 	switch token.Type {
 	case templates.FT:
+		fallthrough
 	case templates.NFT:
 		// Continue normal flow
 	default:
@@ -432,7 +434,7 @@ func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync boo
 
 	c := flow_templates.Contract{Name: n, Source: src}
 
-	t, err := accounts.AddContract(ctx, s.fc, s.km, address, c)
+	t, err := accounts.AddContract(ctx, s.fc, s.km, address, c, s.cfg.TransactionTimeout)
 	if err != nil {
 		return nil, t, err
 	}

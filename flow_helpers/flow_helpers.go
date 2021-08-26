@@ -25,20 +25,24 @@ func LatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, erro
 	return block.ID, nil
 }
 
-// WaitForSeal blocks until either an error occurs or the transaction
-// identified by "id" gets a "TransactionStatusSealed" status.
-func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (*flow.TransactionResult, error) {
-	result, err := c.GetTransactionResult(ctx, id)
-	if err != nil {
-		return nil, err
+// WaitForSeal blocks until
+// - an error occurs while fetching the transaction results
+// - the transaction gets an error status
+// - the transaction gets a "TransactionStatusSealed" or "TransactionStatusExpired" status
+// - timeout is reached
+func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
+	var (
+		result *flow.TransactionResult
+		err    error
+	)
+
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	for result.Status != flow.TransactionStatusSealed {
-		time.Sleep(time.Second)
+	for {
 		result, err = c.GetTransactionResult(ctx, id)
 		if err != nil {
 			return nil, err
@@ -47,9 +51,20 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier) (*fl
 		if result.Error != nil {
 			return nil, result.Error
 		}
-	}
 
-	return result, nil
+		switch result.Status {
+		default:
+			// Not an interesting state, exit switch and continue loop
+		case flow.TransactionStatusExpired:
+			// Expired, handle as an error
+			return nil, fmt.Errorf("transaction expired")
+		case flow.TransactionStatusSealed:
+			// Sealed, all good
+			return result, nil
+		}
+
+		time.Sleep(time.Second)
+	}
 }
 
 func HexString(str string) string {

@@ -110,7 +110,7 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 		}
 
 		// Wait for the transaction to be sealed
-		if err := transaction.Wait(ctx, s.fc); err != nil {
+		if err := transaction.Wait(ctx, s.fc, s.cfg.TransactionTimeout); err != nil {
 			return transaction.TransactionId, err
 		}
 

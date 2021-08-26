@@ -16,9 +16,9 @@ services:
       network: host # docker build sometimes has problems fetching from alpine's CDN
     ports:
       - "3000:3000"
+    restart: unless-stopped
     env_file:
       - ./.env
-    restart: unless-stopped
     environment:
       FLOW_WALLET_DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
       FLOW_WALLET_DATABASE_TYPE: psql
@@ -33,6 +33,8 @@ services:
     command: emulator -v
     ports:
       - "3569:3569"
+    env_file:
+      - ./.env
     environment:
       - FLOW_SERVICEPRIVATEKEY=${FLOW_WALLET_ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
