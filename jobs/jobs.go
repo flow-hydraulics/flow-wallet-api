@@ -3,6 +3,7 @@ package jobs
 import (
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 )
 
 type WorkerPool struct {
-	log         *log.Logger
+	logger      *log.Logger
 	wg          *sync.WaitGroup
 	store       Store
 	jobChan     chan *Job
@@ -20,20 +21,52 @@ type WorkerPool struct {
 	workerCount uint
 }
 
+type Result struct {
+	Result        string
+	TransactionID string
+}
+
+type Process func(result *Result) error
+
+// Job database model
 type Job struct {
-	ID        uuid.UUID              `json:"jobId" gorm:"primary_key;type:uuid;"`
-	Do        func() (string, error) `json:"-" gorm:"-"`
-	Status    Status                 `json:"status"`
-	Error     string                 `json:"-"`
-	Result    string                 `json:"result"`
-	CreatedAt time.Time              `json:"createdAt"`
-	UpdatedAt time.Time              `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt         `json:"-" gorm:"index"`
+	ID            uuid.UUID      `gorm:"column:id;primary_key;type:uuid;"`
+	Status        Status         `gorm:"column:status"`
+	Error         string         `gorm:"column:error"`
+	Result        string         `gorm:"column:result"`
+	TransactionID string         `gorm:"column:transaction_id"`
+	CreatedAt     time.Time      `gorm:"column:created_at"`
+	UpdatedAt     time.Time      `gorm:"column:updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"column:deleted_at;index"`
+	Do            Process        `gorm:"-"`
+}
+
+// Job HTTP response
+type JSONResponse struct {
+	ID            uuid.UUID `json:"jobId"`
+	Status        Status    `json:"status"`
+	Error         string    `json:"error"`
+	Result        string    `json:"result"`
+	TransactionID string    `json:"transactionId"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
+func (j Job) ToJSONResponse() JSONResponse {
+	return JSONResponse{
+		ID:            j.ID,
+		Status:        j.Status,
+		Error:         j.Error,
+		Result:        j.Result,
+		TransactionID: j.TransactionID,
+		CreatedAt:     j.CreatedAt,
+		UpdatedAt:     j.UpdatedAt,
+	}
 }
 
 func (j *Job) BeforeCreate(tx *gorm.DB) (err error) {
 	j.ID = uuid.New()
-	return
+	return nil
 }
 
 func (j *Job) Wait(wait bool) error {
@@ -49,84 +82,98 @@ func (j *Job) Wait(wait bool) error {
 	return nil
 }
 
-func NewWorkerPool(l *log.Logger, db Store, capacity uint, workerCount uint) *WorkerPool {
+func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint) *WorkerPool {
+	if logger == nil {
+		// Make sure we always have a logger
+		logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+	}
 	wg := &sync.WaitGroup{}
 	jobChan := make(chan *Job, capacity)
-
-	pool := &WorkerPool{l, wg, db, jobChan, capacity, workerCount}
-
+	pool := &WorkerPool{logger, wg, db, jobChan, capacity, workerCount}
 	pool.startWorkers()
-
 	return pool
 }
 
-func (p *WorkerPool) startWorkers() {
-	for i := uint(0); i < p.workerCount; i++ {
-		p.wg.Add(1)
+func (wp *WorkerPool) startWorkers() {
+	for i := uint(0); i < wp.workerCount; i++ {
+		wp.wg.Add(1)
 		go func() {
-			defer p.wg.Done()
-			for job := range p.jobChan {
+			defer wp.wg.Done()
+			for job := range wp.jobChan {
 				if job == nil {
 					break
 				}
-				p.process(job)
+				wp.process(job)
 			}
 		}()
 	}
 }
 
-func (p *WorkerPool) AddJob(do func() (string, error)) (*Job, error) {
+// AddJob will try to add a job to the workerpool
+func (wp *WorkerPool) AddJob(do Process) (*Job, error) {
+	// Init job
 	job := &Job{Do: do, Status: Init}
-	if err := p.store.InsertJob(job); err != nil {
+
+	// Insert job into database
+	if err := wp.store.InsertJob(job); err != nil {
 		return job, err
 	}
 
-	if !p.tryEnqueue(job) {
+	// Trying queueing the job
+	if !wp.tryEnqueue(job) {
 		job.Status = QueueFull
-		if err := p.store.UpdateJob(job); err != nil {
-			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
+
+		// Update database
+		if err := wp.store.UpdateJob(job); err != nil {
+			wp.logger.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
+
 		return job, &errors.JobQueueFull{Err: fmt.Errorf(job.Status.String())}
 	}
 
 	job.Status = Accepted
-	if err := p.store.UpdateJob(job); err != nil {
-		p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
+
+	// Update database
+	if err := wp.store.UpdateJob(job); err != nil {
+		wp.logger.Println("WARNING: Could not update DB entry for Job", job.ID)
 	}
 
 	return job, nil
 }
 
-func (p *WorkerPool) Stop() {
-	close(p.jobChan)
-	p.wg.Wait()
+func (wp *WorkerPool) Stop() {
+	close(wp.jobChan)
+	wp.wg.Wait()
 }
 
-func (p *WorkerPool) tryEnqueue(job *Job) bool {
+func (wp *WorkerPool) tryEnqueue(job *Job) bool {
 	select {
-	case p.jobChan <- job:
+	case wp.jobChan <- job:
 		return true
 	default:
 		return false
 	}
 }
 
-func (p *WorkerPool) process(job *Job) {
-	result, err := job.Do()
-	job.Result = result
+func (wp *WorkerPool) process(job *Job) {
+	result := &Result{}
+	err := job.Do(result)
+
+	job.Result = result.Result
+	job.TransactionID = result.TransactionID
+
 	if err != nil {
-		if p.log != nil {
-			p.log.Printf("[Job %s] Error while processing job: %s\n", job.ID, err)
-		}
+		wp.logger.Printf("[Job %s] Error while processing job: %s\n", job.ID, err)
 		job.Status = Error
 		job.Error = err.Error()
-		if err := p.store.UpdateJob(job); err != nil {
-			p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
+		if err := wp.store.UpdateJob(job); err != nil {
+			wp.logger.Println("WARNING: Could not update DB entry for Job", job.ID)
 		}
 		return
 	}
+
 	job.Status = Complete
-	if err := p.store.UpdateJob(job); err != nil {
-		p.log.Println("WARNING: Could not update DB entry for Job", job.ID)
+	if err := wp.store.UpdateJob(job); err != nil {
+		wp.logger.Println("WARNING: Could not update DB entry for Job", job.ID)
 	}
 }

@@ -49,7 +49,7 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 		}
 
 		if result.Error != nil {
-			return nil, result.Error
+			return result, result.Error
 		}
 
 		switch result.Status {
@@ -57,7 +57,7 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 			// Not an interesting state, exit switch and continue loop
 		case flow.TransactionStatusExpired:
 			// Expired, handle as an error
-			return nil, fmt.Errorf("transaction expired")
+			return result, fmt.Errorf("transaction expired")
 		case flow.TransactionStatusSealed:
 			// Sealed, all good
 			return result, nil
@@ -65,6 +65,14 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 
 		time.Sleep(time.Second)
 	}
+}
+
+// SendAndWait sends the transaction and waits for the transaction to be sealed
+func SendAndWait(ctx context.Context, c *client.Client, tx flow.Transaction, timeout time.Duration) (*flow.TransactionResult, error) {
+	if err := c.SendTransaction(ctx, tx); err != nil {
+		return nil, err
+	}
+	return WaitForSeal(ctx, c, tx.ID(), timeout)
 }
 
 func HexString(str string) string {

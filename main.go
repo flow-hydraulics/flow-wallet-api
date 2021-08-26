@@ -163,6 +163,10 @@ func runServer(cfg *configs.Config) {
 	rv.Handle("/fungible-tokens", templateHandler.ListTokens(templates.FT)).Methods(http.MethodGet)      // list
 	rv.Handle("/non-fungible-tokens", templateHandler.ListTokens(templates.NFT)).Methods(http.MethodGet) // list
 
+	// Transactions
+	rv.Handle("/transactions", transactionHandler.List()).Methods(http.MethodGet)                    // list
+	rv.Handle("/transactions/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
+
 	// Account
 	rv.Handle("/accounts", accountHandler.List()).Methods(http.MethodGet)              // list
 	rv.Handle("/accounts", accountHandler.Create()).Methods(http.MethodPost)           // create

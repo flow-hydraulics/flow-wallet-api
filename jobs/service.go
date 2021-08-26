@@ -20,13 +20,19 @@ func NewService(store Store) *Service {
 }
 
 // List returns all jobs in the datastore.
-func (s *Service) List(limit, offset int) (result []Job, err error) {
+func (s *Service) List(limit, offset int) (*[]Job, error) {
 	o := datastore.ParseListOptions(limit, offset)
-	return s.store.Jobs(o)
+
+	jobs, err := s.store.Jobs(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return &jobs, nil
 }
 
 // Details returns a specific job.
-func (s *Service) Details(jobId string) (result Job, err error) {
+func (s *Service) Details(jobId string) (*Job, error) {
 	id, err := uuid.Parse(jobId)
 	if err != nil {
 		// Convert error to a 400 RequestError
@@ -34,19 +40,19 @@ func (s *Service) Details(jobId string) (result Job, err error) {
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("invalid job id"),
 		}
-		return
+		return nil, err
 	}
 
 	// Get from datastore
-	result, err = s.store.Job(id)
+	job, err := s.store.Job(id)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
 			StatusCode: http.StatusNotFound,
 			Err:        fmt.Errorf("job not found"),
 		}
-		return
+		return nil, err
 	}
 
-	return
+	return &job, nil
 }

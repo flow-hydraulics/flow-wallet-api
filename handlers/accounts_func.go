@@ -34,17 +34,19 @@ func (s *Accounts) ListFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Accounts) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	// Decide whether to serve sync or async, default async
 	sync := r.FormValue(SyncQueryParameter) != ""
+
 	job, acc, err := s.service.Create(r.Context(), sync)
-	var res interface{}
-	if sync {
-		res = acc
-	} else {
-		res = job
-	}
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
+	}
+
+	var res interface{}
+	if sync {
+		res = acc
+	} else {
+		res = job.ToJSONResponse()
 	}
 
 	handleJsonResponse(rw, http.StatusCreated, res)

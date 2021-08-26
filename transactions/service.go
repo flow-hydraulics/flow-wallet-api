@@ -41,7 +41,7 @@ func NewService(
 func (s *Service) Create(c context.Context, sync bool, proposerAddress string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
 	transaction := &Transaction{}
 
-	job, err := s.wp.AddJob(func() (string, error) {
+	process := func(jobResult *jobs.Result) error {
 		ctx := c
 		if !sync {
 			ctx = context.Background()
@@ -50,12 +50,12 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 		// Check if the input is a valid address
 		proposerAddress, err := flow_helpers.ValidateAddress(proposerAddress, s.cfg.ChainID)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		latestBlockId, err := flow_helpers.LatestBlockId(ctx, s.fc)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		var (
@@ -66,18 +66,18 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 		// Admin should always be the payer of the transaction fees
 		payer, err = s.km.AdminAuthorizer(ctx)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		if proposerAddress == s.cfg.AdminAddress {
 			proposer, err = s.km.AdminProposalKey(ctx)
 			if err != nil {
-				return "", err
+				return err
 			}
 		} else {
 			proposer, err = s.km.UserAuthorizer(ctx, flow.HexToAddress(proposerAddress))
 			if err != nil {
-				return "", err
+				return err
 			}
 
 		}
@@ -88,34 +88,40 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 
 		builder, err := templates.NewBuilderFromRaw(raw)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		// Init a new transaction
-		if err := New(transaction, latestBlockId, builder, tType, proposer, payer, authorizers); err != nil {
-			return transaction.TransactionId, err
-		}
-
-		// Send the transaction
-		if err := transaction.Send(ctx, s.fc); err != nil {
-			return transaction.TransactionId, err
+		err = New(transaction, latestBlockId, builder, tType, proposer, payer, authorizers)
+		jobResult.TransactionID = transaction.TransactionId // Update job result
+		if err != nil {
+			return err
 		}
 
 		// Insert to datastore
 		if err := s.store.InsertTransaction(transaction); err != nil {
-			return transaction.TransactionId, err
+			return err
 		}
 
-		// Wait for the transaction to be sealed
-		if err := transaction.Wait(ctx, s.fc, s.cfg.TransactionTimeout); err != nil {
-			return transaction.TransactionId, err
+		// Send and wait for the transaction to be sealed
+		result, err := flow_helpers.SendAndWait(ctx, s.fc, *builder.Tx, s.cfg.TransactionTimeout)
+		if result != nil {
+			// Record for possible JSON response
+			transaction.Events = result.Events
+		}
+		if err != nil {
+			return err
 		}
 
 		// Update in datastore
-		err = s.store.UpdateTransaction(transaction)
+		if err := s.store.UpdateTransaction(transaction); err != nil {
+			return err
+		}
 
-		return transaction.TransactionId, err
-	})
+		return nil
+	}
+
+	job, err := s.wp.AddJob(process)
 
 	if err != nil {
 		_, isJErr := err.(*errors.JobQueueFull)
@@ -133,8 +139,14 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 	return job, transaction, err
 }
 
-// List returns all transactions in the datastore for a given account.
-func (s *Service) List(tType Type, address string, limit, offset int) ([]Transaction, error) {
+// List returns all transactions in the datastore.
+func (s *Service) List(limit, offset int) ([]Transaction, error) {
+	o := datastore.ParseListOptions(limit, offset)
+	return s.store.Transactions(o)
+}
+
+// ListForAccount returns all transactions in the datastore for a given account.
+func (s *Service) ListForAccount(tType Type, address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -143,34 +155,69 @@ func (s *Service) List(tType Type, address string, limit, offset int) ([]Transac
 
 	o := datastore.ParseListOptions(limit, offset)
 
-	return s.store.Transactions(tType, address, o)
+	return s.store.TransactionsForAccount(tType, address, o)
 }
 
 // Details returns a specific transaction.
-func (s *Service) Details(tType Type, address, transactionId string) (result Transaction, err error) {
-	// Check if the input is a valid address
-	address, err = flow_helpers.ValidateAddress(address, s.cfg.ChainID)
-	if err != nil {
-		return
-	}
-
+func (s *Service) Details(ctx context.Context, transactionId string) (*Transaction, error) {
 	// Check if the input is a valid transaction id
-	if err = flow_helpers.ValidateTransactionId(transactionId); err != nil {
-		return
+	if err := flow_helpers.ValidateTransactionId(transactionId); err != nil {
+		return nil, err
 	}
 
 	// Get from datastore
-	result, err = s.store.Transaction(tType, address, transactionId)
+	transaction, err := s.store.Transaction(transactionId)
 	if err != nil && err.Error() == "record not found" {
 		// Convert error to a 404 RequestError
 		err = &errors.RequestError{
 			StatusCode: http.StatusNotFound,
 			Err:        fmt.Errorf("transaction not found"),
 		}
-		return
+		return nil, err
 	}
 
-	return
+	results, err := s.fc.GetTransactionResult(ctx, flow.HexToID(transactionId))
+	if err != nil {
+		return nil, err
+	}
+
+	transaction.Events = results.Events
+
+	return &transaction, nil
+}
+
+// DetailsForAccount returns a specific transaction.
+func (s *Service) DetailsForAccount(ctx context.Context, tType Type, address, transactionId string) (*Transaction, error) {
+	// Check if the input is a valid address
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the input is a valid transaction id
+	if err = flow_helpers.ValidateTransactionId(transactionId); err != nil {
+		return nil, err
+	}
+
+	// Get from datastore
+	transaction, err := s.store.TransactionForAccount(tType, address, transactionId)
+	if err != nil && err.Error() == "record not found" {
+		// Convert error to a 404 RequestError
+		err = &errors.RequestError{
+			StatusCode: http.StatusNotFound,
+			Err:        fmt.Errorf("transaction not found"),
+		}
+		return nil, err
+	}
+
+	results, err := s.fc.GetTransactionResult(ctx, flow.HexToID(transactionId))
+	if err != nil {
+		return nil, err
+	}
+
+	transaction.Events = results.Events
+
+	return &transaction, nil
 }
 
 // Execute a script

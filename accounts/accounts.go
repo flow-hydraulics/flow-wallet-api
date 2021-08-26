@@ -31,15 +31,22 @@ type Account struct {
 // It uses the provided admin account to pay for the creation.
 // It generates a new privatekey and returns it (local key)
 // or a reference to it (Google KMS resource id).
-func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km keys.Manager, transactionTimeout time.Duration) error {
+func New(
+	ctx context.Context,
+	transaction *transactions.Transaction,
+	a *Account,
+	k *keys.Private,
+	fc *client.Client,
+	km keys.Manager,
+	transactionTimeout time.Duration) error {
 	// Get admin account authorizer
 	auth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Get latest blocks id as reference id
-	id, err := flow_helpers.LatestBlockId(ctx, fc)
+	// Get latest blocks blockId as reference blockId
+	blockId, err := flow_helpers.LatestBlockId(ctx, fc)
 	if err != nil {
 		return err
 	}
@@ -52,26 +59,36 @@ func New(a *Account, k *keys.Private, ctx context.Context, fc *client.Client, km
 
 	*k = *newPrivateKey
 
-	tx := flow_templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, auth.Address)
-	b := templates.NewBuilderFromTx(tx)
+	builder := templates.NewBuilderFromTx(
+		flow_templates.CreateAccount(
+			[]*flow.AccountKey{accountKey},
+			nil,
+			auth.Address,
+		),
+	)
 
 	proposer, err := km.AdminProposalKey(ctx)
 	if err != nil {
 		return err
 	}
 
-	t := transactions.Transaction{}
-	if err := transactions.New(&t, id, b, transactions.General, proposer, auth, nil); err != nil {
+	if err := transactions.New(transaction, blockId, builder, transactions.General, proposer, auth, nil); err != nil {
 		return err
 	}
 
-	if err := t.SendAndWait(ctx, fc, transactionTimeout); err != nil {
+	// Send and wait for the transaction to be sealed
+	result, err := flow_helpers.SendAndWait(ctx, fc, *builder.Tx, transactionTimeout)
+	if result != nil {
+		// Record for possible JSON response
+		transaction.Events = result.Events
+	}
+	if err != nil {
 		return err
 	}
 
 	// Grab the new address from transaction events
 	var newAddress flow.Address
-	for _, event := range t.Result.Events {
+	for _, event := range result.Events {
 		if event.Type == flow.EventAccountCreated {
 			accountCreatedEvent := flow.AccountCreatedEvent(event)
 			newAddress = accountCreatedEvent.Address()
@@ -138,7 +155,12 @@ func AddContract(
 		return nil, err
 	}
 
-	if err := t.SendAndWait(ctx, fc, transactionTimeout); err != nil {
+	result, err := flow_helpers.SendAndWait(ctx, fc, *b.Tx, transactionTimeout)
+	if result != nil {
+		// Record for possible JSON response
+		t.Events = result.Events
+	}
+	if err != nil {
 		return nil, err
 	}
 

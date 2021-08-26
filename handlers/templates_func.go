@@ -10,6 +10,7 @@ import (
 )
 
 func (s *Templates) AddTokenFunc(rw http.ResponseWriter, r *http.Request) {
+	// TODO (latenssi): separate request, response and db structs
 	var newToken templates.Token
 
 	// Check body is not empty
@@ -55,6 +56,7 @@ func (s *Templates) GetTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	idOrName := vars["id_or_name"]
 
 	id, err := strconv.ParseUint(idOrName, 10, 64)
+
 	if err == nil {
 		token, err = s.service.GetTokenById(id)
 		if err != nil {
@@ -76,6 +78,7 @@ func (s *Templates) RemoveTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	id, err := strconv.ParseUint(vars["id"], 10, 64)
+
 	if err != nil {
 		handleError(rw, s.log, err)
 		return

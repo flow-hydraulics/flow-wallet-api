@@ -46,6 +46,8 @@ func NewService(
 }
 
 func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.Service) error {
+	// TODO (latenssi): why does this take transactions.Service as an argument?
+
 	a, err := s.store.Account(s.cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
@@ -105,37 +107,45 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
 func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, error) {
-	a := Account{}
-	k := keys.Private{}
+	a := &Account{}
+	k := &keys.Private{}
+	transaction := &transactions.Transaction{}
 
-	job, err := s.wp.AddJob(func() (string, error) {
+	process := func(jobResult *jobs.Result) error {
 		ctx := c
 		if !sync {
 			ctx = context.Background()
 		}
 
-		if err := New(&a, &k, ctx, s.fc, s.km, s.cfg.TransactionTimeout); err != nil {
-			return "", err
+		err := New(ctx, transaction, a, k, s.fc, s.km, s.cfg.TransactionTimeout)
+		jobResult.TransactionID = transaction.TransactionId // Update job result
+		if err != nil {
+			return err
 		}
 
 		// Convert the key to storable form (encrypt it)
-		accountKey, err := s.km.Save(k)
+		accountKey, err := s.km.Save(*k)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		// Store account and key
 		a.Keys = []keys.Storable{accountKey}
-		if err := s.store.InsertAccount(&a); err != nil {
-			return "", err
+		if err := s.store.InsertAccount(a); err != nil {
+			return err
 		}
 
 		AccountAdded.Trigger(AccountAddedPayload{
 			Address: flow.HexToAddress(a.Address),
 		})
 
-		return a.Address, nil
-	})
+		// Update job result
+		jobResult.Result = a.Address
+
+		return nil
+	}
+
+	job, err := s.wp.AddJob(process)
 
 	if err != nil {
 		_, isJErr := err.(*errors.JobQueueFull)
@@ -150,7 +160,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 
 	err = job.Wait(sync)
 
-	return job, &a, err
+	return job, a, err
 }
 
 // Details returns a specific account.

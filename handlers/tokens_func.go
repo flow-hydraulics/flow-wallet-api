@@ -18,17 +18,18 @@ func (s *Tokens) SetupFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Decide whether to serve sync or async, default async
 	sync := r.FormValue(SyncQueryParameter) != ""
-	job, tx, err := s.service.Setup(r.Context(), sync, tokenName, address)
-	var res interface{}
-	if sync {
-		res = tx
-	} else {
-		res = job
-	}
+	job, transaction, err := s.service.Setup(r.Context(), sync, tokenName, address)
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
+	}
+
+	var res interface{}
+	if sync {
+		res = transaction.ToJSONResponse()
+	} else {
+		res = job.ToJSONResponse()
 	}
 
 	handleJsonResponse(rw, http.StatusCreated, res)
@@ -40,6 +41,7 @@ func (s *Tokens) MakeAccountTokensFunc(tType templates.TokenType) http.HandlerFu
 		a := vars["address"]
 
 		res, err := s.service.AccountTokens(a, tType)
+
 		if err != nil {
 			handleError(rw, s.log, err)
 			return
@@ -55,6 +57,7 @@ func (s *Tokens) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	tokenName := vars["tokenName"]
 
 	res, err := s.service.Details(r.Context(), tokenName, address)
+
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -87,17 +90,18 @@ func (s *Tokens) CreateWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Decide whether to serve sync or async, default async
 	sync := r.FormValue(SyncQueryParameter) != ""
-	job, tx, err := s.service.CreateWithdrawal(r.Context(), sync, address, withdrawal)
-	var res interface{}
-	if sync {
-		res = tx
-	} else {
-		res = job
-	}
+	job, transaction, err := s.service.CreateWithdrawal(r.Context(), sync, address, withdrawal)
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
+	}
+
+	var res interface{}
+	if sync {
+		res = transaction.ToJSONResponse()
+	} else {
+		res = job.ToJSONResponse()
 	}
 
 	handleJsonResponse(rw, http.StatusCreated, res)
@@ -109,6 +113,7 @@ func (s *Tokens) ListWithdrawalsFunc(rw http.ResponseWriter, r *http.Request) {
 	tokenName := vars["tokenName"]
 
 	res, err := s.service.ListWithdrawals(address, tokenName)
+
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -124,6 +129,7 @@ func (s *Tokens) GetWithdrawalFunc(rw http.ResponseWriter, r *http.Request) {
 	txId := vars["transactionId"]
 
 	res, err := s.service.GetWithdrawal(address, tokenName, txId)
+
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -138,6 +144,7 @@ func (s *Tokens) ListDepositsFunc(rw http.ResponseWriter, r *http.Request) {
 	tokenName := vars["tokenName"]
 
 	res, err := s.service.ListDeposits(address, tokenName)
+
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -153,6 +160,7 @@ func (s *Tokens) GetDepositFunc(rw http.ResponseWriter, r *http.Request) {
 	transactionId := vars["transactionId"]
 
 	res, err := s.service.GetDeposit(address, tokenName, transactionId)
+
 	if err != nil {
 		handleError(rw, s.log, err)
 		return

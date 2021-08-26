@@ -19,7 +19,28 @@ func NewGormStore(db *gorm.DB) *GormStore {
 	return &GormStore{db}
 }
 
-func (s *GormStore) Transactions(tType Type, address string, o datastore.ListOptions) (tt []Transaction, err error) {
+// -- All transactions
+
+func (s *GormStore) Transactions(o datastore.ListOptions) (tt []Transaction, err error) {
+	q := &Transaction{}
+	err = s.db.
+		Where(q).
+		Order("created_at desc").
+		Limit(o.Limit).
+		Offset(o.Offset).
+		Find(&tt).Error
+	return
+}
+
+func (s *GormStore) Transaction(txId string) (t Transaction, err error) {
+	q := &Transaction{TransactionId: txId}
+	err = s.db.Where(q).First(&t).Error
+	return
+}
+
+// -- Transactions for an account
+
+func (s *GormStore) TransactionsForAccount(tType Type, address string, o datastore.ListOptions) (tt []Transaction, err error) {
 	q := &Transaction{ProposerAddress: address, TransactionType: tType}
 	err = s.db.
 		Where(q).
@@ -30,11 +51,13 @@ func (s *GormStore) Transactions(tType Type, address string, o datastore.ListOpt
 	return
 }
 
-func (s *GormStore) Transaction(tType Type, address, txId string) (t Transaction, err error) {
+func (s *GormStore) TransactionForAccount(tType Type, address, txId string) (t Transaction, err error) {
 	q := &Transaction{ProposerAddress: address, TransactionType: tType, TransactionId: txId}
 	err = s.db.Where(q).First(&t).Error
 	return
 }
+
+// -- Misc
 
 func (s *GormStore) GetOrCreateTransaction(txId string) (t *Transaction) {
 	s.db.
