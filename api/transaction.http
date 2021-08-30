@@ -63,7 +63,7 @@ POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/tra
 content-type: application/json
 
 {
-  "code":"transaction(greeting: String) { execute { log(greeting.concat(\", World!\")) }}",
+  "code":"transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}",
   "arguments":[{"type":"String","value":"Hello"}]
 }
 
