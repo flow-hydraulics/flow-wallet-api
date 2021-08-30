@@ -12,10 +12,10 @@ import (
 )
 
 // AsymKey creates a new asymmetric signing key in Google KMS and returns a cloudkms.Key (the "raw" result isn't needed)
-func AsymKey(ctx context.Context, parent, id string) (cloudkms.Key, error) {
+func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	c, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
-		return cloudkms.Key{}, err
+		return nil, err
 	}
 
 	r := &kmspb.CreateCryptoKeyRequest{
@@ -38,20 +38,20 @@ func AsymKey(ctx context.Context, parent, id string) (cloudkms.Key, error) {
 
 	gk, err := c.CreateCryptoKey(ctx, r)
 	if err != nil {
-		return cloudkms.Key{}, err
+		return nil, err
 	}
 
 	// Append cryptoKeyVersions so that we can utilize the KeyFromResourceID method
 	k, err := cloudkms.KeyFromResourceID(fmt.Sprintf("%s/cryptoKeyVersions/1", gk.Name))
 	if err != nil {
-		return cloudkms.Key{}, err
+		return nil, err
 	}
 
 	// Validate key name
 	if !strings.HasPrefix(k.ResourceID(), gk.Name) {
 		err := fmt.Errorf("WARNING: created Google KMS key name does not match the expected")
-		return cloudkms.Key{}, err
+		return nil, err
 	}
 
-	return k, nil
+	return &k, nil
 }

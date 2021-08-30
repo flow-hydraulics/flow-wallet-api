@@ -32,7 +32,7 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 	}
 
 	// Get the public key (using flow-go-sdk's cloudkms.Client)
-	pub, h, err := c.GetPublicKey(ctx, k)
+	pub, h, err := c.GetPublicKey(ctx, *k)
 	if err != nil {
 		return nil, nil, err
 	}
