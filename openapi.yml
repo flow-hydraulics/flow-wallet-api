@@ -195,7 +195,9 @@ paths:
       - $ref: "#/components/parameters/transactionId"
     get:
       summary: Get a transaction
-      description: Get the details of a transaction sent by this service.
+      description: |-
+        Get the details of a transaction sent by this service.
+        NOTE: Will include possible transaction events.
       operationId: getTransactionDetails
       tags:
         - Transactions
@@ -205,7 +207,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/transaction"
+                $ref: "#/components/schemas/transactionWithEvents"
 
 # Scripts
 
@@ -795,7 +797,7 @@ components:
           example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
         transactionType:
           type: string
-          example: "ftsetup"
+          example: "fttransfer"
         events:
           type: array
           items:
