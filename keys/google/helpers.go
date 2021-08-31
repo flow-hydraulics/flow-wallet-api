@@ -18,6 +18,9 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		return nil, err
 	}
 
+	// Close the client connection to avoid leaking goroutines
+	defer c.Close()
+
 	r := &kmspb.CreateCryptoKeyRequest{
 		Parent:      parent,
 		CryptoKeyId: id,
