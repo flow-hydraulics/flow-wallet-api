@@ -821,6 +821,9 @@ components:
         result:
           type: string
           example: ""
+        transactionId:
+          type: string
+          example: "f1e272ee125b370e5129215179705791220764bf71da2aa938c94181b2c06685"
         createdAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
