@@ -26,7 +26,7 @@ func LatestBlockId(ctx context.Context, c *client.Client) (flow.Identifier, erro
 }
 
 // WaitForSeal blocks until
-// - an error occurs while fetching the transaction results
+// - an error occurs while fetching the transaction result
 // - the transaction gets an error status
 // - the transaction gets a "TransactionStatusSealed" or "TransactionStatusExpired" status
 // - timeout is reached

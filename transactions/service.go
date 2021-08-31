@@ -176,12 +176,12 @@ func (s *Service) Details(ctx context.Context, transactionId string) (*Transacti
 		return nil, err
 	}
 
-	results, err := s.fc.GetTransactionResult(ctx, flow.HexToID(transactionId))
+	result, err := s.fc.GetTransactionResult(ctx, flow.HexToID(transactionId))
 	if err != nil {
 		return nil, err
 	}
 
-	transaction.Events = results.Events
+	transaction.Events = result.Events
 
 	return &transaction, nil
 }
@@ -210,12 +210,12 @@ func (s *Service) DetailsForAccount(ctx context.Context, tType Type, address, tr
 		return nil, err
 	}
 
-	results, err := s.fc.GetTransactionResult(ctx, flow.HexToID(transactionId))
+	result, err := s.fc.GetTransactionResult(ctx, flow.HexToID(transactionId))
 	if err != nil {
 		return nil, err
 	}
 
-	transaction.Events = results.Events
+	transaction.Events = result.Events
 
 	return &transaction, nil
 }
