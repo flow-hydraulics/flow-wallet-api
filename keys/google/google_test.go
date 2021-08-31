@@ -6,11 +6,17 @@ import (
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/onflow/flow-go-sdk"
 )
 
 func TestGenerate(t *testing.T) {
 	opts := &configs.Options{EnvFilePath: "../../.env.test"}
 	testCfg, err := configs.ParseConfig(opts)
+
+	// Safety measures
+	testCfg.DatabaseDSN = "google_tests.db"
+	testCfg.DatabaseType = "sqlite"
+	testCfg.ChainID = flow.Emulator
 
 	if err != nil {
 		t.Fatal(err)
@@ -21,7 +27,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	t.Run("key is generated", func(t *testing.T) {
-		flowAccountKey, privateKey, err := Generate(testCfg, context.TODO(), 0, 1000)
+		flowAccountKey, privateKey, err := Generate(testCfg, context.Background(), 0, 1000)
 
 		if err != nil {
 			t.Fatal(err)
