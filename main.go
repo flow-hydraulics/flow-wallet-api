@@ -128,7 +128,7 @@ func runServer(cfg *configs.Config) {
 		TokenService:    tokenService,
 	})
 
-	err = accountService.InitAdminAccount(context.Background(), transactionService)
+	err = accountService.InitAdminAccount(context.Background())
 	if err != nil {
 		ls.Fatal(err)
 	}

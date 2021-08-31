@@ -166,13 +166,13 @@ func TestAccountServices(t *testing.T) {
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
-	service := accounts.NewService(cfg, accountStore, km, fc, wp, nil, templateService)
 	txService := transactions.NewService(cfg, txStore, km, fc, wp)
+	service := accounts.NewService(cfg, accountStore, km, fc, wp, txService, templateService)
 
 	t.Run("admin init", func(t *testing.T) {
 		ctx := context.Background()
 
-		err = service.InitAdminAccount(ctx, txService)
+		err = service.InitAdminAccount(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -281,12 +281,13 @@ func TestAccountHandlers(t *testing.T) {
 	defer wp.Stop()
 
 	store := accounts.NewGormStore(db)
-	service := accounts.NewService(cfg, store, km, fc, wp, nil, templateService)
 	txService := transactions.NewService(cfg, txStore, km, fc, wp)
+	service := accounts.NewService(cfg, store, km, fc, wp, txService, templateService)
+
 	h := handlers.NewAccounts(testLogger, service)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = service.InitAdminAccount(context.Background(), txService)
+		err = service.InitAdminAccount(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -712,7 +713,7 @@ func TestTransactionHandlers(t *testing.T) {
 	router.Handle("/transactions", h.List()).Methods(http.MethodGet)
 	router.Handle("/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
 
-	err = accountService.InitAdminAccount(context.Background(), transactionService)
+	err = accountService.InitAdminAccount(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -970,7 +971,7 @@ func TestTokenServices(t *testing.T) {
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = accountService.InitAdminAccount(context.Background(), transactionService)
+		err = accountService.InitAdminAccount(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1163,7 +1164,7 @@ func TestTokenHandlers(t *testing.T) {
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = accountService.InitAdminAccount(context.Background(), transactionService)
+		err = accountService.InitAdminAccount(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
