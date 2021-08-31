@@ -13,6 +13,11 @@ import (
 )
 
 func (s *Transactions) ListFunc(rw http.ResponseWriter, r *http.Request) {
+	var (
+		transactionSlice []transactions.Transaction
+		err              error
+	)
+
 	limit, err := strconv.Atoi(r.FormValue("limit"))
 	if err != nil {
 		limit = 0
@@ -25,11 +30,24 @@ func (s *Transactions) ListFunc(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	res, err := s.service.List(transactions.General, vars["address"], limit, offset)
+	if address, ok := vars["address"]; ok {
+		// Handle account specific transactions
+		// This endpoint is used to handle "raw" transactions for an account
+		// so we use transactions.General type here
+		transactionSlice, err = s.service.ListForAccount(transactions.General, address, limit, offset)
+	} else {
+		// Handle all transactions
+		transactionSlice, err = s.service.List(limit, offset)
+	}
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
+	}
+
+	res := make([]transactions.JSONResponse, len(transactionSlice))
+	for i, job := range transactionSlice {
+		res[i] = job.ToJSONResponse()
 	}
 
 	handleJsonResponse(rw, http.StatusOK, res)
@@ -64,31 +82,46 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Decide whether to serve sync or async, default async
 	sync := r.FormValue(SyncQueryParameter) != ""
-	job, t, err := s.service.Create(r.Context(), sync, vars["address"], b, transactions.General)
-	var res interface{}
-	if sync {
-		res = t
-	} else {
-		res = job
-	}
+	job, transaction, err := s.service.Create(r.Context(), sync, vars["address"], b, transactions.General)
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
+	}
+
+	var res interface{}
+	if sync {
+		res = transaction.ToJSONResponse()
+	} else {
+		res = job.ToJSONResponse()
 	}
 
 	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
 func (s *Transactions) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
+	var (
+		transaction *transactions.Transaction
+		err         error
+	)
 	vars := mux.Vars(r)
 
-	res, err := s.service.Details(transactions.General, vars["address"], vars["transactionId"])
+	if address, ok := vars["address"]; ok {
+		// Handle account specific transactions
+		// This endpoint is used to handle "raw" transactions for an account
+		// so we use transactions.General type here
+		transaction, err = s.service.DetailsForAccount(r.Context(), transactions.General, address, vars["transactionId"])
+	} else {
+		// Handle all transactions
+		transaction, err = s.service.Details(r.Context(), vars["transactionId"])
+	}
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
 	}
+
+	res := transaction.ToJSONResponse()
 
 	handleJsonResponse(rw, http.StatusOK, res)
 }

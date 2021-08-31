@@ -1,0 +1,11 @@
+@transactionId = 0000
+
+
+### Get all transactions
+GET http://localhost:3000/v1/transactions?limit=0&offset=0 HTTP/1.1
+content-type: application/json
+
+
+### Get a transactions details
+GET http://localhost:3000/v1/transactions/{{transactionId}} HTTP/1.1
+content-type: application/json

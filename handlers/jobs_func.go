@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/gorilla/mux"
 )
 
@@ -19,11 +20,16 @@ func (s *Jobs) ListFunc(rw http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	res, err := s.service.List(limit, offset)
+	jobsSlice, err := s.service.List(limit, offset)
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
+	}
+
+	res := make([]jobs.JSONResponse, len(*jobsSlice))
+	for i, job := range *jobsSlice {
+		res[i] = job.ToJSONResponse()
 	}
 
 	handleJsonResponse(rw, http.StatusOK, res)
@@ -35,12 +41,14 @@ func (s *Jobs) ListFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Jobs) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	res, err := s.service.Details(vars["jobId"])
+	job, err := s.service.Details(vars["jobId"])
 
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
 	}
+
+	res := job.ToJSONResponse()
 
 	handleJsonResponse(rw, http.StatusOK, res)
 }

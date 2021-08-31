@@ -18,6 +18,10 @@ reset: down dev
 test:
 	go test ./...
 
+.PHONY: test-clean
+test-clean:
+	go clean -testcache && go test ./...
+
 .PHONY: deploy
 deploy:
 	flow project deploy --update

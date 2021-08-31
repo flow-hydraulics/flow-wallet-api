@@ -352,17 +352,16 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Ide
 
 	// Get existing transaction or create one
 	transaction := s.transactions.GetOrCreateTransaction(transactionId.Hex())
+	flowTx, err := s.fc.GetTransaction(context.Background(), transactionId)
+	if err != nil {
+		return err
+	}
 
 	if transaction.TransactionType == transactions.Unknown {
 		// Transaction was just created
 		// Transfer most likely did not originate in this wallet service
-
-		if err := transaction.Hydrate(context.Background(), s.fc); err != nil {
-			return err
-		}
-
 		transaction.TransactionType = transactions.FtTransfer
-		transaction.ProposerAddress = flow_helpers.FormatAddress(transaction.Actual.ProposalKey.Address)
+		transaction.ProposerAddress = flow_helpers.FormatAddress(flowTx.ProposalKey.Address)
 		if err := s.transactions.UpdateTransaction(transaction); err != nil {
 			return err
 		}
@@ -389,15 +388,11 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Ide
 		return nil
 	}
 
-	if err := transaction.Hydrate(context.Background(), s.fc); err != nil {
-		return err
-	}
-
 	// Create and store a new token transfer
 	transfer := &TokenTransfer{
 		TransactionId:    transaction.TransactionId,
 		RecipientAddress: recipient.Address,
-		SenderAddress:    flow_helpers.FormatAddress(transaction.Actual.Authorizers[0]),
+		SenderAddress:    flow_helpers.FormatAddress(flowTx.Authorizers[0]),
 		FtAmount:         ftAmount,
 		NftID:            nftId,
 		TokenName:        token.Name,

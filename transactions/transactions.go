@@ -1,34 +1,48 @@
 package transactions
 
 import (
-	"context"
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 	"gorm.io/gorm"
 )
 
 // Transaction is the database model for all transactions.
 type Transaction struct {
-	TransactionId   string                  `json:"transactionId" gorm:"column:transaction_id;primaryKey"`
-	TransactionType Type                    `json:"transactionType" gorm:"column:transaction_type;index"`
-	ProposerAddress string                  `json:"-" gorm:"column:proposer_address;index"`
-	CreatedAt       time.Time               `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt       time.Time               `json:"updatedAt" gorm:"column:updated_at"`
-	DeletedAt       gorm.DeletedAt          `json:"-" gorm:"column:deleted_at;index"`
-	Result          *flow.TransactionResult `json:"-" gorm:"-"`
-	Actual          *flow.Transaction       `json:"-" gorm:"-"`
+	TransactionId   string         `gorm:"column:transaction_id;primaryKey"`
+	TransactionType Type           `gorm:"column:transaction_type;index"`
+	ProposerAddress string         `gorm:"column:proposer_address;index"`
+	CreatedAt       time.Time      `gorm:"column:created_at"`
+	UpdatedAt       time.Time      `gorm:"column:updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"column:deleted_at;index"`
+	Events          []flow.Event   `gorm:"-"`
 }
 
 func (Transaction) TableName() string {
 	return "transactions"
 }
 
-// TODO(latenssi): separate HTTP interface model for transactions
+// Transaction JSON HTTP response
+type JSONResponse struct {
+	TransactionId   string       `json:"transactionId"`
+	TransactionType Type         `json:"transactionType"`
+	Events          []flow.Event `json:"events,omitempty"`
+	CreatedAt       time.Time    `json:"createdAt"`
+	UpdatedAt       time.Time    `json:"updatedAt"`
+}
+
+func (t Transaction) ToJSONResponse() JSONResponse {
+	return JSONResponse{
+		TransactionId:   t.TransactionId,
+		TransactionType: t.TransactionType,
+		Events:          t.Events,
+		CreatedAt:       t.CreatedAt,
+		UpdatedAt:       t.UpdatedAt,
+	}
+}
 
 func New(
 	transaction *Transaction,
@@ -76,57 +90,7 @@ func New(
 
 	transaction.ProposerAddress = flow_helpers.FormatAddress(proposer.Address)
 	transaction.TransactionType = tType
-	transaction.Actual = builder.Tx
-
-	return nil
-}
-
-// Send the transaction to the network
-func (t *Transaction) Send(ctx context.Context, fc *client.Client) error {
-	err := fc.SendTransaction(ctx, *t.Actual)
-
-	// Set TransactionId
-	t.TransactionId = t.Actual.ID().Hex()
-
-	return err
-}
-
-// Wait for the transaction to be sealed
-func (t *Transaction) Wait(ctx context.Context, fc *client.Client, timeout time.Duration) error {
-	result, err := flow_helpers.WaitForSeal(ctx, fc, t.Actual.ID(), timeout)
-	if err != nil {
-		return err
-	}
-	t.Result = result
-	return nil
-}
-
-// Send the transaction to the network and wait for seal
-func (t *Transaction) SendAndWait(ctx context.Context, fc *client.Client, timeout time.Duration) error {
-	if err := t.Send(ctx, fc); err != nil {
-		return err
-	}
-
-	// Wait for the transaction to be sealed
-	if err := t.Wait(ctx, fc, timeout); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (t *Transaction) Hydrate(ctx context.Context, fc *client.Client) error {
-	if t.Actual != nil {
-		// Already hydrated
-		return nil
-	}
-
-	actual, err := fc.GetTransaction(context.Background(), flow.HexToID(t.TransactionId))
-	if err != nil {
-		return err
-	}
-
-	t.Actual = actual
+	transaction.TransactionId = builder.Tx.ID().Hex()
 
 	return nil
 }

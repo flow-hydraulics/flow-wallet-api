@@ -168,6 +168,44 @@ paths:
                 items:
                   $ref: "#/components/schemas/nonFungibleToken"
 
+# Transactions
+
+  /transactions:
+    get:
+      summary: List all transactions
+      description: Get a list of all transactions sent from this service.
+      operationId: listTransactions
+      tags:
+        - Transactions
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/transaction"
+
+  /transactions/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/transactionId"
+    get:
+      summary: Get a transaction
+      description: Get the details of a transaction sent by this service.
+      operationId: getTransactionDetails
+      tags:
+        - Transactions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transaction"
 
 # Scripts
 
@@ -714,6 +752,25 @@ components:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
 
+    transactionEvent:
+      type: object
+      properties:
+        Type:
+          type: string
+          example: "A.0ae53cb6e3f42a79.FlowToken.TokensWithdrawn"
+        TransactionId:
+          type: string
+          example: "<this is actually a byte-array>"
+        TransactionIndex:
+          type: number
+          example: 1
+        EventIndex:
+          type: number
+          example: 0
+        Value:
+          type: string
+          example: "<this is actually a complex object>"
+
     transaction:
       type: object
       properties:
@@ -723,6 +780,26 @@ components:
         transactionType:
           type: string
           example: "ftsetup"
+        createdAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          example: "2021-04-27T05:49:53.211+00:00"
+
+    transactionWithEvents:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          example: "9613c9689a50a5ed9198dc43839cd90ef39203dfdd7ab54f0fc5ca12f256eef0"
+        transactionType:
+          type: string
+          example: "ftsetup"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/transactionEvent"
         createdAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
