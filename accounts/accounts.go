@@ -72,7 +72,7 @@ func New(
 		return err
 	}
 
-	if err := transactions.New(transaction, blockId, builder, transactions.General, proposer, auth, nil); err != nil {
+	if err := transactions.New(transaction, *blockId, builder, transactions.General, proposer, auth, nil); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func AddContract(
 	b.Tx.AddAuthorizer(adminAuth.Address)
 
 	t := transactions.Transaction{}
-	if err := transactions.New(&t, id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
+	if err := transactions.New(&t, *id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
 		return nil, err
 	}
 

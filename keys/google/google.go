@@ -32,7 +32,7 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 	}
 
 	// Get the public key (using flow-go-sdk's cloudkms.Client)
-	pub, h, err := c.GetPublicKey(ctx, k)
+	pub, h, err := c.GetPublicKey(ctx, *k)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,18 +55,18 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto.Signer, error) {
 	c, err := cloudkms.NewClient(ctx)
 	if err != nil {
-		return &cloudkms.Signer{}, err
+		return nil, err
 	}
 
 	k, err := cloudkms.KeyFromResourceID(key.Value)
 	if err != nil {
-		return &cloudkms.Signer{}, err
+		return nil, err
 	}
 
 	s, err := c.SignerForKey(ctx, address, k)
 
 	if err != nil {
-		return &cloudkms.Signer{}, err
+		return nil, err
 	}
 
 	return s, nil

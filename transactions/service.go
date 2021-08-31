@@ -92,7 +92,7 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 		}
 
 		// Init a new transaction
-		err = New(transaction, latestBlockId, builder, tType, proposer, payer, authorizers)
+		err = New(transaction, *latestBlockId, builder, tType, proposer, payer, authorizers)
 		jobResult.TransactionID = transaction.TransactionId // Update job result
 		if err != nil {
 			return err
