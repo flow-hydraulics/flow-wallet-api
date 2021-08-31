@@ -45,9 +45,7 @@ func NewService(
 	return &Service{store, km, fc, wp, txs, tes, cfg}
 }
 
-func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.Service) error {
-	// TODO (latenssi): why does this take transactions.Service as an argument?
-
+func (s *Service) InitAdminAccount(ctx context.Context) error {
 	a, err := s.store.Account(s.cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
@@ -70,7 +68,7 @@ func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.
 	}
 
 	if keyCount < s.cfg.AdminProposalKeyCount {
-		err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount, txService)
+		err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount)
 		if err != nil {
 			return err
 		}
@@ -84,8 +82,8 @@ func (s *Service) InitAdminAccount(ctx context.Context, txService *transactions.
 	return nil
 }
 
-func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16, txService *transactions.Service) error {
-	_, _, err := txService.Create(ctx, true, s.cfg.AdminAddress, templates.Raw{
+func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16) error {
+	_, _, err := s.transactions.Create(ctx, true, s.cfg.AdminAddress, templates.Raw{
 		Code: template_strings.AddProposalKeyTransaction,
 		Arguments: []templates.Argument{
 			cadence.NewInt(s.cfg.AdminKeyIndex),
