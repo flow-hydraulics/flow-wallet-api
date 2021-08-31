@@ -18,7 +18,7 @@ reset: down dev
 test:
 	go test ./...
 
-.PHONE: test-clean
+.PHONY: test-clean
 test-clean:
 	go clean -testcache && go test ./...
 
