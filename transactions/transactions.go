@@ -25,7 +25,7 @@ func (Transaction) TableName() string {
 	return "transactions"
 }
 
-// Transaction JSON HTTP resposne
+// Transaction JSON HTTP response
 type JSONResponse struct {
 	TransactionId   string       `json:"transactionId"`
 	TransactionType Type         `json:"transactionType"`
