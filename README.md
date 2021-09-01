@@ -149,6 +149,30 @@ Configure Google KMS as the key storage for `flow-wallet-api` and set the necess
 | LocationID      | `FLOW_WALLET_GOOGLE_KMS_LOCATION_ID` | GCP Location ID  | -       | `europe-north1`, `us-west1` |
 | KeyRingID       | `FLOW_WALLET_GOOGLE_KMS_KEYRING_ID`  | GCP Key Ring ID  | -       | `example-wallet-keyring`    |
 
+### Google KMS for admin account
+
+If you want to use a key stored in Google KMS for the admin account, just pass the resource identifier as the private key (`FLOW_WALLET_ADMIN_PRIVATE_KEY`) and set `FLOW_WALLET_ADMIN_KEY_TYPE` to `google_kms`.
+
+**Creating an account on testnet via the faucet:**
+
+1. Download the admin public key from Google KMS in PEM format (should have a `.pub` ending)
+2. Run it through `flow keys decode pem --from-file <filename>`
+3. Copy the "Public Key" part
+4. Go to https://testnet-faucet-v2.onflow.org
+5. Paste the copied public key in the form
+6. **IMPORTANT**: Choose **SHA2_256** as the hash algorithm (_SHA3_256_ won't work)
+7. Copy the new address and use it as the `FLOW_WALLET_ADMIN_ADDRESS`
+8. Set `FLOW_WALLET_ADMIN_PRIVATE_KEY` to the resource id of the key
+9. Set `FLOW_WALLET_ADMIN_KEY_TYPE` to `google_kms`
+
+Example environment:
+
+    FLOW_WALLET_ADMIN_ADDRESS=0x1234567890123456
+    FLOW_WALLET_ADMIN_PRIVATE_KEY=projects/<project_id>/locations/<location_id>/keyRings/<keyring_id>/cryptoKeys/<key_name>/cryptoKeyVersions/<version_number> # Make sure this ends with the version number
+    FLOW_WALLET_ADMIN_KEY_TYPE=google_kms
+
+NOTE: This will mess up the docker-compose setup (emulator won't start) as it uses `FLOW_WALLET_ADMIN_PRIVATE_KEY` as `FLOW_SERVICEPRIVATEKEY`. It will cause an encoding error on the emulator.
+
 ### All possible configuration variables
 
 Refer to [configs/configs.go](configs/configs.go) for details and documentation.
