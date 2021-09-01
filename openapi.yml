@@ -10,8 +10,14 @@ servers:
 tags:
   - name: Accounts
     description: Create and lists accounts managed by this Wallet API.
+  - name: Account Transactions
+    description: Send, list and get transactions for an account.
+  - name: Account Fungible Tokens
+    description: Manage fungible tokens for an account.
+  - name: Account Non-Fungible Tokens
+    description: Manage fungible tokens for an account.
   - name: Transactions
-    description: Send transactions from accounts managed by this Wallet API.
+    description: Manage transactions sent by the Wallet API.
   - name: Scripts
     description: Run zero-cost Cadence scripts to read on-chain data.
   - name: Fungible Tokens
@@ -342,8 +348,7 @@ paths:
       description: Get a list of all transactions sent by an account.
       operationId: listAccountRawTransactions
       tags:
-        - Accounts
-        - Transactions
+        - Account Transactions
       parameters:
         - $ref: "#/components/parameters/limit"
         - $ref: "#/components/parameters/offset"
@@ -363,8 +368,7 @@ paths:
         NOTE: The transaction code should require _exactly_ one AuthAccount and is assumed to be the account sending the transaction.
       operationId: sendRawTransaction
       tags:
-        - Accounts
-        - Transactions
+        - Account Transactions
       parameters:
         - $ref: "#/components/parameters/sync"
       requestBody:
@@ -391,8 +395,7 @@ paths:
       description: Get the details of a raw transaction sent by an account.
       operationId: getRawTransactionDetails
       tags:
-        - Accounts
-        - Transactions
+        - Account Transactions
       responses:
         "200":
           description: OK
@@ -412,8 +415,7 @@ paths:
       description: List fungible tokens that are enabled for an account.
       operationId: listAccountFungibleTokens
       tags:
-        - Accounts
-        - Fungible Tokens
+        - Account Fungible Tokens
       responses:
         "200":
           description: OK
@@ -433,8 +435,7 @@ paths:
       description: Get details (balance) regarding a fungible token for an account.
       operationId: getAccountFungibleTokenDetails
       tags:
-        - Accounts
-        - Fungible Tokens
+        - Account Fungible Tokens
       responses:
         "200":
           description: OK
@@ -448,8 +449,7 @@ paths:
       summary: Enable a fungible token for an account
       operationId: enableFungibleTokenForAccount
       tags:
-        - Accounts
-        - Fungible Tokens
+        - Account Fungible Tokens
       parameters:
         - $ref: "#/components/parameters/sync"
       responses:
@@ -471,8 +471,7 @@ paths:
       summary: List accounts withdrawals of a fungible token
       operationId: listAccountFungibleTokenWithdrawals
       tags:
-        - Accounts
-        - Fungible Tokens
+        - Account Fungible Tokens
       responses:
         "200":
           description: OK
@@ -486,8 +485,7 @@ paths:
       summary: Create a fungible token withdrawal
       operationId: createFungibleTokenWithdrawal
       tags:
-        - Accounts
-        - Fungible Tokens
+        - Account Fungible Tokens
       requestBody:
         content:
           application/json:
@@ -515,9 +513,7 @@ paths:
       summary: Get details of a fungible token withdrawal
       operationId: getFungibleTokenWithdrawalDetails
       tags:
-        - Accounts
-        - Fungible Tokens
-        - Transactions
+        - Account Fungible Tokens
       responses:
         "200":
           description: OK
@@ -534,8 +530,7 @@ paths:
       summary: List accounts deposits of a fungible token
       operationId: listAccountFungibleTokenDeposits
       tags:
-        - Accounts
-        - Fungible Tokens
+        - Account Fungible Tokens
       responses:
         "200":
           description: OK
@@ -555,8 +550,7 @@ paths:
       summary: Get details of a fungible token deposit
       operationId: getFungibleTokenDepositDetails
       tags:
-        - Accounts
-        - Fungible Tokens
+        - Account Fungible Tokens
       responses:
         "200":
           description: OK
@@ -576,8 +570,7 @@ paths:
       description: List all non-fungible tokens that are enabled for an account.
       operationId: listAccountNonFungibleTokens
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -597,8 +590,7 @@ paths:
       description: Get details (balance) regarding a non-fungible token for an account.
       operationId: listAccountNonFungibleTokenDetails
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -612,8 +604,7 @@ paths:
       summary: Enable a non-fungible token for an account
       operationId: enableNonFungibleTokenForAccount
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       parameters:
         - $ref: "#/components/parameters/sync"
       responses:
@@ -634,8 +625,7 @@ paths:
       summary: List withdrawals of a non-fungible token
       operationId: listNonFungibleTokenWithdrawals
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -649,8 +639,7 @@ paths:
       summary: Create a non-fungible token withdrawal
       operationId: createNonFungibleTokenWithdrawal
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       requestBody:
         content:
           application/json:
@@ -677,8 +666,7 @@ paths:
       summary: Get details of a non-fungible token withdrawal
       operationId: getNonFungibleTokenWithdrawalDetails
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -695,8 +683,7 @@ paths:
       summary: List deposits of a non-fungible token
       operationId: listNonFungibleTokenDeposits
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       responses:
         "200":
           description: OK
@@ -716,8 +703,7 @@ paths:
       summary: Get details of a non-fungible token deposit
       operationId: getNonFungibleTokenDepositDetails
       tags:
-        - Accounts
-        - Non-Fungible Tokens
+        - Account Non-Fungible Tokens
       responses:
         "200":
           description: OK
