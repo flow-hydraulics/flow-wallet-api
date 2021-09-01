@@ -15,7 +15,7 @@ This service can be used by an application that needs to manage Flow user accoun
 - _Transfer NFTs (e.g. FLOW, FUSD) (coming soon)_
 - _Detect NFT deposits (coming soon)_
 
-View full list of functionality in the [API documentation](https://onflow.github.io/wallet-api/).
+View full list of functionality in the [API documentation](https://flow-hydraulics.github.io/flow-wallet-api/).
 
 ## Background
 
@@ -36,7 +36,7 @@ rather than a hosted 3rd-party solution.
 
 ## API Specification
 
-View the [Wallet API documentation and OpenAPI (Swagger) specification](https://onflow.github.io/wallet-api/).
+View the [Wallet API documentation and OpenAPI (Swagger) specification](https://flow-hydraulics.github.io/flow-wallet-api/).
 
 ## Installation
 
