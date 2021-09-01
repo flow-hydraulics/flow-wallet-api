@@ -1,6 +1,7 @@
 FROM golang:alpine AS builder
 
 RUN apk update && apk add --no-cache \
+  ca-certificates \
   musl-dev \
   gcc \
   build-base \
@@ -27,6 +28,7 @@ RUN cp /build/main .
 
 FROM scratch
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /dist/main /
 
 ENTRYPOINT ["/main"]
