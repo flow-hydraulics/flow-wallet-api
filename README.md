@@ -155,15 +155,16 @@ If you want to use a key stored in Google KMS for the admin account, just pass t
 
 **Creating an account on testnet via the faucet:**
 
-1. Download the admin public key from Google KMS in PEM format (should have a `.pub` ending)
-2. Run it through `flow keys decode pem --from-file <filename>`
-3. Copy the "Public Key" part
-4. Go to https://testnet-faucet-v2.onflow.org
-5. Paste the copied public key in the form
-6. **IMPORTANT**: Choose **SHA2_256** as the hash algorithm (_SHA3_256_ won't work)
-7. Copy the new address and use it as the `FLOW_WALLET_ADMIN_ADDRESS`
-8. Set `FLOW_WALLET_ADMIN_PRIVATE_KEY` to the resource id of the key
-9. Set `FLOW_WALLET_ADMIN_KEY_TYPE` to `google_kms`
+1. When generating the key, choose "Asymmetric sign" as the purpose and "Elliptic Curve P-256 - SHA256 Digest" as the key type and algorithm (other combinations may work but these have been confirmed to work)
+2. Download the admin public key from Google KMS in PEM format (should have a `.pub` ending)
+3. Run it through `flow keys decode pem --from-file <filename>`
+4. Copy the "Public Key" part
+5. Go to https://testnet-faucet-v2.onflow.org
+6. Paste the copied public key in the form
+7. **IMPORTANT**: Choose **SHA2_256** as the hash algorithm (_SHA3_256_ won't work with the key setup above)
+8. Copy the new address and use it as the `FLOW_WALLET_ADMIN_ADDRESS`
+9. Set `FLOW_WALLET_ADMIN_PRIVATE_KEY` to the resource id of the key
+10. Set `FLOW_WALLET_ADMIN_KEY_TYPE` to `google_kms`
 
 Example environment:
 
