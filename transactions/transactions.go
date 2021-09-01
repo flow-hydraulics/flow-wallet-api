@@ -10,6 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const maxGasLimit = 9999
+
 // Transaction is the database model for all transactions.
 type Transaction struct {
 	TransactionId   string         `gorm:"column:transaction_id;primaryKey"`
@@ -52,11 +54,11 @@ func New(
 	proposer, payer keys.Authorizer,
 	authorizers []keys.Authorizer) error {
 
-	// TODO: Gas limit?
 	builder.Tx.
 		SetReferenceBlockID(referenceBlockID).
 		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
-		SetPayer(payer.Address)
+		SetPayer(payer.Address).
+		SetGasLimit(maxGasLimit)
 
 	// Add authorizers
 	for _, a := range authorizers {
