@@ -128,23 +128,9 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 		return keys.Authorizer{}, err
 	}
 
-	var sig crypto.Signer
-
-	// TODO: Decide whether we want to allow this kind of flexibility
-	// or should we just panic if `key.Type` != `s.defaultKeyManager`
-	switch k.Type {
-	default:
-		return keys.Authorizer{}, fmt.Errorf("key.Type not recognised: %s", k.Type)
-	case keys.AccountKeyTypeLocal:
-		sig, err = local.Signer(k)
-		if err != nil {
-			return keys.Authorizer{}, err
-		}
-	case keys.AccountKeyTypeGoogleKMS:
-		sig, err = google.Signer(ctx, address, k)
-		if err != nil {
-			return keys.Authorizer{}, err
-		}
+	sig, err := signerForKey(ctx, address, k)
+	if err != nil {
+		return keys.Authorizer{}, err
 	}
 
 	return keys.Authorizer{
@@ -196,7 +182,7 @@ func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, err
 		return keys.Authorizer{}, err
 	}
 
-	sig, err := local.Signer(s.adminAccountKey)
+	sig, err := signerForKey(ctx, adminAcc, s.adminAccountKey)
 	if err != nil {
 		return keys.Authorizer{}, err
 	}
@@ -206,4 +192,28 @@ func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, err
 		Key:     acc.Keys[index],
 		Signer:  sig,
 	}, nil
+}
+
+func signerForKey(ctx context.Context, address flow.Address, k keys.Private) (crypto.Signer, error) {
+	var (
+		sig crypto.Signer
+		err error
+	)
+
+	switch k.Type {
+	default:
+		return nil, fmt.Errorf("key.Type not recognised: %s", k.Type)
+	case keys.AccountKeyTypeLocal:
+		sig, err = local.Signer(k)
+		if err != nil {
+			return nil, err
+		}
+	case keys.AccountKeyTypeGoogleKMS:
+		sig, err = google.Signer(ctx, address, k)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sig, nil
 }
