@@ -95,11 +95,10 @@ func (l *Listener) Start() *Listener {
 
 	if err := l.initHeight(); err != nil {
 		_, ok := err.(*LockError)
-		if ok {
-			// Skip LockError as it means another listener is already handling this
-		} else {
+		if !ok {
 			panic(err)
 		}
+		// Skip LockError as it means another listener is already handling this
 	}
 
 	// TODO (latenssi): should use random intervals instead
@@ -134,11 +133,10 @@ func (l *Listener) Start() *Listener {
 
 				if lockErr != nil {
 					_, ok := lockErr.(*LockError)
-					if ok {
-						// Skip on LockError as it means another listener is already handling this round
-						continue
+					if !ok {
+						l.handleError(lockErr)
 					}
-					l.handleError(lockErr)
+					// Skip on LockError as it means another listener is already handling this round
 				}
 			}
 		}
