@@ -4,3 +4,11 @@ package chain_events
 type Store interface {
 	LockedStatus(func(*ListenerStatus) error) error
 }
+
+type LockError struct {
+	Err error
+}
+
+func (e *LockError) Error() string {
+	return e.Err.Error()
+}

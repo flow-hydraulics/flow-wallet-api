@@ -94,8 +94,9 @@ func (l *Listener) Start() *Listener {
 	}
 
 	if err := l.initHeight(); err != nil {
-		if strings.Contains(err.Error(), "could not obtain lock on row") {
-			// Skip as another listener is already handling this
+		_, ok := err.(*LockError)
+		if ok {
+			// Skip LockError as it means another listener is already handling this
 		} else {
 			panic(err)
 		}
@@ -132,8 +133,9 @@ func (l *Listener) Start() *Listener {
 				})
 
 				if lockErr != nil {
-					if strings.Contains(lockErr.Error(), "could not obtain lock on row") {
-						// Skip as another listener is already handling this round
+					_, ok := lockErr.(*LockError)
+					if ok {
+						// Skip on LockError as it means another listener is already handling this round
 						continue
 					}
 					l.handleError(lockErr)
