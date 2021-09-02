@@ -1,6 +1,6 @@
 .PHONY: dev
 dev:
-	docker-compose up -d db emulator
+	docker-compose up -d db pgadmin emulator
 	docker-compose logs -f
 
 .PHONY: stop

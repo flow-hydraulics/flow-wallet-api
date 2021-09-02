@@ -2,7 +2,9 @@ package chain_events
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/onflow/flow-go-sdk"
@@ -13,13 +15,15 @@ import (
 type GetEventTypes func() []string
 
 type Listener struct {
-	ticker   *time.Ticker
-	done     chan bool
-	fc       *client.Client
-	db       Store
-	maxDiff  uint64
-	interval time.Duration
-	getTypes GetEventTypes
+	ticker         *time.Ticker
+	done           chan bool
+	logger         *log.Logger
+	fc             *client.Client
+	db             Store
+	getTypes       GetEventTypes
+	maxBlocks      uint64
+	interval       time.Duration
+	startingHeight uint64
 }
 
 type ListenerStatus struct {
@@ -32,35 +36,44 @@ func (ListenerStatus) TableName() string {
 }
 
 func NewListener(
+	logger *log.Logger,
 	fc *client.Client,
 	db Store,
+	getTypes GetEventTypes,
 	maxDiff uint64,
 	interval time.Duration,
-	getTypes GetEventTypes,
+	startingHeight uint64,
 ) *Listener {
-	return &Listener{nil, make(chan bool), fc, db, maxDiff, interval, getTypes}
+	if logger == nil {
+		logger = log.New(os.Stdout, "[EVENT-POLLER] ", log.LstdFlags|log.Lshortfile)
+	}
+	return &Listener{
+		nil, make(chan bool),
+		logger, fc, db, getTypes,
+		maxDiff, interval, startingHeight,
+	}
 }
 
 func (l *Listener) run(ctx context.Context, start, end uint64) error {
-	ee := make([]flow.Event, 0)
+	events := make([]flow.Event, 0)
 
-	types := l.getTypes()
+	eventTypes := l.getTypes()
 
-	for _, t := range types {
+	for _, t := range eventTypes {
 		r, err := l.fc.GetEventsForHeightRange(ctx, client.EventRangeQuery{
 			Type:        t,
 			StartHeight: start,
 			EndHeight:   end,
 		})
 		if err != nil {
-			return fmt.Errorf("error while fetching events: %w", err)
+			return err
 		}
 		for _, b := range r {
-			ee = append(ee, b.Events...)
+			events = append(events, b.Events...)
 		}
 	}
 
-	for _, event := range ee {
+	for _, event := range events {
 		Event.Trigger(event)
 	}
 
@@ -68,7 +81,10 @@ func (l *Listener) run(ctx context.Context, start, end uint64) error {
 }
 
 func (l *Listener) handleError(err error) {
-	fmt.Println(err)
+	l.logger.Println(err)
+	if strings.Contains(err.Error(), "key not found") {
+		l.logger.Println(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
+	}
 }
 
 func (l *Listener) Start() *Listener {
@@ -77,49 +93,83 @@ func (l *Listener) Start() *Listener {
 		return l
 	}
 
+	if err := l.initHeight(); err != nil {
+		if strings.Contains(err.Error(), "could not obtain lock on row") {
+			// Skip as another listener is already handling this
+		} else {
+			panic(err)
+		}
+	}
+
+	// TODO (latenssi): should use random intervals instead
 	l.ticker = time.NewTicker(l.interval)
 
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		status, err := l.db.GetListenerStatus()
-		if err != nil {
-			panic(err)
-		}
-
 		for {
 			select {
 			case <-l.done:
 				return
 			case <-l.ticker.C:
-				latestBlock, err := l.fc.GetLatestBlock(ctx, true)
-				if err != nil {
-					l.handleError(err)
-					continue
-				}
-				curHeight := latestBlock.Height
-				if curHeight > status.LatestHeight {
-					start := status.LatestHeight + 1       // LatestHeight has already been checked, add 1
-					end := min(curHeight, start+l.maxDiff) // Limit maximum end
-					if err := l.run(ctx, start, end); err != nil {
-						l.handleError(err)
+				lockErr := l.db.LockedStatus(func(status *ListenerStatus) error {
+					latestBlock, err := l.fc.GetLatestBlock(ctx, true)
+					if err != nil {
+						return err
+					}
+
+					if latestBlock.Height > status.LatestHeight {
+						start := status.LatestHeight + 1                  // LatestHeight has already been checked, add 1
+						end := min(latestBlock.Height, start+l.maxBlocks) // Limit maximum end
+						if err := l.run(ctx, start, end); err != nil {
+							return err
+						}
+						status.LatestHeight = end
+					}
+
+					return nil
+				})
+
+				if lockErr != nil {
+					if strings.Contains(lockErr.Error(), "could not obtain lock on row") {
+						// Skip as another listener is already handling this round
 						continue
 					}
-					status.LatestHeight = end
-					if err := l.db.UpdateListenerStatus(status); err != nil {
-						l.handleError(err)
-						continue
-					}
+					l.handleError(lockErr)
 				}
 			}
 		}
 	}()
 
+	l.logger.Println("started")
+
 	return l
 }
 
+func (l *Listener) initHeight() error {
+	return l.db.LockedStatus(func(status *ListenerStatus) error {
+		if l.startingHeight > 0 && status.LatestHeight < l.startingHeight-1 {
+			status.LatestHeight = l.startingHeight - 1
+		}
+
+		if status.LatestHeight == 0 {
+			// If starting fresh, we need to start from the latest block as we can't
+			// know what is the root of the current spork.
+			// Data on Flow is only accessible for the current spork height.
+			latestBlock, err := l.fc.GetLatestBlock(context.Background(), true)
+			if err != nil {
+				return err
+			}
+			status.LatestHeight = latestBlock.Height
+		}
+
+		return nil
+	})
+}
+
 func (l *Listener) Stop() {
+	l.logger.Println("stopping...")
 	l.ticker.Stop()
 	l.done <- true
 	l.ticker = nil
