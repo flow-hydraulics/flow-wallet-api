@@ -73,14 +73,14 @@ func (l *Listener) handleError(err error) {
 
 func (l *Listener) Start() *Listener {
 	if l.ticker != nil {
+		// Already started
 		return l
 	}
 
 	l.ticker = time.NewTicker(l.interval)
 
 	go func() {
-		ctx := context.Background()
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		status, err := l.db.GetListenerStatus()
@@ -93,22 +93,21 @@ func (l *Listener) Start() *Listener {
 			case <-l.done:
 				return
 			case <-l.ticker.C:
-				cur, err := l.fc.GetLatestBlock(ctx, true)
+				latestBlock, err := l.fc.GetLatestBlock(ctx, true)
 				if err != nil {
 					l.handleError(err)
 					continue
 				}
-				curHeight := cur.Height
+				curHeight := latestBlock.Height
 				if curHeight > status.LatestHeight {
-					start := status.LatestHeight + 1       // latestHeight has already been checked, add 1
+					start := status.LatestHeight + 1       // LatestHeight has already been checked, add 1
 					end := min(curHeight, start+l.maxDiff) // Limit maximum end
 					if err := l.run(ctx, start, end); err != nil {
 						l.handleError(err)
 						continue
 					}
 					status.LatestHeight = end
-					err := l.db.UpdateListenerStatus(status)
-					if err != nil {
+					if err := l.db.UpdateListenerStatus(status); err != nil {
 						l.handleError(err)
 						continue
 					}
@@ -124,11 +123,4 @@ func (l *Listener) Stop() {
 	l.ticker.Stop()
 	l.done <- true
 	l.ticker = nil
-}
-
-func min(x, y uint64) uint64 {
-	if x > y {
-		return y
-	}
-	return x
 }
