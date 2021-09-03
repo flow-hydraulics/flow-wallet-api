@@ -2,6 +2,7 @@ version: "3.9"
 services:
   db:
     image: postgres:13-alpine
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
@@ -9,14 +10,23 @@ services:
       - POSTGRES_USER=wallet
       - POSTGRES_PASSWORD=wallet
 
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+
   wallet:
     build:
       context: .
       dockerfile: ./docker/wallet/Dockerfile
       network: host # docker build sometimes has problems fetching from alpine's CDN
+    restart: unless-stopped
     ports:
       - "3000:3000"
-    restart: unless-stopped
     env_file:
       - ./.env
     environment:
@@ -30,6 +40,7 @@ services:
 
   emulator:
     image: gcr.io/flow-container-registry/emulator:v0.23.0
+    restart: unless-stopped
     command: emulator -v
     ports:
       - "3569:3569"

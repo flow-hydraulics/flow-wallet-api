@@ -69,6 +69,7 @@ func runServer(cfg *configs.Config) {
 	// Application wide logger
 	ls := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
 	lj := log.New(os.Stdout, "[JOBS] ", log.LstdFlags|log.Lshortfile)
+	le := log.New(os.Stdout, "[EVENT-POLLER] ", log.LstdFlags|log.Lshortfile)
 
 	ls.Printf("Starting server (v%s)...\n", version)
 
@@ -235,11 +236,7 @@ func runServer(cfg *configs.Config) {
 
 	// Chain event listener
 	if !cfg.DisableChainEvents {
-		ls.Println("Starting chain event listener..")
-
 		store := chain_events.NewGormStore(db)
-		maxDiff := uint64(100)       // maximum number of blocks to check each iteration, TODO: make this configurable
-		interval := 10 * time.Second // TODO: make this configurable
 		getTypes := func() []string {
 			// Get all enabled tokens
 			tt, err := templateService.ListTokens(templates.NotSpecified)
@@ -258,12 +255,14 @@ func runServer(cfg *configs.Config) {
 			return event_types
 		}
 
-		listener := chain_events.NewListener(fc, store, maxDiff, interval, getTypes)
+		listener := chain_events.NewListener(
+			le, fc, store, getTypes,
+			cfg.ChainListenerMaxBlocks,
+			cfg.ChainListenerInterval,
+			cfg.ChainListenerStartingHeight,
+		)
 
-		defer func() {
-			ls.Println("Stopping event listener..")
-			listener.Stop()
-		}()
+		defer listener.Stop()
 
 		// Register a handler for chain events
 		chain_events.Event.Register(&tokens.ChainEventHandler{

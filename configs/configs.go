@@ -82,6 +82,16 @@ type Config struct {
 	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 	// For more info: https://pkg.go.dev/time#ParseDuration
 	TransactionTimeout time.Duration `env:"FLOW_WALLET_TRANSACTION_TIMEOUT" envDefault:"0"`
+
+	// Set the starting height for event polling. This won't have any effect if the value in
+	// database (chain_event_status[0].latest_height) is greater.
+	// If 0 (default) use latest block height if starting fresh (no previous value in database).
+	ChainListenerStartingHeight uint64 `env:"FLOW_WALLET_EVENTS_STARTING_HEIGHT" envDefault:"0"`
+	// Maximum number of blocks to check at once.
+	ChainListenerMaxBlocks uint64 `env:"FLOW_WALLET_EVENTS_MAX_BLOCKS" envDefault:"100"`
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+	// For more info: https://pkg.go.dev/time#ParseDuration
+	ChainListenerInterval time.Duration `env:"FLOW_WALLET_EVENTS_INTERVAL" envDefault:"10s"`
 }
 
 type Options struct {
