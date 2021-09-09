@@ -139,6 +139,87 @@ func (s *Service) Create(c context.Context, sync bool, proposerAddress string, r
 	return job, transaction, err
 }
 
+func (s *Service) Sign(c context.Context, proposerAddress string, raw templates.Raw, tType Type) (*SignedTransaction, error) {
+	transaction := &Transaction{}
+	var signedTransaction *SignedTransaction
+
+	process := func(jobResult *jobs.Result) error {
+		ctx := c
+
+		// Check if the input is a valid address.
+		proposerAddress, err := flow_helpers.ValidateAddress(proposerAddress, s.cfg.ChainID)
+		if err != nil {
+			return err
+		}
+
+		latestBlockId, err := flow_helpers.LatestBlockId(ctx, s.fc)
+		if err != nil {
+			return err
+		}
+
+		var (
+			payer    keys.Authorizer
+			proposer keys.Authorizer
+		)
+
+		// Admin should always be the payer of the transaction fees.
+		payer, err = s.km.AdminAuthorizer(ctx)
+		if err != nil {
+			return err
+		}
+
+		if proposerAddress == s.cfg.AdminAddress {
+			proposer, err = s.km.AdminProposalKey(ctx)
+			if err != nil {
+				return err
+			}
+		} else {
+			proposer, err = s.km.UserAuthorizer(ctx, flow.HexToAddress(proposerAddress))
+			if err != nil {
+				return err
+			}
+
+		}
+
+		// We assume proposer is always the sole authorizer
+		// https://github.com/flow-hydraulics/flow-wallet-api/issues/79
+		authorizers := []keys.Authorizer{proposer}
+
+		builder, err := templates.NewBuilderFromRaw(raw)
+		if err != nil {
+			return err
+		}
+
+		// Init a new transaction
+		err = New(transaction, *latestBlockId, builder, tType, proposer, payer, authorizers)
+		jobResult.TransactionID = transaction.TransactionId // Update job result
+		if err != nil {
+			return err
+		}
+
+		signedTransaction = &SignedTransaction{Transaction: *builder.Tx}
+		return nil
+	}
+
+	job, err := s.wp.AddJob(process)
+
+	if err != nil {
+		_, isJErr := err.(*errors.JobQueueFull)
+		if isJErr {
+			err = &errors.RequestError{
+				StatusCode: http.StatusServiceUnavailable,
+				Err:        fmt.Errorf("max capacity reached, try again later"),
+			}
+		}
+		return nil, err
+	}
+
+	// Signing is always synchronous, but executes through worker pool.
+	err = job.Wait(true)
+
+	return signedTransaction, err
+}
+
 // List returns all transactions in the datastore.
 func (s *Service) List(limit, offset int) ([]Transaction, error) {
 	o := datastore.ParseListOptions(limit, offset)
