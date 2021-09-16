@@ -158,16 +158,13 @@ func TestAccountServices(t *testing.T) {
 	keyStore := keys.NewGormStore(db)
 	txStore := transactions.NewGormStore(db)
 
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
 	defer wp.Stop()
 
 	txService := transactions.NewService(cfg, txStore, km, fc, wp)
-	service := accounts.NewService(cfg, accountStore, km, fc, wp, txService, templateService)
+	service := accounts.NewService(cfg, accountStore, km, fc, wp, txService)
 
 	t.Run("admin init", func(t *testing.T) {
 		ctx := context.Background()
@@ -272,9 +269,6 @@ func TestAccountHandlers(t *testing.T) {
 	keyStore := keys.NewGormStore(db)
 	txStore := transactions.NewGormStore(db)
 
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
@@ -282,7 +276,7 @@ func TestAccountHandlers(t *testing.T) {
 
 	store := accounts.NewGormStore(db)
 	txService := transactions.NewService(cfg, txStore, km, fc, wp)
-	service := accounts.NewService(cfg, store, km, fc, wp, txService, templateService)
+	service := accounts.NewService(cfg, store, km, fc, wp, txService)
 
 	h := handlers.NewAccounts(testLogger, service)
 
@@ -705,7 +699,7 @@ func TestTransactionHandlers(t *testing.T) {
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
 
 	accountStore := accounts.NewGormStore(db)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, templateService)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 
 	h := handlers.NewTransactions(testLogger, transactionService)
 
@@ -967,7 +961,7 @@ func TestTokenServices(t *testing.T) {
 	defer wp.Stop()
 
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, templateService)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
@@ -1160,7 +1154,7 @@ func TestTokenHandlers(t *testing.T) {
 	defer wp.Stop()
 
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, templateService)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	t.Run("admin init", func(t *testing.T) {
@@ -1703,7 +1697,7 @@ func TestNFTDeployment(t *testing.T) {
 	defer wp.Stop()
 
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, templateService)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)

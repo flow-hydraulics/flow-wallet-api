@@ -114,7 +114,7 @@ func runServer(cfg *configs.Config) {
 	templateService := templates.NewService(cfg, templateStore)
 	jobsService := jobs.NewService(jobStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, templateService)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	debugService := debug.Service{
