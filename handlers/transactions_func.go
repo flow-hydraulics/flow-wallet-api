@@ -127,7 +127,17 @@ func (s *Transactions) SignFunc(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handleJsonResponse(rw, http.StatusCreated, tx.ToJSONResponse())
+	resp, err := tx.ToJSONResponse()
+	if err != nil {
+		err = &errors.RequestError{
+			StatusCode: http.StatusInternalServerError,
+			Err:        fmt.Errorf("cannot decode signed transaction"),
+		}
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusCreated, resp)
 }
 
 func (s *Transactions) DetailsFunc(rw http.ResponseWriter, r *http.Request) {

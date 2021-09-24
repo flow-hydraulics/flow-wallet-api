@@ -19,6 +19,8 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
+	"github.com/onflow/cadence"
+	c_json "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go-sdk"
 )
 
@@ -37,7 +39,7 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 	var account accounts.Account
 	res := send(router, http.MethodPost, "/?sync=true", nil)
 	assertStatusCode(t, res, http.StatusCreated)
-	fromJsonBody(res, &account)
+	fromJsonBody(t, res, &account)
 
 	// Transaction:
 	code := "transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}"
@@ -49,10 +51,7 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 	assertStatusCode(t, res, http.StatusCreated)
 
 	var txResp transactions.SignedTransactionJSONResponse
-	err := json.NewDecoder(res.Body).Decode(&txResp)
-	if err != nil {
-		t.Fatal("failed to decode transaction signing response")
-	}
+	fromJsonBody(t, res, &txResp)
 
 	tx := flow.NewTransaction().
 		SetScript([]byte(txResp.Code)).
@@ -62,7 +61,11 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 		SetPayer(flow.HexToAddress(txResp.Payer))
 
 	for _, arg := range txResp.Arguments {
-		tx.AddRawArgument(arg)
+		v, err := asCadence(&arg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx.AddArgument(v)
 	}
 
 	for _, a := range txResp.Authorizers {
@@ -87,7 +90,7 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 
 	ctx := context.Background()
 	client := test.NewFlowClient(t, cfg)
-	_, err = flow_helpers.SendAndWait(ctx, client, *tx, 10*time.Minute)
+	_, err := flow_helpers.SendAndWait(ctx, client, *tx, 10*time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,26 +107,38 @@ func assertStatusCode(t *testing.T, res *http.Response, expected int) {
 	}
 }
 
-func asJson(v interface{}) []byte {
-	if v == nil {
-		return nil
+func asCadence(a *transactions.CadenceArgument) (cadence.Value, error) {
+	c, ok := (*a).(cadence.Value)
+	if ok {
+		return c, nil
 	}
-	bs, err := json.Marshal(v)
+
+	// Convert to json bytes so we can use cadence's own encoding library
+	j, err := json.Marshal(a)
 	if err != nil {
-		panic(err)
+		return cadence.Void{}, err
 	}
-	return bs
+
+	// Use cadence's own encoding library
+	c, err = c_json.Decode(j)
+	if err != nil {
+		return cadence.Void{}, err
+	}
+
+	return c, nil
 }
 
-func fromJsonBody(res *http.Response, v interface{}) {
+func fromJsonBody(t *testing.T, res *http.Response, v interface{}) {
+	t.Helper()
+
 	bs, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	err = json.Unmarshal(bs, v)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 }
 
