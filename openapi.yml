@@ -339,6 +339,26 @@ paths:
 
 
 # Account transactions
+  /accounts/{address}/sign:
+    post:
+      summary: Sign a raw transaction
+      description: |-
+        Sign a transaction with custodial account keys, without sending it. Signed transaction is returned in response (with signatures).
+      operationId: signRawTransaction
+      tags:
+        - Account Transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/script"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/signedTransaction"
 
   /accounts/{address}/transactions:
     parameters:
@@ -794,6 +814,71 @@ components:
         updatedAt:
           type: string
           example: "2021-04-27T05:49:53.211+00:00"
+
+    signedTransaction:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}"
+        arguments:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "String"
+              value:
+                type: string
+                example: "Hello"
+        referenceBlockId:
+          type: string
+          example: "ff25699272a9f42b5268e1b9c80b40275ef772528d4dfe8aadb8e5aebdea9bd9"
+        gasLimit:
+          type: integer
+          example: 9999
+        proposalKey:
+          type: object
+          properties:
+            address:
+              type: string
+              example: "e245813137217658"
+            keyIndex:
+              type: integer
+              example: 0
+            sequenceNumber:
+              type: integer
+              example: 42
+        payer:
+          type: string
+          example: "f8d6e0586b0a20c7"
+        authorizers:
+          type: array
+          items:
+            type: string
+            example: "e245813137217658"
+        payloadSignatures:
+          type: array
+          items:
+            $ref: '#components/schemas/transactionSignature'
+        envelopeSignatures:
+          type: array
+          items:
+            $ref: '#components/schemas/transactionSignature'
+
+    transactionSignature:
+      type: object
+      properties:
+        address:
+          type: string
+          example: "e245813137217658"
+        keyIndex:
+          type: integer
+          example: 0
+        signature:
+          type: string
+          example: "e2beedaf426c414925a7757defa61d1169781f1d84bc713788767efae54c1e275dc353481fc386cf7a961415cf9e749c384fdec35f8af0fc93e20d2da8cc29ef"
 
     job:
       type: object
