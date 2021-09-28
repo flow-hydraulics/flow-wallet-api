@@ -11,7 +11,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-func Test_Transaction_Sign_By_Admin(t *testing.T) {
+func Test_TransactionSignByAdmin(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	txSvc := test.GetServices(t, cfg).GetTransactions()
 
@@ -35,7 +35,7 @@ func Test_Transaction_Sign_By_Admin(t *testing.T) {
 	}
 }
 
-func Test_Transaction_Sign_By_AnotherAccount(t *testing.T) {
+func Test_TransactionSignByAnotherAccount(t *testing.T) {
 	ctx := context.Background()
 	cfg := test.LoadConfig(t, testConfigPath)
 	svcs := test.GetServices(t, cfg)
