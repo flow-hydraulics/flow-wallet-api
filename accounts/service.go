@@ -27,7 +27,6 @@ type Service struct {
 	fc           *client.Client
 	wp           *jobs.WorkerPool
 	transactions *transactions.Service
-	templates    *templates.Service
 	cfg          *configs.Config
 }
 
@@ -39,10 +38,9 @@ func NewService(
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 	txs *transactions.Service,
-	tes *templates.Service,
 ) *Service {
 	// TODO(latenssi): safeguard against nil config?
-	return &Service{store, km, fc, wp, txs, tes, cfg}
+	return &Service{store, km, fc, wp, txs, cfg}
 }
 
 func (s *Service) InitAdminAccount(ctx context.Context) error {
