@@ -1,6 +1,7 @@
 package transactions
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
@@ -11,6 +12,74 @@ import (
 )
 
 const maxGasLimit = 9999
+
+type SignedTransaction struct {
+	flow.Transaction
+}
+
+// Signatures JSON HTTP response
+type SignedTransactionJSONResponse struct {
+	Code               string                     `json:"code"`
+	Arguments          [][]byte                   `json:"arguments"`
+	ReferenceBlockID   string                     `json:"referenceBlockId"`
+	GasLimit           uint64                     `json:"gasLimit"`
+	ProposalKey        ProposalKeyJSON            `json:"proposalKey"`
+	Payer              string                     `json:"payer"`
+	Authorizers        []string                   `json:"authorizers"`
+	PayloadSignatures  []TransactionSignatureJSON `json:"payloadSignatures"`
+	EnvelopeSignatures []TransactionSignatureJSON `json:"envelopeSignatures"`
+}
+
+type ProposalKeyJSON struct {
+	Address        string `json:"address"`
+	KeyIndex       int    `json:"keyIndex"`
+	SequenceNumber uint64 `json:"sequenceNumber"`
+}
+
+type TransactionSignatureJSON struct {
+	Address   string `json:"address"`
+	KeyIndex  int    `json:"keyIndex"`
+	Signature string `json:"signature"`
+}
+
+func (st *SignedTransaction) ToJSONResponse() SignedTransactionJSONResponse {
+	var res SignedTransactionJSONResponse
+
+	res.Code = string(st.Script)
+	res.Arguments = st.Arguments
+	res.ReferenceBlockID = st.ReferenceBlockID.Hex()
+	res.GasLimit = st.GasLimit
+	res.ProposalKey = ProposalKeyJSON{
+		Address:        st.ProposalKey.Address.Hex(),
+		KeyIndex:       st.ProposalKey.KeyIndex,
+		SequenceNumber: st.ProposalKey.SequenceNumber,
+	}
+	res.Payer = st.Payer.Hex()
+
+	for _, a := range st.Authorizers {
+		res.Authorizers = append(res.Authorizers, a.Hex())
+	}
+
+	for _, s := range st.PayloadSignatures {
+		sig := TransactionSignatureJSON{
+			Address:   s.Address.Hex(),
+			KeyIndex:  s.KeyIndex,
+			Signature: fmt.Sprintf("%x", s.Signature),
+		}
+		res.PayloadSignatures = append(res.PayloadSignatures, sig)
+	}
+
+	for _, s := range st.EnvelopeSignatures {
+		sig := TransactionSignatureJSON{
+			Address:   s.Address.Hex(),
+			KeyIndex:  s.KeyIndex,
+			Signature: fmt.Sprintf("%x", s.Signature),
+		}
+		res.EnvelopeSignatures = append(res.EnvelopeSignatures, sig)
+	}
+
+	return res
+}
 
 // Transaction is the database model for all transactions.
 type Transaction struct {
