@@ -168,7 +168,7 @@ func (s *Service) Sign(c context.Context, proposerAddress string, raw templates.
 			return err
 		}
 
-		if proposerAddress == s.cfg.AdminAddress {
+		if flow_helpers.HexString(proposerAddress) == flow_helpers.HexString(s.cfg.AdminAddress) {
 			proposer, err = s.km.AdminProposalKey(ctx)
 			if err != nil {
 				return err

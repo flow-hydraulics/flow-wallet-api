@@ -175,6 +175,7 @@ func runServer(cfg *configs.Config) {
 
 	// Account raw transactions
 	if !cfg.DisableRawTransactions {
+		rv.Handle("/accounts/{address}/sign", transactionHandler.Sign()).Methods(http.MethodPost)                           // sign
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.List()).Methods(http.MethodGet)                    // list
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.Create()).Methods(http.MethodPost)                 // create
 		rv.Handle("/accounts/{address}/transactions/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details

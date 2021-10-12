@@ -432,6 +432,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 	h := handlers.NewTransactions(testLogger, service)
 
 	router := mux.NewRouter()
+	router.Handle("/{address}/sign", h.Sign()).Methods(http.MethodPost)
 	router.Handle("/{address}/transactions", h.List()).Methods(http.MethodGet)
 	router.Handle("/{address}/transactions", h.Create()).Methods(http.MethodPost)
 	router.Handle("/{address}/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
@@ -612,6 +613,16 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			url:      "/invalid-address/transactions/invalid-id",
 			expected: "not a valid address",
 			status:   http.StatusBadRequest,
+		},
+		{
+			name:        "sign ok",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			body:        strings.NewReader(validHello),
+			url:         fmt.Sprintf("/%s/sign", cfg.AdminAddress),
+			expected:    `(?m)^{"code":".*","arguments":\[.*\],"referenceBlockId":"(0x)?[0-9a-f]+","gasLimit":\d+,"proposalKey":{"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"sequenceNumber":\d+},"payer":"(0x)?[0-9a-f]+","authorizers":\[(("[(0x)?[0-9a-f]+"),?)*\],"payloadSignatures":(null|\[({"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"signature":"[0-9a-f]+"},?)*\]),"envelopeSignatures":\[({"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"signature":"[0-9a-f]+"},?)*\]}$`,
+			status:      http.StatusCreated,
+			sync:        true,
 		},
 	}
 

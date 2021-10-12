@@ -99,6 +99,47 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	handleJsonResponse(rw, http.StatusCreated, res)
 }
 
+func (s *Transactions) SignFunc(rw http.ResponseWriter, r *http.Request) {
+	err := checkNonEmptyBody(r)
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	vars := mux.Vars(r)
+
+	var b templates.Raw
+
+	// Try to decode the request body into the struct.
+	err = json.NewDecoder(r.Body).Decode(&b)
+	if err != nil {
+		err = &errors.RequestError{
+			StatusCode: http.StatusBadRequest,
+			Err:        fmt.Errorf("invalid body: %#v", err),
+		}
+		handleError(rw, s.log, err)
+		return
+	}
+
+	tx, err := s.service.Sign(r.Context(), vars["address"], b, transactions.General)
+	if err != nil {
+		handleError(rw, s.log, err)
+		return
+	}
+
+	resp, err := tx.ToJSONResponse()
+	if err != nil {
+		err = &errors.RequestError{
+			StatusCode: http.StatusInternalServerError,
+			Err:        fmt.Errorf("cannot decode signed transaction"),
+		}
+		handleError(rw, s.log, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusCreated, resp)
+}
+
 func (s *Transactions) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	var (
 		transaction *transactions.Transaction

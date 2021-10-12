@@ -1,6 +1,7 @@
 package transactions
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -20,7 +21,7 @@ type SignedTransaction struct {
 // Signatures JSON HTTP response
 type SignedTransactionJSONResponse struct {
 	Code               string                     `json:"code"`
-	Arguments          [][]byte                   `json:"arguments"`
+	Arguments          []CadenceArgument          `json:"arguments"`
 	ReferenceBlockID   string                     `json:"referenceBlockId"`
 	GasLimit           uint64                     `json:"gasLimit"`
 	ProposalKey        ProposalKeyJSON            `json:"proposalKey"`
@@ -29,6 +30,8 @@ type SignedTransactionJSONResponse struct {
 	PayloadSignatures  []TransactionSignatureJSON `json:"payloadSignatures"`
 	EnvelopeSignatures []TransactionSignatureJSON `json:"envelopeSignatures"`
 }
+
+type CadenceArgument interface{}
 
 type ProposalKeyJSON struct {
 	Address        string `json:"address"`
@@ -42,11 +45,16 @@ type TransactionSignatureJSON struct {
 	Signature string `json:"signature"`
 }
 
-func (st *SignedTransaction) ToJSONResponse() SignedTransactionJSONResponse {
+func (st *SignedTransaction) ToJSONResponse() (SignedTransactionJSONResponse, error) {
 	var res SignedTransactionJSONResponse
 
+	args, err := decodeCDCArguments(st.Arguments)
+	if err != nil {
+		return SignedTransactionJSONResponse{}, err
+	}
+
 	res.Code = string(st.Script)
-	res.Arguments = st.Arguments
+	res.Arguments = args
 	res.ReferenceBlockID = st.ReferenceBlockID.Hex()
 	res.GasLimit = st.GasLimit
 	res.ProposalKey = ProposalKeyJSON{
@@ -78,7 +86,7 @@ func (st *SignedTransaction) ToJSONResponse() SignedTransactionJSONResponse {
 		res.EnvelopeSignatures = append(res.EnvelopeSignatures, sig)
 	}
 
-	return res
+	return res, nil
 }
 
 // Transaction is the database model for all transactions.
@@ -164,4 +172,17 @@ func New(
 	transaction.TransactionId = builder.Tx.ID().Hex()
 
 	return nil
+}
+
+func decodeCDCArguments(encodedArgs [][]byte) (args []CadenceArgument, err error) {
+	for _, bs := range encodedArgs {
+		var a CadenceArgument
+		err := json.Unmarshal(bs, &a)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, a)
+	}
+
+	return args, nil
 }
