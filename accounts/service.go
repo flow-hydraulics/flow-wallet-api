@@ -105,7 +105,7 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
 func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, error) {
-	a := &Account{}
+	a := &Account{Type: AccountTypeCustodial}
 	k := &keys.Private{}
 	transaction := &transactions.Transaction{}
 
@@ -159,6 +159,38 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 	err = job.Wait(sync)
 
 	return job, a, err
+}
+
+func (s *Service) AddNonCustodialAccount(_ context.Context, address string) (*Account, error) {
+	a := &Account{
+		Address: flow_helpers.HexString(address),
+		Type:    AccountTypeNonCustodial,
+	}
+
+	err := s.store.InsertAccount(a)
+	if err != nil {
+		return nil, err
+	}
+
+	return a, nil
+}
+
+func (s *Service) DeleteNonCustodialAccount(_ context.Context, address string) error {
+	a, err := s.store.Account(flow_helpers.HexString(address))
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			// Account already gone. All good.
+			return nil
+		}
+
+		return err
+	}
+
+	if a.Type != AccountTypeNonCustodial {
+		return fmt.Errorf("only non-custodial accounts supported")
+	}
+
+	return s.store.HardDeleteAccount(&a)
 }
 
 // Details returns a specific account.

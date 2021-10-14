@@ -6,6 +6,7 @@ import (
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
 )
@@ -36,7 +37,7 @@ func (h *ChainEventHandler) handleDeposit(event flow.Event) {
 	accountAddress := event.Value.Fields[1]
 
 	// Get the target account from database
-	account, err := h.AccountService.Details(accountAddress.String())
+	account, err := h.AccountService.Details(flow_helpers.HexString(accountAddress.String()))
 	if err != nil {
 		return
 	}

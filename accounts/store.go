@@ -14,4 +14,7 @@ type Store interface {
 
 	// Insert a new account.
 	InsertAccount(a *Account) error
+
+	// Permanently delete an account, despite of `DeletedAt` field.
+	HardDeleteAccount(a *Account) error
 }

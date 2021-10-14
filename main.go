@@ -183,6 +183,10 @@ func runServer(cfg *configs.Config) {
 		ls.Println("raw transactions disabled")
 	}
 
+	// Non-custodial watchlist accounts
+	rv.Handle("/watchlist/accounts", accountHandler.AddNonCustodialAccount()).Methods(http.MethodPost)                // add
+	rv.Handle("/watchlist/accounts/{address}", accountHandler.DeleteNonCustodialAccount()).Methods(http.MethodDelete) // delete
+
 	// Scripts
 	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost) // create
 

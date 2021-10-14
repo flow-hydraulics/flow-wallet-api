@@ -712,6 +712,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/nonFungibleTokenDeposit"
 
+
+# Non-Custodial accounts' deposit watchlist management
+
+  /watchlist/accounts:
+    post:
+      summary: Add a non-custodial account to watchlist.
+      description: Add a non-custodial account to watchlist so that deposits to them can be tracked.
+      operationId: addWatchlistAccount
+      tags:
+        - Watchlist
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/account"
+                - example:
+                    address: '0xf8d6e0586b0a20c7'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/account"
+
+  /watchlist/accounts/{address}:
+    parameters:
+      - $ref: "#/components/parameters/address"
+    delete:
+      summary: Remove a non-custodial account from watchlist.
+      description: Remove an account from a watchlist of non-custodial accounts' deposits.
+      operationId: removeWatchlistAccount
+      tags:
+        - Watchlist
+      responses:
+        "200":
+          description: OK
+
+
 components:
   schemas:
     debugInfo:
