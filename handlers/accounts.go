@@ -28,6 +28,14 @@ func (s *Accounts) Create() http.Handler {
 	return http.HandlerFunc(s.CreateFunc)
 }
 
+func (s *Accounts) AddNonCustodialAccount() http.Handler {
+	return http.HandlerFunc(s.AddNonCustodialAccountFunc)
+}
+
+func (s *Accounts) DeleteNonCustodialAccount() http.Handler {
+	return http.HandlerFunc(s.DeleteNonCustodialAccountFunc)
+}
+
 func (s *Accounts) Details() http.Handler {
 	return http.HandlerFunc(s.DetailsFunc)
 }

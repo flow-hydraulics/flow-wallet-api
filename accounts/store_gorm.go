@@ -31,3 +31,7 @@ func (s *GormStore) Account(address string) (a Account, err error) {
 func (s *GormStore) InsertAccount(a *Account) error {
 	return s.db.Create(a).Error
 }
+
+func (s *GormStore) HardDeleteAccount(a *Account) error {
+	return s.db.Unscoped().Delete(a).Error
+}
