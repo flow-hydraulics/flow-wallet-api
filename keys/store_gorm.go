@@ -9,9 +9,6 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.Migrator().RenameTable("storables", "storable_keys") // Ignore error
-	db.AutoMigrate(&Storable{})
-	db.AutoMigrate(&ProposalKey{})
 	return &GormStore{db}
 }
 

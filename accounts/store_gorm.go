@@ -10,7 +10,6 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&Account{})
 	return &GormStore{db}
 }
 

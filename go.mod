@@ -5,6 +5,7 @@ go 1.16
 require (
 	cloud.google.com/go v0.81.0
 	github.com/caarlos0/env/v6 v6.6.2
+	github.com/go-gormigrate/gormigrate/v2 v2.0.0
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.2.0

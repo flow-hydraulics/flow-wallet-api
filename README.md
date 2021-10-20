@@ -111,6 +111,8 @@ Examples of Database DSN
 
 For more: https://gorm.io/docs/connecting_to_the_database.html
 
+To learn more about database schema versioning and migrations, read [MIGRATIONS.md](MIGRATIONS.MD).
+
 ### Google KMS setup
 
 Note: In order to use Google KMS for remote key management you'll need a Google Cloud Platform account.
