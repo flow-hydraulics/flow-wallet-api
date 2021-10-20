@@ -28,6 +28,8 @@ tags:
     description: View the status of asynchronous tasks being completed by the Wallet API.
   - name: Debugging
     description: View useful debugging information about the Wallet API.
+  - name: Watchlist
+    description: View info for non-custodial accounts of interest.
 
 paths:
   /debug:
