@@ -135,7 +135,11 @@ func getTestConfig(t *testing.T) *configs.Config {
 func getTestApp(t *testing.T) TestApp {
 	t.Helper()
 
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+	leakIgnores := []goleak.Option{
+		goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"), // Ignore OpenCensus
+		goleak.IgnoreTopFunction("net/http.(*persistConn).writeLoop"),           // Ignore goroutine leak from AWS KMS
+		goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),              // Ignore goroutine leak from AWS KMS
+	}
 
 	cfg := getTestConfig(t)
 
@@ -169,7 +173,7 @@ func getTestApp(t *testing.T) TestApp {
 		gorm.Close(db)
 		os.Remove(cfg.DatabaseDSN)
 		fc.Close()
-		goleak.VerifyNone(t, ignoreOpenCensus)
+		goleak.VerifyNone(t, leakIgnores...)
 	})
 
 	return TestApp{
