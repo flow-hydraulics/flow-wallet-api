@@ -64,7 +64,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	templateService := templates.NewService(cfg, templateStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, templateService)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	store := chain_events.NewGormStore(db)

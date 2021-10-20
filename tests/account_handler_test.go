@@ -122,12 +122,12 @@ func TestWatchlistAccountManagement(t *testing.T) {
 	buf := bytes.NewBuffer(asJson(&account))
 	res := send(router, http.MethodPost, "/", buf)
 	assertStatusCode(t, res, http.StatusCreated)
-	fromJsonBody(res, &account)
+	fromJsonBody(t, res, &account)
 
 	// Ensure that account can be found.
 	res = send(router, http.MethodGet, fmt.Sprintf("/%s", account.Address), nil)
 	assertStatusCode(t, res, http.StatusOK)
-	fromJsonBody(res, &account)
+	fromJsonBody(t, res, &account)
 
 	if account.Address != flow_helpers.FormatAddress(nonCustodialAccount.Address) {
 		t.Fatalf("read account address doesn't match - expected %q, got %q", flow_helpers.FormatAddress(nonCustodialAccount.Address), account.Address)
@@ -155,6 +155,17 @@ func assertStatusCode(t *testing.T, res *http.Response, expected int) {
 		}
 		t.Fatalf("expected HTTP response status code %d, got %d: %s", expected, res.StatusCode, string(bs))
 	}
+}
+
+func asJson(v interface{}) []byte {
+	if v == nil {
+		return nil
+	}
+	bs, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return bs
 }
 
 func asCadence(a *transactions.CadenceArgument) (cadence.Value, error) {
