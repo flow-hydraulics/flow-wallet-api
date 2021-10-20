@@ -376,7 +376,7 @@ func TestAccountHandlers(t *testing.T) {
 			if step.status == http.StatusCreated {
 				jobService := jobs.NewService(jobStore)
 				var rJob jobs.JSONResponse
-				json.Unmarshal(rr.Body.Bytes(), &rJob)
+				json.Unmarshal(rr.Body.Bytes(), &rJob) // nolint
 				id := rJob.ID.String()
 				job, _ := jobService.Details(id)
 				for job.Status == jobs.Accepted {
@@ -662,7 +662,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			// If this step was creating a new transaction store the new txId in "tempTxId".
 			if step.sync && status == http.StatusCreated {
 				var transaction transactions.Transaction
-				json.Unmarshal(rr.Body.Bytes(), &transaction)
+				json.Unmarshal(rr.Body.Bytes(), &transaction) // nolint
 				tempTxId = transaction.TransactionId
 			}
 

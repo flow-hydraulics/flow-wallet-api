@@ -1,0 +1,70 @@
+---
+name: Test & lint
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+
+  test:
+    env:
+      FLOW_CLI_VERSION: v0.28.3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Cache Flow CLI
+        id: cache-flow-cli
+        uses: actions/cache@v2
+        with:
+          path: ~/.local/bin/flow
+          key: ${{ runner.os }}-flow-cli-${{ env.FLOW_CLI_VERSION }}
+
+      - name: Install Flow CLI
+        if: steps.cache-flow-cli.outputs.cache-hit != 'true'
+        run: sh -c "$(curl -fsSL https://storage.googleapis.com/flow-cli/install.sh)" 0 $FLOW_CLI_VERSION
+
+      - name: Run emulator in background
+        run: |
+          flow emulator &
+          sleep 1
+          flow project deploy --network=emulator --update=true
+
+
+      - name: Cache Go modules
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run tests
+        env:
+          FLOW_WALLET_ADMIN_ADDRESS: "0xf8d6e0586b0a20c7"
+          FLOW_WALLET_ADMIN_PRIVATE_KEY: "91a22fbd87392b019fbe332c32695c14cf2ba5b6521476a8540228bdf1987068"
+          FLOW_WALLET_ADMIN_PROPOSAL_KEY_COUNT: "100"
+          FLOW_WALLET_ACCESS_API_HOST: "localhost:3569"
+          FLOW_WALLET_CHAIN_ID: "flow-emulator"
+          FLOW_WALLET_ENCRYPTION_KEY: "faae4ed1c30f4e4555ee3a71f1044a8e"
+          FLOW_WALLET_ENABLED_TOKENS: "FUSD:0xf8d6e0586b0a20c7:fusd,FlowToken:0x0ae53cb6e3f42a79:flowToken"
+        run: |
+          go test
+          go test ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.29
+          args: --timeout=3m

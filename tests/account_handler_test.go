@@ -65,7 +65,7 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx.AddArgument(v)
+		tx.AddArgument(v) // nolint
 	}
 
 	for _, a := range txResp.Authorizers {
