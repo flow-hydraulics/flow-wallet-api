@@ -13,6 +13,7 @@ import (
 const (
 	AccountKeyTypeLocal     = "local"
 	AccountKeyTypeGoogleKMS = "google_kms"
+	AccountKeyTypeAWSKMS    = "aws_kms"
 )
 
 // Manager provides the functions needed for key management.

@@ -174,6 +174,35 @@ Example environment:
 
 NOTE: This will mess up the docker-compose setup (emulator won't start) as it uses `FLOW_WALLET_ADMIN_PRIVATE_KEY` as `FLOW_SERVICEPRIVATEKEY`. It will cause an encoding error on the emulator.
 
+
+### AWS KMS setup
+
+Note: In order to use AWS KMS for remote key management you'll need an AWS account.
+Note: Custom key stores are not supported.
+
+Pre-requisites:
+
+1. AWS credentials for an account that has access to KMS
+
+Configure AWS KMS as the key storage for `flow-wallet-api` and set the necessary environment variables, with the default key type as `aws_kms`:
+
+| Config variable | Environment variable                 | Description            | Default | Examples                         |
+| --------------- | ------------------------------------ | ---------------------- | ------- | -------------------------------- |
+| DefaultKeyType  | `FLOW_WALLET_DEFAULT_KEY_TYPE`       | Default key type       | `local` | `aws_kms`, `google_kms`, `local` |
+| -               | `AWS_REGION`                         | AWS KMS Region         | -       | `eu-central-1`, `us-west-1`      |
+| -               | `AWS_ACCESS_KEY_ID`                  | AWS access key ID      | -       | `AKIAXXX123FOOBAR1234`           |
+| -               | `AWS_SECRET_ACCESS_KEY`              | AWS secret access key  | -       | `FooBaRBaZ12345...`              |
+
+### AWS KMS for admin account
+
+If you want to use a key stored in AWS KMS for the admin account, just pass the ARN (e.g. `arn:aws:kms:eu-central-1:012345678910:key/00000000-aaaa-bbbb-cccc-12345678910`) of the admin key as the private key (`FLOW_WALLET_ADMIN_PRIVATE_KEY`) and set `FLOW_WALLET_ADMIN_KEY_TYPE` to `aws_kms`.
+
+When testing make sure to add the key to the admin account. You can convert the AWS public key (e.g. `aws.pem`) you downloaded/copied from AWS with flow-cli;
+
+```
+flow keys decode pem --from-file=aws.pem --sig-algo "ECDSA_secp256k1"
+```
+
 ### All possible configuration variables
 
 Refer to [configs/configs.go](configs/configs.go) for details and documentation.

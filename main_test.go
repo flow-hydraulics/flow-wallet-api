@@ -41,6 +41,12 @@ const (
 	testCadenceTxBasePath = "./flow/cadence/transactions"
 )
 
+var globalLeakIgnores = []goleak.Option{
+	goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"), // Ignore OpenCensus
+	goleak.IgnoreTopFunction("net/http.(*persistConn).writeLoop"),           // Ignore goroutine leak from AWS KMS
+	goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),              // Ignore goroutine leak from AWS KMS
+}
+
 var testLogger *log.Logger
 
 type TestLogger struct {
@@ -137,8 +143,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestAccountServices(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -249,8 +254,7 @@ func TestAccountServices(t *testing.T) {
 }
 
 func TestAccountHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -398,8 +402,7 @@ func TestAccountHandlers(t *testing.T) {
 }
 
 func TestAccountTransactionHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -679,8 +682,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 }
 
 func TestTransactionHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -845,8 +847,7 @@ func TestTransactionHandlers(t *testing.T) {
 }
 
 func TestScriptsHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -948,8 +949,7 @@ func TestScriptsHandlers(t *testing.T) {
 }
 
 func TestTokenServices(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -1133,8 +1133,7 @@ func TestTokenServices(t *testing.T) {
 }
 
 func TestTokenHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -1673,8 +1672,7 @@ func TestTokenHandlers(t *testing.T) {
 func TestNFTDeployment(t *testing.T) {
 	t.Skip("currently not supported")
 
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -1718,8 +1716,7 @@ func TestNFTDeployment(t *testing.T) {
 }
 
 func TestTemplateHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
@@ -1915,8 +1912,7 @@ func TestTemplateHandlers(t *testing.T) {
 }
 
 func TestTemplateService(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	defer goleak.VerifyNone(t, globalLeakIgnores...)
 
 	cfg := getTestConfig()
 
