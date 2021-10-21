@@ -10,12 +10,6 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	// Ignore migration errors
-
-	db.Migrator().RenameColumn(&Transaction{}, "payer_address", "proposer_address")
-
-	db.AutoMigrate(&Transaction{})
-
 	return &GormStore{db}
 }
 

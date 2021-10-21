@@ -13,7 +13,6 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&Token{})
 	return &GormStore{db, make(map[string]*Token)}
 }
 

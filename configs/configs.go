@@ -46,8 +46,9 @@ type Config struct {
 
 	// -- Database --
 
-	DatabaseDSN  string `env:"FLOW_WALLET_DATABASE_DSN" envDefault:"wallet.db"`
-	DatabaseType string `env:"FLOW_WALLET_DATABASE_TYPE" envDefault:"sqlite"`
+	DatabaseDSN     string `env:"FLOW_WALLET_DATABASE_DSN" envDefault:"wallet.db"`
+	DatabaseType    string `env:"FLOW_WALLET_DATABASE_TYPE" envDefault:"sqlite"`
+	DatabaseVersion string `env:"FLOW_WALLET_DATABASE_VERSION" envDefault:""`
 
 	// -- Host and chain access --
 

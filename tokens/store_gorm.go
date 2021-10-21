@@ -14,26 +14,6 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	// Ignoring migration errors
-
-	db.Migrator().RenameTable("fungible_token_transfers", "token_transfers")
-
-	db.AutoMigrate(&AccountToken{}, &TokenTransfer{})
-
-	// Migrating from transaction.payer_address to transaction.proposer_address
-	// This change meant that transactions payer or proposer no longer equals
-	// the actual sender of a token transfer. From now on token transfers have
-	// their own sender_address column and thus there may be old token transfers whose
-	// sender_address is NULL.
-	// This migration updates sender_address columns which are NULL to equal
-	// the transactions proposer_address. This assumption is ok as sender_address
-	// column should be NULL only when this migration is run the first time.
-	db.Table("token_transfers as tt").
-		Where(map[string]interface{}{"sender_address": nil}).
-		Update("sender_address", db.Table("transactions as tx").
-			Select("proposer_address").
-			Where("tx.transaction_id = tt.transaction_id"))
-
 	return &GormStore{db}
 }
 

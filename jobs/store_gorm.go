@@ -11,7 +11,6 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	db.AutoMigrate(&Job{})
 	return &GormStore{db}
 }
 

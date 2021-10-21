@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
+	"github.com/flow-hydraulics/flow-wallet-api/migrations"
+	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -37,6 +39,21 @@ func New(cfg *configs.Config) (*gorm.DB, error) {
 	}
 
 	db, err := gorm.Open(dialector, options)
+	if err != nil {
+		return &gorm.DB{}, err
+	}
+
+	m := gormigrate.New(db, gormigrate.DefaultOptions, migrations.List())
+	if cfg.DatabaseVersion == "" {
+		err = m.Migrate()
+	} else {
+		err = m.MigrateTo(cfg.DatabaseVersion)
+		if err != nil {
+			return &gorm.DB{}, err
+		}
+
+		err = m.RollbackTo(cfg.DatabaseVersion)
+	}
 	if err != nil {
 		return &gorm.DB{}, err
 	}
