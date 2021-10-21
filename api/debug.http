@@ -1,3 +1,0 @@
-### Get debug
-GET http://localhost:3000/v1/debug HTTP/1.1
-content-type: application/json
