@@ -85,8 +85,8 @@ func transferTokens(t *testing.T, ctx context.Context, fc *client.Client, km key
 		t.Fatal(err)
 	}
 
-	lastBlock, err := fc.GetLatestBlockHeader(ctx, true)
-	proposer, err := fc.GetAccountAtLatestBlock(ctx, flow.HexToAddress(proposerAddr))
+	lastBlock, err := fc.GetLatestBlockHeader(ctx, true)                              // nolint
+	proposer, err := fc.GetAccountAtLatestBlock(ctx, flow.HexToAddress(proposerAddr)) // nolint
 	seqNum := proposer.Keys[0].SequenceNumber
 
 	payer, err := km.AdminAuthorizer(ctx)
@@ -100,8 +100,8 @@ func transferTokens(t *testing.T, ctx context.Context, fc *client.Client, km key
 	}
 	tx := flow.NewTransaction()
 	tx.SetScript(test.ReadFile(t, "fixtures/transfer_tokens.cdc"))
-	tx.AddArgument(amountArg)
-	tx.AddArgument(cadence.NewAddress(flow.HexToAddress(receiverAddr)))
+	tx.AddArgument(amountArg)                                           // nolint
+	tx.AddArgument(cadence.NewAddress(flow.HexToAddress(receiverAddr))) // nolint
 	tx.SetGasLimit(9999)
 	tx.SetReferenceBlockID(lastBlock.ID)
 	tx.SetProposalKey(proposer.Address, 0, seqNum)
@@ -109,9 +109,9 @@ func transferTokens(t *testing.T, ctx context.Context, fc *client.Client, km key
 	tx.AddAuthorizer(authorizer.Address)
 
 	if authorizer.Address != payer.Address {
-		tx.SignPayload(authorizer.Address, authorizer.Key.Index, authorizer.Signer)
+		tx.SignPayload(authorizer.Address, authorizer.Key.Index, authorizer.Signer) // nolint
 	}
-	tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer)
+	tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer) // nolint
 	err = fc.SendTransaction(context.Background(), *tx)
 	if err != nil {
 		t.Fatal(err)

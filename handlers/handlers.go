@@ -42,7 +42,7 @@ func handleError(rw http.ResponseWriter, logger *log.Logger, err error) {
 func handleJsonResponse(rw http.ResponseWriter, status int, res interface{}) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(status)
-	json.NewEncoder(rw).Encode(res)
+	json.NewEncoder(rw).Encode(res) // nolint
 }
 
 func checkNonEmptyBody(r *http.Request) error {

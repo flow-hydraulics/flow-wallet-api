@@ -369,12 +369,15 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Ide
 
 	// Make sure the token is enabled in the database for the recipient account
 	// We are registering a deposit event, so the token must be setup already for the recipient
-	s.store.InsertAccountToken(&AccountToken{
+	err = s.store.InsertAccountToken(&AccountToken{
 		AccountAddress: recipient.Address,
 		TokenAddress:   token.Address,
 		TokenName:      token.Name,
 		TokenType:      token.Type,
 	})
+	if err != nil {
+		return err
+	}
 
 	// Check for existing deposit
 	if _, err := s.store.TokenDeposit(recipient.Address, transaction.TransactionId, token); err != nil {

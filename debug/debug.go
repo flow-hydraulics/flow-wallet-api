@@ -22,7 +22,7 @@ func servePlainText(w http.ResponseWriter, s string) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Content-Length", strconv.Itoa(len(s)))
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(s))
+	w.Write([]byte(s)) // nolint
 }
 
 func (d *Service) HandleDebug(w http.ResponseWriter, r *http.Request) {

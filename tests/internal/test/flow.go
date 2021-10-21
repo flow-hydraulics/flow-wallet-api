@@ -42,7 +42,7 @@ func NewFlowClient(t *testing.T, cfg *configs.Config) *client.Client {
 }
 
 func NewFlowAccount(t *testing.T, fc *client.Client, creatorAddress flow.Address, creatorKey *flow.AccountKey, creatorSigner crypto.Signer) *flow.Account {
-	seed := make([]byte, seed_length, seed_length)
+	seed := make([]byte, seed_length, seed_length) // nolint
 	readRandom(t, seed)
 
 	privateKey, err := crypto.GeneratePrivateKey(crypto.ECDSA_P256, seed)
@@ -87,7 +87,7 @@ func NewFlowAccount(t *testing.T, fc *client.Client, creatorAddress flow.Address
 		panic("failed to send transaction to network")
 	}
 
-	result, err := flow_helpers.WaitForSeal(context.Background(), fc, tx.ID(), max_tx_wait)
+	result, err := flow_helpers.WaitForSeal(context.Background(), fc, tx.ID(), max_tx_wait) // nolint
 
 	var newAddress flow.Address
 	for _, event := range result.Events {

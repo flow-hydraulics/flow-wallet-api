@@ -134,21 +134,21 @@ func (Transaction) TableName() string {
 }
 
 func Migrate(tx *gorm.DB) error {
-	tx.AutoMigrate(&ListenerStatus{})
-	tx.AutoMigrate(&Job{})
+	tx.AutoMigrate(&ListenerStatus{}) // nolint
+	tx.AutoMigrate(&Job{})            // nolint
 
 	// Storables has had migration in the past. Just keep it as-is.
-	tx.Migrator().RenameTable("storables", "storable_keys") // Ignore error
-	tx.AutoMigrate(&ProposalKey{}, &Storable{})
+	tx.Migrator().RenameTable("storables", "storable_keys") // nolint
+	tx.AutoMigrate(&ProposalKey{}, &Storable{})             // nolint
 
-	tx.Migrator().RenameTable("fungible_token_transfers", "token_transfers")
-	tx.AutoMigrate(&AccountToken{}, &TokenTransfer{})
+	tx.Migrator().RenameTable("fungible_token_transfers", "token_transfers") // nolint
+	tx.AutoMigrate(&AccountToken{}, &TokenTransfer{})                        // nolint
 
-	tx.Migrator().RenameColumn(&Transaction{}, "payer_address", "proposer_address")
-	tx.AutoMigrate(&Transaction{})
+	tx.Migrator().RenameColumn(&Transaction{}, "payer_address", "proposer_address") // nolint
+	tx.AutoMigrate(&Transaction{})                                                  // nolint
 
-	tx.AutoMigrate(&Account{})
-	tx.AutoMigrate(&Token{})
+	tx.AutoMigrate(&Account{}) // nolint
+	tx.AutoMigrate(&Token{})   // nolint
 
 	// Migrating from transaction.payer_address to transaction.proposer_address
 	// This change meant that transactions payer or proposer no longer equals
