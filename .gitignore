@@ -137,3 +137,5 @@ tmp/
 
 # Built binary
 main
+
+flow/flowdb
