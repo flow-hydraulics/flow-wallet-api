@@ -54,4 +54,4 @@ stop-emulator: emulator.pid
 	@kill `cat $<` && rm $<
 
 emulator.pid:
-	@cd flow && { flow emulator --persist --simple-addresses & echo $$! > ../$@; }
+	@cd flow && { flow emulator & echo $$! > ../$@; }
