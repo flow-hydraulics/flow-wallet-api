@@ -34,9 +34,9 @@ jobs:
 
       - name: Run emulator in background
         run: |
-          flow emulator &
+          cd flow && flow emulator &
           sleep 1
-          flow project deploy --network=emulator --update=true
+          cd flow && flow project deploy --network=emulator --update=true
 
 
       - name: Cache Go modules

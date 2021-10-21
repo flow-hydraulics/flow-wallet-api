@@ -1,0 +1,77 @@
+@testnetCustodyAccount = 0x0000000000000000
+@emulatorCustodyAccount = 0x0000000000000000
+@transferAmount = 0.05
+@jobId = 00000000-0000-0000-0000-000000000000
+
+### Get job status
+GET http://localhost:3000/v1/jobs/{{jobId}} HTTP/1.1
+content-type: application/json
+
+
+### Get admin account transactions
+GET http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions?limit=0&offset=0 HTTP/1.1
+content-type: application/json
+
+
+#######################################################################
+# TESTNET (ensure .env is set accordingly - ACCESS_API_HOST etc)
+
+### Transfer FLOW on testnet, admin -> custody account
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
+content-type: application/json
+
+{
+  "code":"import FungibleToken from 0x9a0766d93b6608b7\nimport FlowToken from 0x7e60df042a9c0868\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{testnetCustodyAccount}}"}]
+}
+
+
+### Transfer FLOW on testnet, custody account -> admin
+POST http://localhost:3000/v1/accounts/{{testnetCustodyAccount}}/transactions HTTP/1.1
+content-type: application/json
+
+{
+  "code":"import FungibleToken from 0x9a0766d93b6608b7\nimport FlowToken from 0x7e60df042a9c0868\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}"}]
+}
+
+
+#######################################################################
+# EMULATOR (ensure .env is set accordingly - ACCESS_API_HOST etc)
+
+### Transfer FLOW on emulator, admin -> custody account
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
+content-type: application/json
+
+{
+  "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{emulatorCustodyAccount}}"}]
+}
+
+### Transfer FLOW on emulator, custody account -> admin
+POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/transactions HTTP/1.1
+content-type: application/json
+
+{
+  "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
+  "arguments":[{"type":"UFix64","value":"{{transferAmount}}"},{"type":"Address","value":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}"}]
+}
+
+
+### Run "Hello world" transaction on emulator
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
+content-type: application/json
+
+{
+  "code":"transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}",
+  "arguments":[{"type":"String","value":"Hello"}]
+}
+
+### Mint ExampleNFT for admin account
+POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
+content-type: application/json
+
+{
+  "code":"import NonFungibleToken from {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}\nimport ExampleNFT from {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}\ntransaction(recipient: Address) {\n    let minter: &ExampleNFT.NFTMinter\n    prepare(signer: AuthAccount) {\n        self.minter = signer\n            .borrow<&ExampleNFT.NFTMinter>(from: ExampleNFT.MinterStoragePath)\n            ?? panic(\"Could not borrow a reference to the NFT minter\")\n    }\n    execute {\n        let recipient = getAccount(recipient)\n        let receiver = recipient\n            .getCapability(ExampleNFT.CollectionPublicPath)!\n            .borrow<&{NonFungibleToken.CollectionPublic}>()\n            ?? panic(\"Could not get receiver reference to the NFT Collection\")\n        self.minter.mintNFT(recipient: receiver)\n    }\n}\n",
+  "arguments":[{"type":"Address","value":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}"}]
+}

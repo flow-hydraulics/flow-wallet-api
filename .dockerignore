@@ -18,6 +18,10 @@
 __debug_bin
 .vscode
 tmp/
+*.pid
 
 # Docker specific
-flow.json
+flow/
+api/
+.github/
+examples/

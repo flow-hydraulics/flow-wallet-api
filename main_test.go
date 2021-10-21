@@ -38,7 +38,7 @@ import (
 
 const (
 	testDbType            = "sqlite"
-	testCadenceTxBasePath = "./cadence/transactions"
+	testCadenceTxBasePath = "./flow/cadence/transactions"
 )
 
 var testLogger *log.Logger
