@@ -113,7 +113,7 @@ func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, err
 			ctx = context.Background()
 		}
 
-		err := New(ctx, transaction, a, k, s.fc, s.km, s.cfg.TransactionTimeout)
+		err := New(ctx, transaction, a, k, s.fc, s.km, s.cfg)
 		jobResult.TransactionID = transaction.TransactionId // Update job result
 		if err != nil {
 			return err

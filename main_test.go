@@ -126,6 +126,20 @@ func getTestConfig() *configs.Config {
 	return cfg
 }
 
+func deepCopy(v interface{}) (interface{}, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	vptr := reflect.New(reflect.TypeOf(v))
+	err = json.Unmarshal(data, vptr.Interface())
+	if err != nil {
+		return nil, err
+	}
+	return vptr.Elem().Interface(), err
+}
+
 func TestMain(m *testing.M) {
 	testLogger = log.New(io.Discard, "", log.LstdFlags)
 
@@ -244,6 +258,31 @@ func TestAccountServices(t *testing.T) {
 			t.Log("expected 503 'max capacity reached, try again later' but got no error")
 		}
 	})
+
+	t.Run("create with custom init script", func(t *testing.T) {
+		// Create a copy of config so we can isolate changes
+		cp, err := deepCopy(cfg)
+		fatal(t, err)
+		cfg2 := cp.(*configs.Config)
+
+		// Set custom script path
+		cfg2.ScriptPathCreateAccount = "./flow/cadence/transactions/custom_create_account.cdc"
+
+		// Create a new service with new config
+		service2 := accounts.NewService(cfg2, accountStore, km, fc, wp, txService)
+
+		// Use the new service to create an account
+		_, _, err = service2.Create(context.Background(), true)
+
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+
+		if !strings.Contains(err.Error(), "Account initialized with custom script") {
+			t.Fatal(`expected error to contain "Account initialized with custom script"`)
+		}
+	})
+
 }
 
 func TestAccountHandlers(t *testing.T) {

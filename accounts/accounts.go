@@ -4,8 +4,10 @@ package accounts
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
@@ -44,7 +46,7 @@ func New(
 	k *keys.Private,
 	fc *client.Client,
 	km keys.Manager,
-	transactionTimeout time.Duration) error {
+	cfg *configs.Config) error {
 	// Get admin account authorizer
 	auth, err := km.AdminAuthorizer(ctx)
 	if err != nil {
@@ -73,6 +75,18 @@ func New(
 		),
 	)
 
+	// Check if we want to use a custom account create script
+	if cfg.ScriptPathCreateAccount != "" {
+		// TODO (latenssi): this is reading from file each time an account is created
+		bytes, err := os.ReadFile(cfg.ScriptPathCreateAccount)
+		if err != nil {
+			return err
+		}
+		// TODO (latenssi): replace template values?
+		// Overwrite the existing script
+		builder.Tx.SetScript(bytes)
+	}
+
 	proposer, err := km.AdminProposalKey(ctx)
 	if err != nil {
 		return err
@@ -83,7 +97,7 @@ func New(
 	}
 
 	// Send and wait for the transaction to be sealed
-	result, err := flow_helpers.SendAndWait(ctx, fc, *builder.Tx, transactionTimeout)
+	result, err := flow_helpers.SendAndWait(ctx, fc, *builder.Tx, cfg.TransactionTimeout)
 	if result != nil {
 		// Record for possible JSON response
 		transaction.Events = result.Events
