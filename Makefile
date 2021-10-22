@@ -55,3 +55,7 @@ stop-emulator: emulator.pid
 
 emulator.pid:
 	@cd flow && { flow emulator & echo $$! > ../$@; }
+
+.PHONY: lint
+lint:
+	@golangci-lint run

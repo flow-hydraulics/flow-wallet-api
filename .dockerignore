@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+main
 
 # Test binary, built with `go test -c`
 *.test
@@ -21,7 +22,13 @@ tmp/
 *.pid
 
 # Docker specific
-flow/
-api/
 .github/
 examples/
+
+# Not required for build
+flow/
+api-test-scripts/
+*.md
+*.svg
+*.html
+*.yml
