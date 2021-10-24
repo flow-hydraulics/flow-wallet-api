@@ -41,7 +41,7 @@ View the [Wallet API documentation and OpenAPI (Swagger) specification](https://
 The Wallet API is provided as a Docker image:
 
 ```sh
-docker pull gcr.io/flow-container-registry/wallet-api:v0.3.1
+docker pull ghcr.io/flow-hydraulics/flow-wallet-api:latest
 ```
 
 ### Basic example usage
