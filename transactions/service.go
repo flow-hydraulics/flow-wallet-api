@@ -221,7 +221,10 @@ func (s *Service) buildFlowTransaction(ctx context.Context, proposerAddress, cod
 			return nil, err
 		}
 
-		flowTx.AddArgument(cv)
+		err = flowTx.AddArgument(cv)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Add authorizers. We assume proposer is always the sole authorizer

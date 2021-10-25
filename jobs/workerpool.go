@@ -39,7 +39,7 @@ type WorkerPool struct {
 	capacity          uint
 	workerCount       uint
 	dbJobPollInterval time.Duration
-	stopped           bool
+	stopChan          chan struct{}
 }
 
 func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint) *WorkerPool {
@@ -59,9 +59,11 @@ func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint
 		capacity:          capacity,
 		workerCount:       workerCount,
 		dbJobPollInterval: defaultDBJobPollInterval,
+		stopChan:          make(chan struct{}),
 	}
 
 	pool.startWorkers()
+	pool.startDBJobScheduler()
 	return pool
 }
 
@@ -98,7 +100,7 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 }
 
 func (wp *WorkerPool) Stop() {
-	wp.stopped = true
+	close(wp.stopChan)
 	close(wp.jobChan)
 	wp.wg.Wait()
 }
@@ -115,7 +117,16 @@ func (wp *WorkerPool) accept(job *Job) bool {
 
 func (wp *WorkerPool) startDBJobScheduler() {
 	go func() {
-		for !wp.stopped {
+		var restTime time.Duration
+
+	jobPoolLoop:
+		for {
+			select {
+			case <-time.After(restTime):
+			case <-wp.stopChan:
+				break jobPoolLoop
+			}
+
 			begin := time.Now()
 
 			o := datastore.ParseListOptions(0, 0)
@@ -130,13 +141,8 @@ func (wp *WorkerPool) startDBJobScheduler() {
 			}
 
 			elapsed := time.Since(begin)
-			restTime := wp.dbJobPollInterval - elapsed
-			if restTime > 0 {
-				time.Sleep(restTime)
-			}
+			restTime = wp.dbJobPollInterval - elapsed
 		}
-
-		close(wp.jobChan)
 	}()
 }
 

@@ -49,11 +49,10 @@ func (s *GormStore) SchedulableJobs(acceptedGracePeriod, reSchedulableGracePerio
 	tAccepted := t0.Add(-1 * acceptedGracePeriod)
 	tReschedulable := t0.Add(-1 * reSchedulableGracePeriod)
 
-	err = s.db.Table("(?) AS union_table",
-		s.db.Where("state IN ? AND updated_at < ?", []string{string(Init), string(Accepted)}, tAccepted).Model(&Job{}),
-	).Joins("UNION (?)",
-		s.db.Where("state IN ? AND updated_at < ?", []string{string(Error), string(NoAvailableWorkers)}, tReschedulable).Model(&Job{}),
-	).
+	err = s.db.
+		Where("state IN ? AND updated_at < ?", []string{string(Init), string(Accepted)}, tAccepted).
+		Or("state IN ? AND updated_at < ?", []string{string(Error), string(NoAvailableWorkers)}, tReschedulable).
+		Model(&Job{}).
 		Order("created_at desc").
 		Limit(o.Limit).
 		Offset(o.Offset).
