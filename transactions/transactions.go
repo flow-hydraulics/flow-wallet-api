@@ -85,7 +85,7 @@ type Transaction struct {
 	TransactionId   string         `gorm:"column:transaction_id;primaryKey"`
 	TransactionType Type           `gorm:"column:transaction_type;index"`
 	ProposerAddress string         `gorm:"column:proposer_address;index"`
-	FlowTransaction []byte         `gorm:"column:flow_transaction;type:bytes`
+	FlowTransaction []byte         `gorm:"column:flow_transaction;type:bytes"`
 	CreatedAt       time.Time      `gorm:"column:created_at"`
 	UpdatedAt       time.Time      `gorm:"column:updated_at"`
 	DeletedAt       gorm.DeletedAt `gorm:"column:deleted_at;index"`
