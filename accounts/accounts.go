@@ -65,8 +65,8 @@ func AddContract(
 		SetGasLimit(maxGasLimit).
 		SetScript([]byte(template_strings.AddAccountContractWithAdmin))
 
-	flowTx.AddArgument(cadence.NewString(contract.Name))
-	flowTx.AddArgument(cadence.NewString(contract.SourceHex()))
+	flowTx.AddArgument(cadence.NewString(contract.Name))        // nolint
+	flowTx.AddArgument(cadence.NewString(contract.SourceHex())) // nolint
 	flowTx.AddAuthorizer(payer.Address)
 
 	// Proposer signs the payload
