@@ -11,18 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-/*
- # Test cases
-
- - Test job succeeds.
- - Test job fails.
- - Test initialized job is picked up.
- - Test accepted job is picked up.
- - Test errored job is picked up.
- - Test failed or completed job is NOT picked up.
-
-*/
-
 func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
@@ -164,6 +152,116 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 
 	if job.State != jobs.Failed {
 		t.Fatalf("expected job.State = %q, got %q", jobs.Failed, job.State)
+	}
+}
+
+func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
+	cfg := test.LoadConfig(t, testConfigPath)
+	db := test.GetDatabase(t, cfg)
+	jobStore := jobs.NewGormStore(db)
+
+	executedWG := &sync.WaitGroup{}
+	jobType := "job"
+	jobFunc := func(j *jobs.Job) error {
+		defer executedWG.Done()
+		return nil
+	}
+
+	t0 := time.Now()
+	j := &jobs.Job{
+		ID:            uuid.New(),
+		State:         jobs.Init,
+		Type:          jobType,
+		TransactionID: "0xf00d",
+		ExecCount:     2,
+		CreatedAt:     t0.Add(-10 * time.Minute),
+		UpdatedAt:     t0.Add(-10 * time.Minute),
+	}
+
+	// Directly insert "old" job into DB.
+	err := db.Create(j).Error
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	executedWG.Add(1)
+	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp.RegisterExecutor(jobType, jobFunc)
+
+	executedWG.Wait()
+
+	var job jobs.Job
+	for {
+		job, err = jobStore.Job(j.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if time.Since(job.UpdatedAt) < 250*time.Millisecond {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		break
+	}
+
+	if job.State != jobs.Complete {
+		t.Fatalf("expected job.State = %q, got %q", jobs.Complete, job.State)
+	}
+}
+
+func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
+	cfg := test.LoadConfig(t, testConfigPath)
+	db := test.GetDatabase(t, cfg)
+	jobStore := jobs.NewGormStore(db)
+
+	executedWG := &sync.WaitGroup{}
+	jobType := "job"
+	jobFunc := func(j *jobs.Job) error {
+		defer executedWG.Done()
+		return nil
+	}
+
+	t0 := time.Now()
+	j := &jobs.Job{
+		ID:            uuid.New(),
+		State:         jobs.Error,
+		Type:          jobType,
+		TransactionID: "0xf00d",
+		ExecCount:     2,
+		CreatedAt:     t0.Add(-10 * time.Minute),
+		UpdatedAt:     t0.Add(-10 * time.Minute),
+	}
+
+	// Directly insert "old" job into DB.
+	err := db.Create(j).Error
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	executedWG.Add(1)
+	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp.RegisterExecutor(jobType, jobFunc)
+
+	executedWG.Wait()
+
+	var job jobs.Job
+	for {
+		job, err = jobStore.Job(j.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if time.Since(job.UpdatedAt) < 250*time.Millisecond {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		break
+	}
+
+	if job.State != jobs.Complete {
+		t.Fatalf("expected job.State = %q, got %q", jobs.Complete, job.State)
 	}
 }
 
