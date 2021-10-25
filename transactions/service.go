@@ -229,9 +229,7 @@ func (s *Service) buildFlowTransaction(ctx context.Context, proposerAddress, cod
 	flowTx.AddAuthorizer(proposer.Address)
 
 	// Proposer signs the payload (unless proposer == payer).
-	//if proposer.Address.Hex() != payer.Address.Hex() {
 	if !proposer.Equals(payer) {
-		//if err := flowTx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
 		if err := flowTx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
 			return nil, err
 		}
