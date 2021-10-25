@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -10,8 +11,13 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 )
 
+// maxJobErrorCount is the maximum number of times a Job can be tried to
+// execute before considering it completely failed.
+const maxJobErrorCount = 10
+
 var (
-	ErrInvalidJobType = errors.New("invalid job type")
+	ErrInvalidJobType   = errors.New("invalid job type")
+	ErrPermanentFailure = errors.New("permanent failure")
 
 	// Poll DB for new schedulable jobs every 30s.
 	defaultDBJobPollInterval = 30 * time.Second
@@ -195,7 +201,11 @@ func (wp *WorkerPool) process(job *Job) {
 
 	err := executor(job)
 	if err != nil {
-		job.State = Error
+		if job.ExecCount > maxJobErrorCount || errors.Is(err, ErrPermanentFailure) {
+			job.State = Failed
+		} else {
+			job.State = Error
+		}
 		job.Error = err.Error()
 		wp.logger.Printf("WARNING: Job(id: %q, type: %q) execution resulted with error: %s", job.ID, job.Type, job.Error)
 	} else {
@@ -206,4 +216,8 @@ func (wp *WorkerPool) process(job *Job) {
 	if err := wp.store.UpdateJob(job); err != nil {
 		wp.logger.Printf("WARNING: Could not update DB entry for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
 	}
+}
+
+func PermanentFailure(err error) error {
+	return fmt.Errorf("%w: %s", ErrPermanentFailure, err.Error())
 }
