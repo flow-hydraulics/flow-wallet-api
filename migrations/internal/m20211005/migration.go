@@ -28,44 +28,6 @@ func Migrate(tx *gorm.DB) error {
 		return err
 	}
 
-	/*
-		if err := tx.Model(&Job{}).Where("status = ?", 0).Update("state", "INIT"); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&Job{}).Where("status = ?", 1).Update("state", "INIT"); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&Job{}).Where("status = ?", 2).Update("state", "ACCEPTED"); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&Job{}).Where("status = ?", 3).Update("state", "NO_AVAILABLE_WORKERS"); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&Job{}).Where("status = ?", 4).Update("state", "NO_AVAILABLE_WORKERS"); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&Job{}).Where("status = ?", 5).Update("state", "FAILED"); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&Job{}).Where("status = ?", 6).Update("state", "COMPLETE"); err != nil {
-			return err
-		}
-
-		if err := tx.Model(&Job{}).Where("status > ?", 6).Update("state", "FAILED"); err != nil {
-			return err
-		}
-
-		if err := tx.DropColumn(&Job{}, "status"); err != nil {
-			return err
-		}
-	*/
-
 	err := tx.Model(&Job{}).
 		Where("status = ?", 0).Update("state", "INIT").
 		Where("status = ?", 1).Update("state", "INIT").
