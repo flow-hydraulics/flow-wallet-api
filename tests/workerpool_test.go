@@ -58,7 +58,7 @@ func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if job.ExecCount > 1 || (time.Now().Sub(job.UpdatedAt) < 250*time.Millisecond) {
+		if job.ExecCount > 1 || (time.Since(job.UpdatedAt) < 250*time.Millisecond) {
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
@@ -106,7 +106,7 @@ func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if job.ExecCount < 1 || (time.Now().Sub(job.UpdatedAt) < 250*time.Millisecond) {
+		if job.ExecCount < 1 || (time.Since(job.UpdatedAt) < 250*time.Millisecond) {
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
@@ -154,7 +154,7 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if job.ExecCount < 1 || (time.Now().Sub(job.UpdatedAt) < 250*time.Millisecond) {
+		if job.ExecCount < 1 || (time.Since(job.UpdatedAt) < 250*time.Millisecond) {
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
@@ -219,7 +219,7 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if job.ExecCount < 1 || (time.Now().Sub(job.UpdatedAt) < 250*time.Millisecond) {
+		if job.ExecCount < 1 || (time.Since(job.UpdatedAt) < 250*time.Millisecond) {
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
