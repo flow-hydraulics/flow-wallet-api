@@ -85,8 +85,16 @@ func transferTokens(t *testing.T, ctx context.Context, fc *client.Client, km key
 		t.Fatal(err)
 	}
 
-	lastBlock, err := fc.GetLatestBlockHeader(ctx, true)                              // nolint
-	proposer, err := fc.GetAccountAtLatestBlock(ctx, flow.HexToAddress(proposerAddr)) // nolint
+	lastBlock, err := fc.GetLatestBlockHeader(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposer, err := fc.GetAccountAtLatestBlock(ctx, flow.HexToAddress(proposerAddr))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	seqNum := proposer.Keys[0].SequenceNumber
 
 	payer, err := km.AdminAuthorizer(ctx)

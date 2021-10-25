@@ -1,4 +1,4 @@
-package templates
+package transactions
 
 import (
 	"encoding/json"
@@ -7,8 +7,10 @@ import (
 	c_json "github.com/onflow/cadence/encoding/json"
 )
 
-func AsCadence(a *Argument) (cadence.Value, error) {
-	c, ok := (*a).(cadence.Value)
+type Argument interface{}
+
+func ArgAsCadence(a Argument) (cadence.Value, error) {
+	c, ok := a.(cadence.Value)
 	if ok {
 		return c, nil
 	}
@@ -32,7 +34,7 @@ func MustDecodeArgs(aa []Argument) []cadence.Value {
 	var cc []cadence.Value
 
 	for _, a := range aa {
-		c, err := AsCadence(&a)
+		c, err := ArgAsCadence(a)
 		if err != nil {
 			panic("unable to decode arguments")
 		}

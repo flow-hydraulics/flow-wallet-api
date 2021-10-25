@@ -11,11 +11,13 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	"google.golang.org/grpc/codes"
 )
+
+const TransactionJobType = "transaction"
 
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
@@ -35,189 +37,59 @@ func NewService(
 	wp *jobs.WorkerPool,
 ) *Service {
 	// TODO(latenssi): safeguard against nil config?
-	return &Service{store, km, fc, wp, cfg}
+	svc := &Service{store, km, fc, wp, cfg}
+
+	// Register asynchronous job executor.
+	wp.RegisterExecutor(TransactionJobType, svc.executeTransactionJob)
+
+	return svc
 }
 
-func (s *Service) Create(c context.Context, sync bool, proposerAddress string, raw templates.Raw, tType Type) (*jobs.Job, *Transaction, error) {
-	transaction := &Transaction{}
-
-	process := func(jobResult *jobs.Result) error {
-		ctx := c
-		if !sync {
-			ctx = context.Background()
-		}
-
-		// Check if the input is a valid address
-		proposerAddress, err := flow_helpers.ValidateAddress(proposerAddress, s.cfg.ChainID)
-		if err != nil {
-			return err
-		}
-
-		latestBlockId, err := flow_helpers.LatestBlockId(ctx, s.fc)
-		if err != nil {
-			return err
-		}
-
-		var (
-			payer    keys.Authorizer
-			proposer keys.Authorizer
-		)
-
-		// Admin should always be the payer of the transaction fees
-		payer, err = s.km.AdminAuthorizer(ctx)
-		if err != nil {
-			return err
-		}
-
-		if proposerAddress == s.cfg.AdminAddress {
-			proposer, err = s.km.AdminProposalKey(ctx)
-			if err != nil {
-				return err
-			}
-		} else {
-			proposer, err = s.km.UserAuthorizer(ctx, flow.HexToAddress(proposerAddress))
-			if err != nil {
-				return err
-			}
-
-		}
-
-		// We assume proposer is always the sole authorizer
-		// https://github.com/flow-hydraulics/flow-wallet-api/issues/79
-		authorizers := []keys.Authorizer{proposer}
-
-		builder, err := templates.NewBuilderFromRaw(raw)
-		if err != nil {
-			return err
-		}
-
-		// Init a new transaction
-		err = New(transaction, *latestBlockId, builder, tType, proposer, payer, authorizers)
-		jobResult.TransactionID = transaction.TransactionId // Update job result
-		if err != nil {
-			return err
-		}
-
-		// Insert to datastore
-		if err := s.store.InsertTransaction(transaction); err != nil {
-			return err
-		}
-
-		// Send and wait for the transaction to be sealed
-		result, err := flow_helpers.SendAndWait(ctx, s.fc, *builder.Tx, s.cfg.TransactionTimeout)
-		if result != nil {
-			// Record for possible JSON response
-			transaction.Events = result.Events
-		}
-		if err != nil {
-			return err
-		}
-
-		// Update in datastore
-		if err := s.store.UpdateTransaction(transaction); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	job, err := s.wp.AddJob(process)
-
+func (s *Service) Create(ctx context.Context, sync bool, proposerAddress string, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error) {
+	transaction, err := s.newTransaction(ctx, proposerAddress, code, args, tType)
 	if err != nil {
-		_, isJErr := err.(*errors.JobQueueFull)
-		if isJErr {
-			err = &errors.RequestError{
-				StatusCode: http.StatusServiceUnavailable,
-				Err:        fmt.Errorf("max capacity reached, try again later"),
-			}
-		}
 		return nil, nil, err
 	}
 
-	err = job.Wait(sync)
-
-	return job, transaction, err
-}
-
-func (s *Service) Sign(c context.Context, proposerAddress string, raw templates.Raw, tType Type) (*SignedTransaction, error) {
-	transaction := &Transaction{}
-	var signedTransaction *SignedTransaction
-
-	process := func(jobResult *jobs.Result) error {
-		ctx := c
-
-		// Check if the input is a valid address.
-		proposerAddress, err := flow_helpers.ValidateAddress(proposerAddress, s.cfg.ChainID)
+	if !sync {
+		err := s.store.InsertTransaction(transaction)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
-		latestBlockId, err := flow_helpers.LatestBlockId(ctx, s.fc)
+		job, err := s.wp.CreateJob(TransactionJobType, transaction.TransactionId)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
-		var (
-			payer    keys.Authorizer
-			proposer keys.Authorizer
-		)
-
-		// Admin should always be the payer of the transaction fees.
-		payer, err = s.km.AdminAuthorizer(ctx)
+		err = s.wp.Schedule(job)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
-		if flow_helpers.HexString(proposerAddress) == flow_helpers.HexString(s.cfg.AdminAddress) {
-			proposer, err = s.km.AdminProposalKey(ctx)
-			if err != nil {
-				return err
-			}
-		} else {
-			proposer, err = s.km.UserAuthorizer(ctx, flow.HexToAddress(proposerAddress))
-			if err != nil {
-				return err
-			}
-
-		}
-
-		// We assume proposer is always the sole authorizer
-		// https://github.com/flow-hydraulics/flow-wallet-api/issues/79
-		authorizers := []keys.Authorizer{proposer}
-
-		builder, err := templates.NewBuilderFromRaw(raw)
-		if err != nil {
-			return err
-		}
-
-		// Init a new transaction
-		err = New(transaction, *latestBlockId, builder, tType, proposer, payer, authorizers)
-		jobResult.TransactionID = transaction.TransactionId // Update job result
-		if err != nil {
-			return err
-		}
-
-		signedTransaction = &SignedTransaction{Transaction: *builder.Tx}
-		return nil
+		return job, transaction, nil
 	}
 
-	job, err := s.wp.AddJob(process)
-
+	err = s.store.InsertTransaction(transaction)
 	if err != nil {
-		_, isJErr := err.(*errors.JobQueueFull)
-		if isJErr {
-			err = &errors.RequestError{
-				StatusCode: http.StatusServiceUnavailable,
-				Err:        fmt.Errorf("max capacity reached, try again later"),
-			}
-		}
+		return nil, nil, err
+	}
+
+	err = s.sendTransaction(ctx, transaction)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nil, transaction, nil
+}
+
+func (s *Service) Sign(ctx context.Context, proposerAddress string, code string, args []Argument) (*SignedTransaction, error) {
+	flowTx, err := s.buildFlowTransaction(ctx, proposerAddress, code, args)
+	if err != nil {
 		return nil, err
 	}
 
-	// Signing is always synchronous, but executes through worker pool.
-	err = job.Wait(true)
-
-	return signedTransaction, err
+	return &SignedTransaction{Transaction: *flowTx}, nil
 }
 
 // List returns all transactions in the datastore.
@@ -302,11 +174,11 @@ func (s *Service) DetailsForAccount(ctx context.Context, tType Type, address, tr
 }
 
 // Execute a script
-func (s *Service) ExecuteScript(ctx context.Context, raw templates.Raw) (cadence.Value, error) {
+func (s *Service) ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error) {
 	return s.fc.ExecuteScriptAtLatestBlock(
 		ctx,
-		[]byte(raw.Code),
-		templates.MustDecodeArgs(raw.Arguments),
+		[]byte(code),
+		MustDecodeArgs(args),
 	)
 }
 
@@ -316,4 +188,152 @@ func (s *Service) UpdateTransaction(t *Transaction) error {
 
 func (s *Service) GetOrCreateTransaction(transactionId string) *Transaction {
 	return s.store.GetOrCreateTransaction(transactionId)
+}
+
+func (s *Service) buildFlowTransaction(ctx context.Context, proposerAddress, code string, arguments []Argument) (*flow.Transaction, error) {
+	latestBlockID, err := flow_helpers.LatestBlockId(ctx, s.fc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Admin should always be the payer of the transaction fees.
+	payer, err := s.km.AdminAuthorizer(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	proposer, err := s.getProposalAuthorizer(ctx, proposerAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	flowTx := flow.NewTransaction()
+	flowTx.
+		SetReferenceBlockID(*latestBlockID).
+		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
+		SetPayer(payer.Address).
+		SetGasLimit(maxGasLimit).
+		SetScript([]byte(code))
+
+	for _, arg := range arguments {
+		cv, err := ArgAsCadence(arg)
+		if err != nil {
+			return nil, err
+		}
+
+		flowTx.AddArgument(cv)
+	}
+
+	// Add authorizers. We assume proposer is always the sole authorizer
+	// https://github.com/flow-hydraulics/flow-wallet-api/issues/79
+	flowTx.AddAuthorizer(proposer.Address)
+
+	// Proposer signs the payload (unless proposer == payer).
+	//if proposer.Address.Hex() != payer.Address.Hex() {
+	if !proposer.Equals(payer) {
+		//if err := flowTx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
+		if err := flowTx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
+			return nil, err
+		}
+	}
+
+	// Payer signs the envelope
+	if err := flowTx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
+		return nil, err
+	}
+
+	return flowTx, nil
+}
+
+func (s *Service) newTransaction(ctx context.Context, proposerAddress string, code string, args []Argument, tType Type) (*Transaction, error) {
+	tx := &Transaction{
+		ProposerAddress: proposerAddress,
+		TransactionType: tType,
+	}
+
+	flowTx, err := s.buildFlowTransaction(ctx, proposerAddress, code, args)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.TransactionId = flowTx.ID().Hex()
+	tx.FlowTransaction = flowTx.Encode()
+
+	return tx, nil
+}
+
+func (s *Service) getProposalAuthorizer(ctx context.Context, proposerAddress string) (keys.Authorizer, error) {
+	// Validate the input address.
+	proposerAddress, err := flow_helpers.ValidateAddress(proposerAddress, s.cfg.ChainID)
+	if err != nil {
+		return keys.Authorizer{}, err
+	}
+
+	var proposer keys.Authorizer
+	if proposerAddress == s.cfg.AdminAddress {
+		proposer, err = s.km.AdminAuthorizer(ctx)
+		if err != nil {
+			return keys.Authorizer{}, err
+		}
+	} else {
+		proposer, err = s.km.UserAuthorizer(ctx, flow.HexToAddress(proposerAddress))
+		if err != nil {
+			return keys.Authorizer{}, err
+		}
+	}
+
+	return proposer, nil
+}
+
+func (s *Service) sendTransaction(ctx context.Context, tx *Transaction) error {
+	flowTx, err := flow.DecodeTransaction(tx.FlowTransaction)
+	if err != nil {
+		return err
+	}
+
+	// Check if transaction has been sent already.
+	_, err = s.fc.GetTransaction(ctx, flowTx.ID())
+	if err != nil {
+		rpcErr, ok := err.(client.RPCError)
+		if !ok {
+			// The error wasn't from gRPC.
+			return err
+		}
+
+		if rpcErr.GRPCStatus().Code() != codes.NotFound {
+			// Something unexpected went wrong in the gRPC call or in the Access API.
+			return err
+		}
+
+		// The Flow transaction was not found. All good. Continue.
+	}
+
+	resp, err := flow_helpers.SendAndWait(ctx, s.fc, *flowTx, s.cfg.TransactionTimeout)
+	if err != nil {
+		return err
+	}
+
+	tx.Events = resp.Events
+
+	return nil
+}
+
+func (s *Service) executeTransactionJob(j *jobs.Job) error {
+	if j.Type != TransactionJobType {
+		return jobs.ErrInvalidJobType
+	}
+
+	ctx := context.Background()
+
+	tx, err := s.store.Transaction(j.TransactionID)
+	if err != nil {
+		return err
+	}
+
+	err = s.sendTransaction(ctx, &tx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
-	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 )
@@ -67,10 +66,10 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var b templates.Raw
+	var txReq transactions.JSONRequest
 
 	// Try to decode the request body into the struct.
-	err = json.NewDecoder(r.Body).Decode(&b)
+	err = json.NewDecoder(r.Body).Decode(&txReq)
 	if err != nil {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
@@ -82,7 +81,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Decide whether to serve sync or async, default async
 	sync := r.FormValue(SyncQueryParameter) != ""
-	job, transaction, err := s.service.Create(r.Context(), sync, vars["address"], b, transactions.General)
+	job, transaction, err := s.service.Create(r.Context(), sync, vars["address"], txReq.Code, txReq.Arguments, transactions.General)
 
 	if err != nil {
 		handleError(rw, s.log, err)
@@ -108,10 +107,10 @@ func (s *Transactions) SignFunc(rw http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var b templates.Raw
+	var txReq transactions.JSONRequest
 
 	// Try to decode the request body into the struct.
-	err = json.NewDecoder(r.Body).Decode(&b)
+	err = json.NewDecoder(r.Body).Decode(&txReq)
 	if err != nil {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
@@ -121,7 +120,7 @@ func (s *Transactions) SignFunc(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := s.service.Sign(r.Context(), vars["address"], b, transactions.General)
+	tx, err := s.service.Sign(r.Context(), vars["address"], txReq.Code, txReq.Arguments)
 	if err != nil {
 		handleError(rw, s.log, err)
 		return
@@ -179,10 +178,10 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var b templates.Raw
+	var txReq transactions.JSONRequest
 
 	// Try to decode the request body into the struct.
-	err = json.NewDecoder(r.Body).Decode(&b)
+	err = json.NewDecoder(r.Body).Decode(&txReq)
 	if err != nil {
 		err = &errors.RequestError{
 			StatusCode: http.StatusBadRequest,
@@ -192,7 +191,7 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	res, err := s.service.ExecuteScript(r.Context(), b)
+	res, err := s.service.ExecuteScript(r.Context(), txReq.Code, txReq.Arguments)
 
 	if err != nil {
 		handleError(rw, s.log, err)

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
-	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -103,17 +102,17 @@ func (AccountToken) TableName() string {
 }
 
 type TokenTransfer struct {
-	ID               uint64                   `gorm:"column:id;primaryKey"`
-	TransactionId    string                   `gorm:"column:transaction_id"`
-	Transaction      transactions.Transaction `gorm:"foreignKey:TransactionId;references:TransactionId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	RecipientAddress string                   `gorm:"column:recipient_address;index"`
-	SenderAddress    string                   `gorm:"column:sender_address;index"`
-	FtAmount         string                   `gorm:"column:ft_amount"`
-	NftID            uint64                   `gorm:"column:nft_id"`
-	TokenName        string                   `gorm:"column:token_name"`
-	CreatedAt        time.Time                `gorm:"column:created_at"`
-	UpdatedAt        time.Time                `gorm:"column:updated_at"`
-	DeletedAt        gorm.DeletedAt           `gorm:"column:deleted_at;index"`
+	ID               uint64         `gorm:"column:id;primaryKey"`
+	TransactionId    string         `gorm:"column:transaction_id"`
+	Transaction      Transaction    `gorm:"foreignKey:TransactionId;references:TransactionId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	RecipientAddress string         `gorm:"column:recipient_address;index"`
+	SenderAddress    string         `gorm:"column:sender_address;index"`
+	FtAmount         string         `gorm:"column:ft_amount"`
+	NftID            uint64         `gorm:"column:nft_id"`
+	TokenName        string         `gorm:"column:token_name"`
+	CreatedAt        time.Time      `gorm:"column:created_at"`
+	UpdatedAt        time.Time      `gorm:"column:updated_at"`
+	DeletedAt        gorm.DeletedAt `gorm:"column:deleted_at;index"`
 }
 
 func (TokenTransfer) TableName() string {

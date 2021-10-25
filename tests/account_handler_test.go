@@ -19,8 +19,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
-	"github.com/onflow/cadence"
-	c_json "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go-sdk"
 )
 
@@ -61,11 +59,7 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 		SetPayer(flow.HexToAddress(txResp.Payer))
 
 	for _, arg := range txResp.Arguments {
-		v, err := asCadence(&arg)
-		if err != nil {
-			t.Fatal(err)
-		}
-		tx.AddArgument(v) // nolint
+		tx.AddRawArgument(arg) // nolint
 	}
 
 	for _, a := range txResp.Authorizers {
@@ -166,27 +160,6 @@ func asJson(v interface{}) []byte {
 		panic(err)
 	}
 	return bs
-}
-
-func asCadence(a *transactions.CadenceArgument) (cadence.Value, error) {
-	c, ok := (*a).(cadence.Value)
-	if ok {
-		return c, nil
-	}
-
-	// Convert to json bytes so we can use cadence's own encoding library
-	j, err := json.Marshal(a)
-	if err != nil {
-		return cadence.Void{}, err
-	}
-
-	// Use cadence's own encoding library
-	c, err = c_json.Decode(j)
-	if err != nil {
-		return cadence.Void{}, err
-	}
-
-	return c, nil
 }
 
 func fromJsonBody(t *testing.T, res *http.Response, v interface{}) {

@@ -1,13 +1,9 @@
 package transactions
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
-	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
 	"gorm.io/gorm"
 )
@@ -21,7 +17,7 @@ type SignedTransaction struct {
 // Signatures JSON HTTP response
 type SignedTransactionJSONResponse struct {
 	Code               string                     `json:"code"`
-	Arguments          []CadenceArgument          `json:"arguments"`
+	Arguments          [][]byte                   `json:"arguments"`
 	ReferenceBlockID   string                     `json:"referenceBlockId"`
 	GasLimit           uint64                     `json:"gasLimit"`
 	ProposalKey        ProposalKeyJSON            `json:"proposalKey"`
@@ -48,13 +44,8 @@ type TransactionSignatureJSON struct {
 func (st *SignedTransaction) ToJSONResponse() (SignedTransactionJSONResponse, error) {
 	var res SignedTransactionJSONResponse
 
-	args, err := decodeCDCArguments(st.Arguments)
-	if err != nil {
-		return SignedTransactionJSONResponse{}, err
-	}
-
 	res.Code = string(st.Script)
-	res.Arguments = args
+	res.Arguments = st.Arguments
 	res.ReferenceBlockID = st.ReferenceBlockID.Hex()
 	res.GasLimit = st.GasLimit
 	res.ProposalKey = ProposalKeyJSON{
@@ -94,6 +85,7 @@ type Transaction struct {
 	TransactionId   string         `gorm:"column:transaction_id;primaryKey"`
 	TransactionType Type           `gorm:"column:transaction_type;index"`
 	ProposerAddress string         `gorm:"column:proposer_address;index"`
+	FlowTransaction []byte         `gorm:"column:flow_transaction;type:bytes`
 	CreatedAt       time.Time      `gorm:"column:created_at"`
 	UpdatedAt       time.Time      `gorm:"column:updated_at"`
 	DeletedAt       gorm.DeletedAt `gorm:"column:deleted_at;index"`
@@ -102,6 +94,12 @@ type Transaction struct {
 
 func (Transaction) TableName() string {
 	return "transactions"
+}
+
+// Transaction JSON HTTP request
+type JSONRequest struct {
+	Code      string     `json:"code"`
+	Arguments []Argument `json:"arguments"`
 }
 
 // Transaction JSON HTTP response
@@ -121,68 +119,4 @@ func (t Transaction) ToJSONResponse() JSONResponse {
 		CreatedAt:       t.CreatedAt,
 		UpdatedAt:       t.UpdatedAt,
 	}
-}
-
-func New(
-	transaction *Transaction,
-	referenceBlockID flow.Identifier,
-	builder *templates.TransactionBuilder,
-	tType Type,
-	proposer, payer keys.Authorizer,
-	authorizers []keys.Authorizer) error {
-
-	builder.Tx.
-		SetReferenceBlockID(referenceBlockID).
-		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
-		SetPayer(payer.Address).
-		SetGasLimit(maxGasLimit)
-
-	// Add authorizers
-	for _, a := range authorizers {
-		builder.Tx.AddAuthorizer(a.Address)
-	}
-
-	// Authorizers sign the payload
-	for _, a := range authorizers {
-		// If account is also the payer, it must only sign the envelope,
-		// proposer signing is handled outside this loop as well
-		if a.Equals(proposer) || a.Equals(payer) {
-			continue
-		}
-
-		if err := builder.Tx.SignPayload(a.Address, a.Key.Index, a.Signer); err != nil {
-			return err
-		}
-	}
-
-	// Proposer signs the payload
-	if !proposer.Equals(payer) {
-		if err := builder.Tx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
-			return err
-		}
-	}
-
-	// Payer signs the envelope
-	if err := builder.Tx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
-		return err
-	}
-
-	transaction.ProposerAddress = flow_helpers.FormatAddress(proposer.Address)
-	transaction.TransactionType = tType
-	transaction.TransactionId = builder.Tx.ID().Hex()
-
-	return nil
-}
-
-func decodeCDCArguments(encodedArgs [][]byte) (args []CadenceArgument, err error) {
-	for _, bs := range encodedArgs {
-		var a CadenceArgument
-		err := json.Unmarshal(bs, &a)
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, a)
-	}
-
-	return args, nil
 }

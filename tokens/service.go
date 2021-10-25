@@ -60,10 +60,6 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 		return nil, nil, err
 	}
 
-	raw := templates.Raw{
-		Code: token.Setup,
-	}
-
 	var txType transactions.Type
 
 	switch token.Type {
@@ -73,12 +69,14 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 		txType = transactions.NftSetup
 	}
 
-	job, tx, err := s.transactions.Create(ctx, sync, address, raw, txType)
+	job, tx, err := s.transactions.Create(ctx, sync, address, token.Setup, nil, txType)
 
 	// Handle adding token to account in database
 	go func() {
-		if err := job.Wait(true); err != nil && !strings.Contains(err.Error(), "vault exists") {
-			return
+		if !sync {
+			if err := job.Wait(true); err != nil && !strings.Contains(err.Error(), "vault exists") {
+				return
+			}
 		}
 
 		// Won't return an error on duplicate keys as it uses FirstOrCreate
@@ -129,14 +127,7 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 		return nil, fmt.Errorf("unsupported token type: %s", token.Type)
 	}
 
-	r := templates.Raw{
-		Code: token.Balance,
-		Arguments: []templates.Argument{
-			cadence.NewAddress(flow.HexToAddress(address)),
-		},
-	}
-
-	res, err := s.transactions.ExecuteScript(ctx, r)
+	res, err := s.transactions.ExecuteScript(ctx, token.Balance, []transactions.Argument{cadence.NewAddress(flow.HexToAddress(address))})
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +154,7 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 	}
 
 	var txType transactions.Type
-	var arguments []templates.Argument = make([]templates.Argument, 2)
+	var arguments []transactions.Argument = make([]transactions.Argument, 2)
 
 	switch token.Type {
 	case templates.FT:
@@ -182,14 +173,11 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 		return nil, nil, fmt.Errorf("unsupported token type: %s", token.Type)
 	}
 
-	// Raw transfer template
-	raw := templates.Raw{
-		Code:      token.Transfer,
-		Arguments: arguments,
-	}
-
 	// Create the transaction
-	job, tx, err := s.transactions.Create(ctx, runSync, sender, raw, txType)
+	job, tx, err := s.transactions.Create(ctx, runSync, sender, token.Transfer, arguments, txType)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Initialise the transfer object
 	transfer := &TokenTransfer{
@@ -200,20 +188,28 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 		TokenName:        token.Name,
 	}
 
-	// Handle database update
-	go func() {
-		if err := job.Wait(true); err != nil {
-			// There was an error regarding the transaction
-			// Don't store a token transfer
-			// TODO: record the error so it can be delivered to client, job has the error
-			// but the client may not have the job id (if using sync)
-			return
-		}
+	if !runSync {
+		// Handle database update asynchronously.
+		// XXX: This ain't safe for sudden server restart.
+		go func() {
+			if err := job.Wait(true); err != nil {
+				// There was an error regarding the transaction
+				// Don't store a token transfer
+				return
+			}
+
+			transfer.TransactionId = job.TransactionID
+
+			if err := s.store.InsertTokenTransfer(transfer); err != nil {
+				fmt.Printf("Error while inserting token transfer: %s\n", err)
+			}
+		}()
+	} else {
 		transfer.TransactionId = tx.TransactionId
 		if err := s.store.InsertTokenTransfer(transfer); err != nil {
-			fmt.Printf("Error while inserting token transfer: %s\n", err)
+			return nil, tx, err
 		}
-	}()
+	}
 
 	return job, tx, err
 }
@@ -409,33 +405,33 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Ide
 }
 
 // DeployTokenContractForAccount is mainly used for testing purposes.
-func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) error {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	n := token.Name
 
 	tmplStr, err := template_strings.GetByName(n)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	src := templates.TokenCode(s.cfg.ChainID, token, tmplStr)
 
 	c := flow_templates.Contract{Name: n, Source: src}
 
-	t, err := accounts.AddContract(ctx, s.fc, s.km, address, c, s.cfg.TransactionTimeout)
+	err = accounts.AddContract(ctx, s.fc, s.km, address, c, s.cfg.TransactionTimeout)
 	if err != nil {
-		return nil, t, err
+		return err
 	}
 
-	return nil, t, nil
+	return nil
 }

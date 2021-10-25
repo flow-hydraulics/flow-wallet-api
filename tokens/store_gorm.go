@@ -63,7 +63,7 @@ func (s *GormStore) TokenWithdrawals(address string, token *templates.Token) (tt
 
 	err = s.db.
 		Preload(clause.Associations).
-		Select("*").
+		Select("token_transfers.*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("token_transfers.sender_address = ?", address).
 		Where("transactions.transaction_type = ?", txType).
@@ -81,7 +81,7 @@ func (s *GormStore) TokenWithdrawal(address, transactionId string, token *templa
 
 	err = s.db.
 		Preload(clause.Associations).
-		Select("*").
+		Select("token_transfers.*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("token_transfers.sender_address = ?", address).
 		Where("transactions.transaction_type = ?", txType).
@@ -100,7 +100,7 @@ func (s *GormStore) TokenDeposits(address string, token *templates.Token) (tt []
 
 	err = s.db.
 		Preload(clause.Associations).
-		Select("*").
+		Select("token_transfers.*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("token_transfers.recipient_address = ?", address).
 		Where("transactions.transaction_type = ?", txType).
@@ -118,7 +118,7 @@ func (s *GormStore) TokenDeposit(address, transactionId string, token *templates
 
 	err = s.db.
 		Preload(clause.Associations).
-		Select("*").
+		Select("token_transfers.*").
 		Joins("left join transactions on token_transfers.transaction_id = transactions.transaction_id").
 		Where("token_transfers.recipient_address = ?", address).
 		Where("transactions.transaction_type = ?", txType).

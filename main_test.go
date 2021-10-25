@@ -101,6 +101,8 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 }
 
 func fatal(t *testing.T, err error) {
+	t.Helper()
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,17 +205,17 @@ func TestAccountServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if job.Status != jobs.Accepted && job.Status != jobs.Complete {
-			t.Errorf("expected job status to be %s or %s but got %s",
-				jobs.Accepted, jobs.Complete, job.Status)
+		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Complete {
+			t.Errorf("expected job status to be %s or %s or %s but got %s",
+				jobs.Init, jobs.Accepted, jobs.Complete, job.State)
 		}
 
-		for job.Status == jobs.Accepted {
+		for job.State == jobs.Init || job.State == jobs.Accepted {
 			time.Sleep(10 * time.Millisecond)
 		}
 
-		if job.Status != jobs.Complete {
-			t.Errorf("expected job status to be %s got %s", jobs.Complete, job.Status)
+		if job.State != jobs.Complete {
+			t.Errorf("expected job status to be %s got %s; job.Error: %s", jobs.Complete, job.State, job.Error)
 		}
 
 		account, err := service.Details(job.Result)
@@ -379,7 +381,7 @@ func TestAccountHandlers(t *testing.T) {
 				json.Unmarshal(rr.Body.Bytes(), &rJob) // nolint
 				id := rJob.ID.String()
 				job, _ := jobService.Details(id)
-				for job.Status == jobs.Accepted {
+				for job.State != jobs.Complete && job.State != jobs.Failed {
 					job, _ = jobService.Details(id)
 				}
 				tempAccAddress = job.Result
@@ -734,10 +736,8 @@ func TestTransactionHandlers(t *testing.T) {
 		context.Background(),
 		true,
 		cfg.AdminAddress,
-		templates.Raw{
-			Code:      "transaction() { prepare(signer: AuthAccount){} execute { log(\"Hello World!\") }}",
-			Arguments: []templates.Argument{},
-		},
+		"transaction() { prepare(signer: AuthAccount){} execute { log(\"Hello World!\") }}",
+		nil,
 		transactions.General,
 	)
 	if err != nil {
@@ -748,12 +748,10 @@ func TestTransactionHandlers(t *testing.T) {
 		context.Background(),
 		true,
 		cfg.AdminAddress,
-		templates.Raw{
-			Code: transferFlow,
-			Arguments: []templates.Argument{
-				cadence.UFix64(1.0),
-				cadence.NewAddress(flow.HexToAddress(cfg.AdminAddress)),
-			},
+		transferFlow,
+		[]transactions.Argument{
+			cadence.UFix64(1.0),
+			cadence.NewAddress(flow.HexToAddress(cfg.AdminAddress)),
 		},
 		transactions.General,
 	)
@@ -858,7 +856,18 @@ func TestScriptsHandlers(t *testing.T) {
 	}
 	defer fc.Close()
 
-	service := transactions.NewService(cfg, nil, nil, fc, nil)
+	db, err := gorm.New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(cfg.DatabaseDSN)
+	defer gorm.Close(db)
+
+	jobStore := jobs.NewGormStore(db)
+	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
+	defer wp.Stop()
+
+	service := transactions.NewService(cfg, nil, nil, fc, wp)
 	h := handlers.NewTransactions(testLogger, service)
 
 	router := mux.NewRouter()
@@ -1032,7 +1041,7 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, tx, err := tokenService.CreateWithdrawal(
+		_, _, err = tokenService.CreateWithdrawal(
 			context.Background(),
 			true,
 			account.Address,
@@ -1042,14 +1051,6 @@ func TestTokenServices(t *testing.T) {
 				FtAmount:  "1.0",
 			},
 		)
-
-		if tx == nil {
-			t.Fatal("Expected transaction not to be nil")
-		}
-
-		if flow.HexToID(tx.TransactionId) == flow.EmptyID {
-			t.Fatal("Expected TransactionId not to be empty")
-		}
 
 		if err == nil {
 			t.Fatal("Expected an error")
@@ -1062,7 +1063,7 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Make sure FUSD is deployed
-		_, _, err := tokenService.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
+		err := tokenService.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 				t.Fatal(err)
@@ -1211,7 +1212,7 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Make sure FUSD is deployed
-	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
+	err = tokenService.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
@@ -1247,7 +1248,7 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Make sure ExampleNFT is deployed
-	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
+	err = tokenService.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
@@ -1348,12 +1349,9 @@ func TestTokenHandlers(t *testing.T) {
 	// Mint ExampleNFTs for account 0
 	mintCode := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
 	for i := 0; i < 3; i++ {
-		_, _, err := transactionService.Create(context.Background(), true, cfg.AdminAddress, templates.Raw{
-			Code: mintCode,
-			Arguments: []templates.Argument{
-				cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address)),
-			},
-		}, transactions.General)
+		_, _, err := transactionService.Create(context.Background(), true, cfg.AdminAddress, mintCode,
+			[]transactions.Argument{cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address))},
+			transactions.General)
 		fatal(t, err)
 	}
 
@@ -1711,7 +1709,7 @@ func TestNFTDeployment(t *testing.T) {
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
-	_, _, err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
+	err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
