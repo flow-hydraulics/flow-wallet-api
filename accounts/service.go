@@ -3,21 +3,25 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
-	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	flow_templates "github.com/onflow/flow-go-sdk/templates"
+)
+
+const (
+	AccountCreateJobType = "account_create"
+
+	maxGasLimit = 9999
 )
 
 // Service defines the API for account management.
@@ -40,7 +44,12 @@ func NewService(
 	txs *transactions.Service,
 ) *Service {
 	// TODO(latenssi): safeguard against nil config?
-	return &Service{store, km, fc, wp, txs, cfg}
+	svc := &Service{store, km, fc, wp, txs, cfg}
+
+	// Register asynchronous job executor.
+	wp.RegisterExecutor(AccountCreateJobType, svc.executeAccountCreateJob)
+
+	return svc
 }
 
 func (s *Service) InitAdminAccount(ctx context.Context) error {
@@ -81,14 +90,13 @@ func (s *Service) InitAdminAccount(ctx context.Context) error {
 }
 
 func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16) error {
-	_, _, err := s.transactions.Create(ctx, true, s.cfg.AdminAddress, templates.Raw{
-		Code: template_strings.AddProposalKeyTransaction,
-		Arguments: []templates.Argument{
-			cadence.NewInt(s.cfg.AdminKeyIndex),
-			cadence.NewUInt16(count),
-		},
-	}, transactions.General)
+	code := template_strings.AddProposalKeyTransaction
+	args := []transactions.Argument{
+		cadence.NewInt(s.cfg.AdminKeyIndex),
+		cadence.NewUInt16(count),
+	}
 
+	_, _, err := s.transactions.Create(ctx, true, s.cfg.AdminAddress, code, args, transactions.General)
 	return err
 }
 
@@ -102,61 +110,27 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // It receives a new account with a corresponding private key or resource ID
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
-func (s *Service) Create(c context.Context, sync bool) (*jobs.Job, *Account, error) {
-	a := &Account{Type: AccountTypeCustodial}
-	k := &keys.Private{}
-	transaction := &transactions.Transaction{}
-
-	process := func(jobResult *jobs.Result) error {
-		ctx := c
-		if !sync {
-			ctx = context.Background()
-		}
-
-		err := New(ctx, transaction, a, k, s.fc, s.km, s.cfg.TransactionTimeout)
-		jobResult.TransactionID = transaction.TransactionId // Update job result
+func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error) {
+	if !sync {
+		job, err := s.wp.CreateJob(AccountCreateJobType, "")
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
-		// Convert the key to storable form (encrypt it)
-		accountKey, err := s.km.Save(*k)
+		err = s.wp.Schedule(job)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
-		// Store account and key
-		a.Keys = []keys.Storable{accountKey}
-		if err := s.store.InsertAccount(a); err != nil {
-			return err
-		}
-
-		AccountAdded.Trigger(AccountAddedPayload{
-			Address: flow.HexToAddress(a.Address),
-		})
-
-		// Update job result
-		jobResult.Result = a.Address
-
-		return nil
+		return job, nil, err
 	}
 
-	job, err := s.wp.AddJob(process)
-
+	account, _, err := s.createAccount(ctx)
 	if err != nil {
-		_, isJErr := err.(*errors.JobQueueFull)
-		if isJErr {
-			err = &errors.RequestError{
-				StatusCode: http.StatusServiceUnavailable,
-				Err:        fmt.Errorf("max capacity reached, try again later"),
-			}
-		}
 		return nil, nil, err
 	}
 
-	err = job.Wait(sync)
-
-	return job, a, err
+	return nil, account, nil
 }
 
 func (s *Service) AddNonCustodialAccount(_ context.Context, address string) (*Account, error) {
@@ -200,4 +174,107 @@ func (s *Service) Details(address string) (Account, error) {
 	}
 
 	return s.store.Account(address)
+}
+
+// createAccount creates a new account on the flow blockchain. It generates a
+// fresh key pair and constructs a flow transaction to create the account with
+// generated key. Admin account is used to pay for the transaction.
+//
+// Returns created account and the flow transaction ID of the account creation.
+func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
+	account := &Account{Type: AccountTypeCustodial}
+
+	// Get admin account authorizer
+	adminAuthorizer, err := s.km.AdminAuthorizer(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Get latest blocks blockID as reference blockID
+	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, s.fc)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Generate a new key pair
+	accountKey, newPrivateKey, err := s.km.GenerateDefault(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+
+	flowTx := flow_templates.CreateAccount(
+		[]*flow.AccountKey{accountKey},
+		nil,
+		adminAuthorizer.Address,
+	)
+
+	flowTx.
+		SetReferenceBlockID(*referenceBlockID).
+		SetProposalKey(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Key.SequenceNumber).
+		SetPayer(adminAuthorizer.Address).
+		SetGasLimit(maxGasLimit)
+
+	// Payer signs the envelope
+	if err := flowTx.SignEnvelope(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Signer); err != nil {
+		return nil, "", err
+	}
+
+	// Send and wait for the transaction to be sealed
+	result, err := flow_helpers.SendAndWait(ctx, s.fc, *flowTx, s.cfg.TransactionTimeout)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Grab the new address from transaction events
+	var newAddress flow.Address
+	for _, event := range result.Events {
+		if event.Type == flow.EventAccountCreated {
+			accountCreatedEvent := flow.AccountCreatedEvent(event)
+			newAddress = accountCreatedEvent.Address()
+			break
+		}
+	}
+
+	// Check that we actually got a new address
+	if newAddress == flow.EmptyAddress {
+		return nil, "", fmt.Errorf("something went wrong when waiting for address")
+	}
+
+	account.Address = flow_helpers.FormatAddress(newAddress)
+
+	// Convert the key to storable form (encrypt it)
+	encryptedAccountKey, err := s.km.Save(*newPrivateKey)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Store account and key
+	account.Keys = []keys.Storable{encryptedAccountKey}
+	if err := s.store.InsertAccount(account); err != nil {
+		return nil, "", err
+	}
+
+	AccountAdded.Trigger(AccountAddedPayload{
+		Address: flow.HexToAddress(account.Address),
+	})
+
+	return account, flowTx.ID().String(), nil
+}
+
+func (s *Service) executeAccountCreateJob(j *jobs.Job) error {
+	if j.Type != AccountCreateJobType {
+		return jobs.ErrInvalidJobType
+	}
+
+	ctx := context.Background()
+
+	a, txID, err := s.createAccount(ctx)
+	if err != nil {
+		return err
+	}
+
+	j.TransactionID = txID
+	j.Result = a.Address
+
+	return nil
 }

@@ -3,14 +3,11 @@ package accounts
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
-	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -33,85 +30,6 @@ type Account struct {
 	DeletedAt gorm.DeletedAt  `json:"-" gorm:"index"`
 }
 
-// New creates a new account on the Flow blockchain.
-// It uses the provided admin account to pay for the creation.
-// It generates a new privatekey and returns it (local key)
-// or a reference to it (Google KMS resource id).
-func New(
-	ctx context.Context,
-	transaction *transactions.Transaction,
-	a *Account,
-	k *keys.Private,
-	fc *client.Client,
-	km keys.Manager,
-	transactionTimeout time.Duration) error {
-	// Get admin account authorizer
-	auth, err := km.AdminAuthorizer(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Get latest blocks blockId as reference blockId
-	blockId, err := flow_helpers.LatestBlockId(ctx, fc)
-	if err != nil {
-		return err
-	}
-
-	// Generate a new key pair
-	accountKey, newPrivateKey, err := km.GenerateDefault(ctx)
-	if err != nil {
-		return err
-	}
-
-	*k = *newPrivateKey
-
-	builder := templates.NewBuilderFromTx(
-		flow_templates.CreateAccount(
-			[]*flow.AccountKey{accountKey},
-			nil,
-			auth.Address,
-		),
-	)
-
-	proposer, err := km.AdminProposalKey(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err := transactions.New(transaction, *blockId, builder, transactions.General, proposer, auth, nil); err != nil {
-		return err
-	}
-
-	// Send and wait for the transaction to be sealed
-	result, err := flow_helpers.SendAndWait(ctx, fc, *builder.Tx, transactionTimeout)
-	if result != nil {
-		// Record for possible JSON response
-		transaction.Events = result.Events
-	}
-	if err != nil {
-		return err
-	}
-
-	// Grab the new address from transaction events
-	var newAddress flow.Address
-	for _, event := range result.Events {
-		if event.Type == flow.EventAccountCreated {
-			accountCreatedEvent := flow.AccountCreatedEvent(event)
-			newAddress = accountCreatedEvent.Address()
-			break
-		}
-	}
-
-	// Check that we actually got a new address
-	if newAddress == flow.EmptyAddress {
-		return fmt.Errorf("something went wrong when waiting for address")
-	}
-
-	a.Address = flow_helpers.FormatAddress(newAddress)
-
-	return nil
-}
-
 // AddContract is mainly used for testing purposes
 func AddContract(
 	ctx context.Context,
@@ -119,56 +37,54 @@ func AddContract(
 	km keys.Manager,
 	accountAddress string,
 	contract flow_templates.Contract,
-	transactionTimeout time.Duration) (*transactions.Transaction, error) {
+	transactionTimeout time.Duration) error {
 
 	// Get admin account authorizer
-	adminAuth, err := km.AdminAuthorizer(ctx)
+	payer, err := km.AdminAuthorizer(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	flowAddr := flow.HexToAddress(accountAddress)
-
 	// Get user account authorizer
-	userAuth, err := km.UserAuthorizer(ctx, flowAddr)
+	proposer, err := km.UserAuthorizer(ctx, flow.HexToAddress(accountAddress))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Get latest blocks id as reference id
-	id, err := flow_helpers.LatestBlockId(ctx, fc)
+	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, fc)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	raw := templates.Raw{
-		Code: template_strings.AddAccountContractWithAdmin,
-		Arguments: []templates.Argument{
-			cadence.NewString(contract.Name),
-			cadence.NewString(contract.SourceHex()),
-		},
+	flowTx := flow.NewTransaction()
+	flowTx.
+		SetReferenceBlockID(*referenceBlockID).
+		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
+		SetPayer(payer.Address).
+		SetGasLimit(maxGasLimit).
+		SetScript([]byte(template_strings.AddAccountContractWithAdmin))
+
+	flowTx.AddArgument(cadence.NewString(contract.Name))        // nolint
+	flowTx.AddArgument(cadence.NewString(contract.SourceHex())) // nolint
+	flowTx.AddAuthorizer(payer.Address)
+
+	// Proposer signs the payload
+	if proposer.Address.Hex() != payer.Address.Hex() {
+		if err := flowTx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
+			return err
+		}
 	}
 
-	b, err := templates.NewBuilderFromRaw(raw)
+	// Payer signs the envelope
+	if err := flowTx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
+		return err
+	}
+
+	_, err = flow_helpers.SendAndWait(ctx, fc, *flowTx, transactionTimeout)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	b.Tx.AddAuthorizer(adminAuth.Address)
-
-	t := transactions.Transaction{}
-	if err := transactions.New(&t, *id, b, transactions.General, userAuth, adminAuth, nil); err != nil {
-		return nil, err
-	}
-
-	result, err := flow_helpers.SendAndWait(ctx, fc, *b.Tx, transactionTimeout)
-	if result != nil {
-		// Record for possible JSON response
-		t.Events = result.Events
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return &t, nil
+	return nil
 }

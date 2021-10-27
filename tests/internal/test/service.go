@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	upstreamgorm "gorm.io/gorm"
+
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
@@ -37,9 +39,7 @@ type svcs struct {
 	listener   *chain_events.Listener
 }
 
-func GetServices(t *testing.T, cfg *configs.Config) Services {
-	t.Helper()
-
+func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
 	db, err := gorm.New(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -47,6 +47,13 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	dbClose := func() { gorm.Close(db) }
 	t.Cleanup(dbClose)
 
+	return db
+}
+
+func GetServices(t *testing.T, cfg *configs.Config) Services {
+	t.Helper()
+
+	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
 	jobStore := jobs.NewGormStore(db)
@@ -107,7 +114,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	listener.Start()
 
 	ctx := context.Background()
-	err = accountService.InitAdminAccount(ctx)
+	err := accountService.InitAdminAccount(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

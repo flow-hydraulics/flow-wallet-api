@@ -1,6 +1,8 @@
 package transactions
 
-import "github.com/flow-hydraulics/flow-wallet-api/datastore"
+import (
+	"github.com/flow-hydraulics/flow-wallet-api/datastore"
+)
 
 // Store manages data regarding transactions.
 type Store interface {
