@@ -12,18 +12,17 @@ import (
 func TestGenerate(t *testing.T) {
 	opts := &configs.Options{EnvFilePath: "../../.env.test"}
 	testCfg, err := configs.ParseConfig(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Safety measures
 	testCfg.DatabaseDSN = "aws_tests.db"
 	testCfg.DatabaseType = "sqlite"
 	testCfg.ChainID = flow.Emulator
 
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if testCfg.DefaultKeyType != keys.AccountKeyTypeAWSKMS {
-		t.Skip("skipping since default key type is not", keys.AccountKeyTypeAWSKMS)
+		t.Skip("skipping since DefaultKeyType is not", keys.AccountKeyTypeAWSKMS)
 	}
 
 	t.Run("key is generated", func(t *testing.T) {

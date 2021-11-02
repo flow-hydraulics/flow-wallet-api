@@ -23,7 +23,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	if testCfg.DefaultKeyType != keys.AccountKeyTypeGoogleKMS {
-		t.Skip("skipping since default key type is not", keys.AccountKeyTypeGoogleKMS)
+		t.Skip("skipping since DefaultKeyType is not", keys.AccountKeyTypeGoogleKMS)
 	}
 
 	t.Run("key is generated", func(t *testing.T) {

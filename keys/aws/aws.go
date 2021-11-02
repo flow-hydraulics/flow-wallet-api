@@ -34,12 +34,7 @@ type kmsPubKey struct {
 // and returns data required for account creation; a flow.AccountKey and a private key. The private
 // key has the KMS key ARN as the value.
 func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *keys.Private, error) {
-	awsCfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		panic("configuration error, " + err.Error())
-	}
-
-	client := kms.NewFromConfig(awsCfg)
+	client := createKMSClient(ctx)
 
 	// Create the new key in AWS KMS
 	createKeyOutput, err := client.CreateKey(ctx, &kms.CreateKeyInput{
@@ -136,12 +131,7 @@ func SignerForKey(
 	}
 	keyId := parts[1]
 
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		panic("configuration error, " + err.Error())
-	}
-
-	client := kms.NewFromConfig(cfg)
+	client := createKMSClient(ctx)
 
 	// Get the public key from AWS KMS
 	pbkOutput, err := client.GetPublicKey(ctx, &kms.GetPublicKeyInput{KeyId: aws.String(keyId)})
@@ -202,6 +192,16 @@ func (s *AWSSigner) Sign(message []byte) ([]byte, error) {
 	}
 
 	return sig, nil
+}
+
+func createKMSClient(ctx context.Context) *kms.Client {
+	awsCfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		panic("aws configuration error, " + err.Error())
+	}
+
+	client := kms.NewFromConfig(awsCfg)
+	return client
 }
 
 // Source: flow-go-sdk/crypto/cloudkms/signer.go

@@ -42,7 +42,15 @@ func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *Ke
 		HashAlgo: crypto.StringToHashAlgorithm(cfg.DefaultHashAlgo),
 	}
 
-	crypter := encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
+	var crypter encryption.Crypter
+	switch cfg.EncryptionKeyType {
+	default:
+		crypter = encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
+	case encryption.EncryptionKeyTypeGoogleKMS:
+		crypter = google.NewGoogleKMSCrypter([]byte(cfg.EncryptionKey))
+	case encryption.EncryptionKeyTypeAWSKMS:
+		crypter = aws.NewAWSKMSCrypter([]byte(cfg.EncryptionKey))
+	}
 
 	return &KeyManager{
 		store,
