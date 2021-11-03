@@ -272,7 +272,7 @@ func (s *Service) getProposalAuthorizer(ctx context.Context, proposerAddress str
 
 	var proposer keys.Authorizer
 	if proposerAddress == s.cfg.AdminAddress {
-		proposer, err = s.km.AdminAuthorizer(ctx)
+		proposer, err = s.km.AdminProposalKey(ctx)
 		if err != nil {
 			return keys.Authorizer{}, err
 		}
