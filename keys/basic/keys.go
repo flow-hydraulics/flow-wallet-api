@@ -174,7 +174,7 @@ func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, err
 
 	index, err := s.store.ProposalKey()
 	if err != nil {
-		return keys.Authorizer{}, err
+		return keys.Authorizer{}, fmt.Errorf("unable to get admin proposal key: %w", err)
 	}
 
 	acc, err := s.fc.GetAccount(ctx, adminAcc)

@@ -28,8 +28,7 @@ reset: down dev
 
 .PHONY: run-tests
 run-tests:
-	@go test
-	@go test ./...
+	@go test ./... -p 1
 
 .PHONY: test
 test: start-emulator deploy run-tests

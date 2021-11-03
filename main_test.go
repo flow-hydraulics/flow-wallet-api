@@ -43,13 +43,16 @@ const (
 
 var testLogger *log.Logger
 
-type TestLogger struct {
-	t *testing.T
-}
+type TestApp struct {
+	Config     *configs.Config
+	KeyManager keys.Manager
 
-func (tl *TestLogger) Write(p []byte) (n int, err error) {
-	tl.t.Log(string(p))
-	return len(p), nil
+	AccountService     *accounts.Service
+	TemplateService    *templates.Service
+	TokenService       *tokens.Service
+	TransactionService *transactions.Service
+
+	JobStore jobs.Store
 }
 
 type httpTestStep struct {
@@ -63,11 +66,17 @@ type httpTestStep struct {
 	sync        bool
 }
 
-func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.ResponseRecorder {
-	req, err := http.NewRequest(s.method, s.url, s.body)
+func fatal(t *testing.T, err error) {
+	t.Helper()
+
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.ResponseRecorder {
+	req, err := http.NewRequest(s.method, s.url, s.body)
+	fatal(t, err)
 
 	if s.contentType != "" {
 		req.Header.Set("content-type", "application/json")
@@ -100,32 +109,80 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 	return rr
 }
 
-func fatal(t *testing.T, err error) {
-	t.Helper()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 var testDbDSNcounter uint = 0
 
-func getTestDbDSN() string {
+func getTestDbDSN(t *testing.T) string {
+	t.Helper()
+
 	testDbDSNcounter += 1
 	return fmt.Sprintf("testDB%d.db", testDbDSNcounter)
 }
 
-func getTestConfig() *configs.Config {
+func getTestConfig(t *testing.T) *configs.Config {
+	t.Helper()
+
 	opts := &configs.Options{EnvFilePath: ".env.test"}
-	var err error
+
 	cfg, err := configs.ParseConfig(opts)
-	if err != nil {
-		panic(err)
-	}
-	cfg.DatabaseDSN = getTestDbDSN()
+	fatal(t, err)
+
+	cfg.DatabaseDSN = getTestDbDSN(t)
 	cfg.DatabaseType = testDbType
 	cfg.ChainID = flow.Emulator
 	return cfg
+}
+
+func getTestApp(t *testing.T) TestApp {
+	t.Helper()
+
+	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
+
+	cfg := getTestConfig(t)
+
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
+	fatal(t, err)
+
+	db, err := gorm.New(cfg)
+	fatal(t, err)
+
+	accountStore := accounts.NewGormStore(db)
+	jobStore := jobs.NewGormStore(db)
+	keyStore := keys.NewGormStore(db)
+	templateStore := templates.NewGormStore(db)
+	tokenStore := tokens.NewGormStore(db)
+	transactionStore := transactions.NewGormStore(db)
+
+	km := basic.NewKeyManager(cfg, keyStore, fc)
+
+	wp := jobs.NewWorkerPool(testLogger, jobStore, 100, 1)
+
+	templateService := templates.NewService(cfg, templateStore)
+	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
+	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
+
+	err = accountService.InitAdminAccount(context.Background())
+	fatal(t, err)
+
+	t.Cleanup(func() {
+		wp.Stop()
+		gorm.Close(db)
+		os.Remove(cfg.DatabaseDSN)
+		fc.Close()
+		goleak.VerifyNone(t, ignoreOpenCensus)
+	})
+
+	return TestApp{
+		Config:     cfg,
+		KeyManager: km,
+
+		AccountService:     accountService,
+		TemplateService:    templateService,
+		TokenService:       tokenService,
+		TransactionService: transactionService,
+
+		JobStore: jobStore,
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -137,62 +194,27 @@ func TestMain(m *testing.M) {
 }
 
 func TestAccountServices(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
-
-	cfg := getTestConfig()
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	txStore := transactions.NewGormStore(db)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	txService := transactions.NewService(cfg, txStore, km, fc, wp)
-	service := accounts.NewService(cfg, accountStore, km, fc, wp, txService)
+	app := getTestApp(t)
 
 	t.Run("admin init", func(t *testing.T) {
 		ctx := context.Background()
 
-		err = service.InitAdminAccount(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
+		err := app.AccountService.InitAdminAccount(ctx)
+		fatal(t, err)
 
 		// make sure all requested proposal keys are created
 
-		keyCount, err := km.InitAdminProposalKeys(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
+		keyCount, err := app.KeyManager.InitAdminProposalKeys(ctx)
+		fatal(t, err)
 
-		if keyCount != cfg.AdminProposalKeyCount {
+		if keyCount != app.Config.AdminProposalKeyCount {
 			t.Fatal("incorrect number of admin proposal keys")
 		}
 	})
 
 	t.Run("sync create", func(t *testing.T) {
-		_, account, err := service.Create(context.Background(), true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, account, err := app.AccountService.Create(context.Background(), true)
+		fatal(t, err)
 
 		if _, err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
@@ -200,10 +222,8 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("async create", func(t *testing.T) {
-		job, _, err := service.Create(context.Background(), false)
-		if err != nil {
-			t.Fatal(err)
-		}
+		job, _, err := app.AccountService.Create(context.Background(), false)
+		fatal(t, err)
 
 		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Complete {
 			t.Errorf("expected job status to be %s or %s or %s but got %s",
@@ -218,10 +238,8 @@ func TestAccountServices(t *testing.T) {
 			t.Errorf("expected job status to be %s got %s; job.Error: %s", jobs.Complete, job.State, job.Error)
 		}
 
-		account, err := service.Details(job.Result)
-		if err != nil {
-			t.Fatal(err)
-		}
+		account, err := app.AccountService.Details(job.Result)
+		fatal(t, err)
 
 		if _, err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
@@ -233,9 +251,9 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("async create thrice", func(t *testing.T) {
-		_, _, err1 := service.Create(context.Background(), false) // Goes immediately to processing
-		_, _, err2 := service.Create(context.Background(), false) // Queues - queue now full
-		_, _, err3 := service.Create(context.Background(), false) // Should not fit, sometimes does
+		_, _, err1 := app.AccountService.Create(context.Background(), false) // Goes immediately to processing
+		_, _, err2 := app.AccountService.Create(context.Background(), false) // Queues - queue now full
+		_, _, err3 := app.AccountService.Create(context.Background(), false) // Should not fit, sometimes does
 		if err1 != nil {
 			t.Error(err1)
 		}
@@ -249,50 +267,19 @@ func TestAccountServices(t *testing.T) {
 }
 
 func TestAccountHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	app := getTestApp(t)
 
-	cfg := getTestConfig()
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	jobStore := jobs.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	txStore := transactions.NewGormStore(db)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	store := accounts.NewGormStore(db)
-	txService := transactions.NewService(cfg, txStore, km, fc, wp)
-	service := accounts.NewService(cfg, store, km, fc, wp, txService)
-
-	h := handlers.NewAccounts(testLogger, service)
+	handler := handlers.NewAccounts(testLogger, app.AccountService)
 
 	t.Run("admin init", func(t *testing.T) {
-		err = service.InitAdminAccount(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
+		err := app.AccountService.InitAdminAccount(context.Background())
+		fatal(t, err)
 	})
 
 	router := mux.NewRouter()
-	router.Handle("/", h.List()).Methods(http.MethodGet)
-	router.Handle("/", h.Create()).Methods(http.MethodPost)
-	router.Handle("/{address}", h.Details()).Methods(http.MethodGet)
+	router.Handle("/", handler.List()).Methods(http.MethodGet)
+	router.Handle("/", handler.Create()).Methods(http.MethodPost)
+	router.Handle("/{address}", handler.Details()).Methods(http.MethodGet)
 
 	var tempAccAddress string
 
@@ -308,7 +295,7 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "list db empty",
 			method:   http.MethodGet,
 			url:      "/",
-			expected: fmt.Sprintf(`(?m)^\[{"address":"%s".*}\]$`, cfg.AdminAddress),
+			expected: fmt.Sprintf(`(?m)^\[{"address":"%s".*}\]$`, app.Config.AdminAddress),
 			status:   http.StatusOK,
 		},
 		{
@@ -357,9 +344,7 @@ func TestAccountHandlers(t *testing.T) {
 			url := replacer.Replace(string(step.url))
 
 			req, err := http.NewRequest(step.method, url, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+			fatal(t, err)
 
 			req.Context()
 
@@ -376,7 +361,7 @@ func TestAccountHandlers(t *testing.T) {
 			// wait for the account to become available
 			// and store the new account in "tempAcc".
 			if step.status == http.StatusCreated {
-				jobService := jobs.NewService(jobStore)
+				jobService := jobs.NewService(app.JobStore)
 				var rJob jobs.JSONResponse
 				json.Unmarshal(rr.Body.Bytes(), &rJob) // nolint
 				id := rJob.ID.String()
@@ -398,62 +383,27 @@ func TestAccountHandlers(t *testing.T) {
 }
 
 func TestAccountTransactionHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	app := getTestApp(t)
 
-	cfg := getTestConfig()
-
-	// logger = log.New(&TestLogger{t}, "", log.Lshortfile)
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	jobStore := jobs.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	store := transactions.NewGormStore(db)
-	service := transactions.NewService(cfg, store, km, fc, wp)
-	h := handlers.NewTransactions(testLogger, service)
+	handler := handlers.NewTransactions(testLogger, app.TransactionService)
 
 	router := mux.NewRouter()
-	router.Handle("/{address}/sign", h.Sign()).Methods(http.MethodPost)
-	router.Handle("/{address}/transactions", h.List()).Methods(http.MethodGet)
-	router.Handle("/{address}/transactions", h.Create()).Methods(http.MethodPost)
-	router.Handle("/{address}/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
+	router.Handle("/{address}/sign", handler.Sign()).Methods(http.MethodPost)
+	router.Handle("/{address}/transactions", handler.List()).Methods(http.MethodGet)
+	router.Handle("/{address}/transactions", handler.Create()).Methods(http.MethodPost)
+	router.Handle("/{address}/transactions/{transactionId}", handler.Details()).Methods(http.MethodGet)
 
-	token, err := templateService.GetTokenByName("FlowToken")
-	if err != nil {
-		t.Fatal(err)
-	}
+	token, err := app.TemplateService.GetTokenByName("FlowToken")
+	fatal(t, err)
 
-	tFlow := templates.FungibleTransferCode(cfg.ChainID, token)
+	tFlow := templates.FungibleTransferCode(app.Config.ChainID, token)
 	tFlowBytes, err := json.Marshal(tFlow)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatal(t, err)
 
 	validTransferFlow := fmt.Sprintf(`{
 		"code":%s,
 		"arguments":[{"type":"UFix64","value":"1.0"},{"type":"Address","value":"%s"}]
-	}`, tFlowBytes, cfg.AdminAddress)
+	}`, tFlowBytes, app.Config.AdminAddress)
 
 	validHello := `{
 		"code":"transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}",
@@ -481,7 +431,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 		{
 			name:     "list db empty",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected: `(?m)^\[\]$`,
 			status:   http.StatusOK,
 		},
@@ -497,7 +447,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -506,7 +456,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -516,7 +466,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    "Unsupported content type",
 			status:      http.StatusUnsupportedMediaType,
 			sync:        true,
@@ -526,7 +476,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validTransferFlow),
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -536,7 +486,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        nil,
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    "empty body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -546,7 +496,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(""),
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    "empty body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -556,7 +506,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader("notvalidobject"),
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    "invalid body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -566,7 +516,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(invalidHello),
-			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected:    "Parsing failed",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -584,28 +534,28 @@ func TestAccountTransactionHandlers(t *testing.T) {
 		{
 			name:     "list db not empty",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
 			expected: `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "details invalid id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/invalid-id", cfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/invalid-id", app.Config.AdminAddress),
 			expected: "not a valid transaction id",
 			status:   http.StatusBadRequest,
 		},
 		{
 			name:     "details unknown id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921", cfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921", app.Config.AdminAddress),
 			expected: "transaction not found",
 			status:   http.StatusNotFound,
 		},
 		{
 			name:     "details known id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/<id>", cfg.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/<id>", app.Config.AdminAddress),
 			expected: `(?m)^{"transactionId":".+"}$`,
 			status:   http.StatusOK,
 		},
@@ -621,7 +571,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/sign", cfg.AdminAddress),
+			url:         fmt.Sprintf("/%s/sign", app.Config.AdminAddress),
 			expected:    `(?m)^{"code":".*","arguments":\[.*\],"referenceBlockId":"(0x)?[0-9a-f]+","gasLimit":\d+,"proposalKey":{"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"sequenceNumber":\d+},"payer":"(0x)?[0-9a-f]+","authorizers":\[(("[(0x)?[0-9a-f]+"),?)*\],"payloadSignatures":(null|\[({"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"signature":"[0-9a-f]+"},?)*\]),"envelopeSignatures":\[({"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"signature":"[0-9a-f]+"},?)*\]}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -679,85 +629,41 @@ func TestAccountTransactionHandlers(t *testing.T) {
 }
 
 func TestTransactionHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	app := getTestApp(t)
 
-	cfg := getTestConfig()
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	jobStore := jobs.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-
-	transactionStore := transactions.NewGormStore(db)
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-
-	accountStore := accounts.NewGormStore(db)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-
-	h := handlers.NewTransactions(testLogger, transactionService)
+	handler := handlers.NewTransactions(testLogger, app.TransactionService)
 
 	router := mux.NewRouter()
-	router.Handle("/transactions", h.List()).Methods(http.MethodGet)
-	router.Handle("/transactions/{transactionId}", h.Details()).Methods(http.MethodGet)
+	router.Handle("/transactions", handler.List()).Methods(http.MethodGet)
+	router.Handle("/transactions/{transactionId}", handler.Details()).Methods(http.MethodGet)
 
-	err = accountService.InitAdminAccount(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	token, err := app.TemplateService.GetTokenByName("FlowToken")
+	fatal(t, err)
 
-	token, err := templateService.GetTokenByName("FlowToken")
-	if err != nil {
-		t.Fatal(err)
-	}
+	transferFlow := templates.FungibleTransferCode(app.Config.ChainID, token)
 
-	transferFlow := templates.FungibleTransferCode(cfg.ChainID, token)
-
-	_, transaction1, err := transactionService.Create(
+	_, transaction1, err := app.TransactionService.Create(
 		context.Background(),
 		true,
-		cfg.AdminAddress,
+		app.Config.AdminAddress,
 		"transaction() { prepare(signer: AuthAccount){} execute { log(\"Hello World!\") }}",
 		nil,
 		transactions.General,
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatal(t, err)
 
-	_, transaction2, err := transactionService.Create(
+	_, transaction2, err := app.TransactionService.Create(
 		context.Background(),
 		true,
-		cfg.AdminAddress,
+		app.Config.AdminAddress,
 		transferFlow,
 		[]transactions.Argument{
 			cadence.UFix64(1.0),
-			cadence.NewAddress(flow.HexToAddress(cfg.AdminAddress)),
+			cadence.NewAddress(flow.HexToAddress(app.Config.AdminAddress)),
 		},
 		transactions.General,
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatal(t, err)
 
 	// NOTE: The order of the test "steps" matters
 	steps := []struct {
@@ -845,33 +751,12 @@ func TestTransactionHandlers(t *testing.T) {
 }
 
 func TestScriptsHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	app := getTestApp(t)
 
-	cfg := getTestConfig()
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	jobStore := jobs.NewGormStore(db)
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	service := transactions.NewService(cfg, nil, nil, fc, wp)
-	h := handlers.NewTransactions(testLogger, service)
+	handler := handlers.NewTransactions(testLogger, app.TransactionService)
 
 	router := mux.NewRouter()
-	router.Handle("/", h.ExecuteScript()).Methods(http.MethodPost)
+	router.Handle("/", handler.ExecuteScript()).Methods(http.MethodPost)
 
 	steps := []struct {
 		name        string
@@ -909,7 +794,7 @@ func TestScriptsHandlers(t *testing.T) {
 			body: strings.NewReader(fmt.Sprintf(`{
 				"code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
 				"arguments":[{"type":"Address","value":"%s"}]
-			}`, cfg.AdminAddress)),
+			}`, app.Config.AdminAddress)),
 			contentType: "application/json",
 			expected:    "\\d+",
 			status:      http.StatusOK,
@@ -948,61 +833,18 @@ func TestScriptsHandlers(t *testing.T) {
 }
 
 func TestTokenServices(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
-
-	cfg := getTestConfig()
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
-	tokenStore := tokens.NewGormStore(db)
-
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
-
-	t.Run("admin init", func(t *testing.T) {
-		err = accountService.InitAdminAccount(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
+	app := getTestApp(t)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
-		_, account, err := accountService.Create(context.Background(), true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, account, err := app.AccountService.Create(context.Background(), true)
+		fatal(t, err)
 
 		// Fund the account from service account
-		_, _, err = tokenService.CreateWithdrawal(
+		_, _, err = app.TokenService.CreateWithdrawal(
 			context.Background(),
 			true,
-			cfg.AdminAddress,
+			app.Config.AdminAddress,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
 				Recipient: account.Address,
@@ -1010,24 +852,20 @@ func TestTokenServices(t *testing.T) {
 			},
 		)
 
-		if err != nil {
-			t.Fatal(err)
-		}
+		fatal(t, err)
 
-		_, transfer, err := tokenService.CreateWithdrawal(
+		_, transfer, err := app.TokenService.CreateWithdrawal(
 			context.Background(),
 			true,
 			account.Address,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
-				Recipient: cfg.AdminAddress,
+				Recipient: app.Config.AdminAddress,
 				FtAmount:  "1.0",
 			},
 		)
 
-		if err != nil {
-			t.Fatal(err)
-		}
+		fatal(t, err)
 
 		if flow.HexToID(transfer.TransactionId) == flow.EmptyID {
 			t.Fatalf("Expected TransactionId not to be empty")
@@ -1036,18 +874,16 @@ func TestTokenServices(t *testing.T) {
 
 	t.Run("account can not make a transaction without funds", func(t *testing.T) {
 		// Create an account
-		_, account, err := accountService.Create(context.Background(), true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, account, err := app.AccountService.Create(context.Background(), true)
+		fatal(t, err)
 
-		_, _, err = tokenService.CreateWithdrawal(
+		_, _, err = app.TokenService.CreateWithdrawal(
 			context.Background(),
 			true,
 			account.Address,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
-				Recipient: cfg.AdminAddress,
+				Recipient: app.Config.AdminAddress,
 				FtAmount:  "1.0",
 			},
 		)
@@ -1063,7 +899,7 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Make sure FUSD is deployed
-		err := tokenService.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
+		err := app.TokenService.DeployTokenContractForAccount(ctx, true, tokenName, app.Config.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 				t.Fatal(err)
@@ -1071,7 +907,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = tokenService.Setup(ctx, true, tokenName, cfg.AdminAddress)
+		_, _, err = app.TokenService.Setup(ctx, true, tokenName, app.Config.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "vault exists") {
 				t.Fatal(err)
@@ -1079,26 +915,22 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Create an account
-		_, account, err := accountService.Create(ctx, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, account, err := app.AccountService.Create(ctx, true)
+		fatal(t, err)
 
 		// Setup the new account to be able to handle FUSD
-		_, setupTx, err := tokenService.Setup(ctx, true, tokenName, account.Address)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, setupTx, err := app.TokenService.Setup(ctx, true, tokenName, account.Address)
+		fatal(t, err)
 
 		if setupTx.TransactionType != transactions.FtSetup {
 			t.Errorf("expected %s but got %s", transactions.FtSetup, setupTx.TransactionType)
 		}
 
 		// Create a withdrawal, should error as we can not mint FUSD right now
-		_, _, err = tokenService.CreateWithdrawal(
+		_, _, err = app.TokenService.CreateWithdrawal(
 			ctx,
 			true,
-			cfg.AdminAddress,
+			app.Config.AdminAddress,
 			tokens.WithdrawalRequest{
 				TokenName: tokenName,
 				Recipient: account.Address,
@@ -1119,13 +951,11 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Create an account
-		_, account, err := accountService.Create(ctx, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, account, err := app.AccountService.Create(ctx, true)
+		fatal(t, err)
 
 		// Setup the new account to be able to handle the non-existent token
-		_, _, err = tokenService.Setup(ctx, true, tokenName, account.Address)
+		_, _, err = app.TokenService.Setup(ctx, true, tokenName, account.Address)
 		if err == nil {
 			t.Fatal("expected an error")
 		}
@@ -1133,89 +963,44 @@ func TestTokenServices(t *testing.T) {
 }
 
 func TestTokenHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	app := getTestApp(t)
 
-	cfg := getTestConfig()
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
-	tokenStore := tokens.NewGormStore(db)
-
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
-
-	t.Run("admin init", func(t *testing.T) {
-		err = accountService.InitAdminAccount(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	tokenHandler := handlers.NewTokens(testLogger, tokenService)
+	handler := handlers.NewTokens(testLogger, app.TokenService)
 
 	router := mux.NewRouter()
-	router.Handle("/{address}/fungible-tokens", tokenHandler.AccountTokens(templates.FT)).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
-	router.Handle("/{address}/fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
-	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens", handler.AccountTokens(templates.FT)).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", handler.Setup()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}", handler.Details()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", handler.CreateWithdrawal()).Methods(http.MethodPost)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals", handler.ListWithdrawals()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}", handler.GetWithdrawal()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits", handler.ListDeposits()).Methods(http.MethodGet)
+	router.Handle("/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", handler.GetDeposit()).Methods(http.MethodGet)
 
-	router.Handle("/{address}/non-fungible-tokens", tokenHandler.AccountTokens(templates.NFT)).Methods(http.MethodGet)
-	router.Handle("/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Setup()).Methods(http.MethodPost)
-	router.Handle("/{address}/non-fungible-tokens/{tokenName}", tokenHandler.Details()).Methods(http.MethodGet)
-	router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals", tokenHandler.CreateWithdrawal()).Methods(http.MethodPost)
-	router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals", tokenHandler.ListWithdrawals()).Methods(http.MethodGet)
-	router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}", tokenHandler.GetWithdrawal()).Methods(http.MethodGet)
-	router.Handle("/{address}/non-fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
-	router.Handle("/{address}/non-fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
+	router.Handle("/{address}/non-fungible-tokens", handler.AccountTokens(templates.NFT)).Methods(http.MethodGet)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}", handler.Setup()).Methods(http.MethodPost)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}", handler.Details()).Methods(http.MethodGet)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals", handler.CreateWithdrawal()).Methods(http.MethodPost)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals", handler.ListWithdrawals()).Methods(http.MethodGet)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}", handler.GetWithdrawal()).Methods(http.MethodGet)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}/deposits", handler.ListDeposits()).Methods(http.MethodGet)
+	router.Handle("/{address}/non-fungible-tokens/{tokenName}/deposits/{transactionId}", handler.GetDeposit()).Methods(http.MethodGet)
 
 	// Setup
 
 	// FlowToken
-	flowToken, err := templateService.GetTokenByName("FlowToken")
-	if err != nil {
-		t.Fatal(err)
-	}
+	flowToken, err := app.TemplateService.GetTokenByName("FlowToken")
+	fatal(t, err)
 
 	// FUSD
-	fusd, err := templateService.GetTokenByName("FUSD")
-	if err != nil {
-		t.Fatal(err)
-	}
+	fusd, err := app.TemplateService.GetTokenByName("FUSD")
+	fatal(t, err)
 
 	// Make sure FUSD is deployed
-	err = tokenService.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
+	err = app.TokenService.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			t.Fatal(err)
+			fatal(t, err)
 		}
 	}
 
@@ -1235,7 +1020,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	exampleNft := templates.Token{
 		Name:     "ExampleNFT",
-		Address:  cfg.AdminAddress,
+		Address:  app.Config.AdminAddress,
 		Type:     templates.NFT,
 		Setup:    string(setupBytes),
 		Transfer: string(transferBytes),
@@ -1243,46 +1028,40 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Make sure ExampleNFT is enabled
-	if err := templateService.AddToken(&exampleNft); err != nil {
-		t.Fatal(err)
-	}
+	err = app.TemplateService.AddToken(&exampleNft)
+	fatal(t, err)
 
 	// Make sure ExampleNFT is deployed
-	err = tokenService.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
+	err = app.TokenService.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			t.Fatal(err)
+			fatal(t, err)
 		}
 	}
 
 	// Create a few accounts
 	testAccounts := make([]*accounts.Account, 2)
 	for i := 0; i < 2; i++ {
-		_, a, err := accountService.Create(context.Background(), true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, a, err := app.AccountService.Create(context.Background(), true)
+		fatal(t, err)
+
 		testAccounts[i] = a
 	}
 
-	_, testAccount, err := accountService.Create(context.Background(), true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, testAccount, err := app.AccountService.Create(context.Background(), true)
+	fatal(t, err)
 
-	_, testTransferFT, err := tokenService.CreateWithdrawal(
+	_, testTransferFT, err := app.TokenService.CreateWithdrawal(
 		context.Background(),
 		true,
-		cfg.AdminAddress,
+		app.Config.AdminAddress,
 		tokens.WithdrawalRequest{
 			TokenName: flowToken.Name,
 			Recipient: testAccount.Address,
 			FtAmount:  "1.0",
 		},
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatal(t, err)
 
 	// Setup tokens
 	setupTokenSteps := []httpTestStep{
@@ -1347,20 +1126,20 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Mint ExampleNFTs for account 0
-	mintCode := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
+	mintCode := templates.TokenCode(app.Config.ChainID, &exampleNft, string(mintBytes))
 	for i := 0; i < 3; i++ {
-		_, _, err := transactionService.Create(context.Background(), true, cfg.AdminAddress, mintCode,
+		_, _, err := app.TransactionService.Create(context.Background(), true, app.Config.AdminAddress, mintCode,
 			[]transactions.Argument{cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address))},
 			transactions.General)
 		fatal(t, err)
 	}
 
-	aa0NftDetails, err := tokenService.Details(context.Background(), exampleNft.Name, testAccounts[0].Address)
+	aa0NftDetails, err := app.TokenService.Details(context.Background(), exampleNft.Name, testAccounts[0].Address)
 	fatal(t, err)
 
 	nftIDs := aa0NftDetails.Balance.CadenceValue.(cadence.Array).Values
 
-	_, testTransferNFT, err := tokenService.CreateWithdrawal(
+	_, testTransferNFT, err := app.TokenService.CreateWithdrawal(
 		context.Background(),
 		true,
 		testAccounts[0].Address,
@@ -1370,9 +1149,7 @@ func TestTokenHandlers(t *testing.T) {
 			NftID:     reflect.ValueOf(nftIDs[0].ToGoValue()).Uint(),
 		},
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fatal(t, err)
 
 	// Token details
 	detailtsSteps := []httpTestStep{
@@ -1429,7 +1206,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
 			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -1439,7 +1216,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -1448,7 +1225,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
 			expected:    "not a valid address",
 			status:      http.StatusBadRequest,
 		},
@@ -1457,7 +1234,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
 			expected:    "missing decimal point",
 			status:      http.StatusBadRequest,
 		},
@@ -1465,7 +1242,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "create ExampleNFT withdrawal valid sync",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, cfg.AdminAddress, nftIDs[1].ToGoValue())),
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, app.Config.AdminAddress, nftIDs[1].ToGoValue())),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", testAccounts[0].Address, exampleNft.Name),
 			expected:    `(?m)^{"transactionId":".+"}$`,
@@ -1475,7 +1252,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "create ExampleNFT withdrawal with missing NFT",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, cfg.AdminAddress, nftIDs[1].ToGoValue())),
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, app.Config.AdminAddress, nftIDs[1].ToGoValue())),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", testAccounts[1].Address, exampleNft.Name),
 			expected:    `missing NFT`,
@@ -1489,7 +1266,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "list fungible token withdrawals valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
 			expected:    `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:      http.StatusOK,
 		},
@@ -1513,7 +1290,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get withdrawal details valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", cfg.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", app.Config.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
 			expected:    fmt.Sprintf(`(?m)^{"transactionId":"%s".*}$`, testTransferFT.TransactionId),
 			status:      http.StatusOK,
 		},
@@ -1525,7 +1302,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get fungible token withdrawal details valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", cfg.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", app.Config.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
 			expected:    fmt.Sprintf(`(?m)^{"transactionId":"%s".*}$`, testTransferFT.TransactionId),
 			status:      http.StatusOK,
 		},
@@ -1541,7 +1318,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get withdrawal details invalid transaction id",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/invalid-transaction-id", cfg.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/invalid-transaction-id", app.Config.AdminAddress, flowToken.Name),
 			expected:    "not a valid transaction id",
 			status:      http.StatusBadRequest,
 		},
@@ -1673,43 +1450,9 @@ func TestTokenHandlers(t *testing.T) {
 func TestNFTDeployment(t *testing.T) {
 	t.Skip("currently not supported")
 
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	app := getTestApp(t)
 
-	cfg := getTestConfig()
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fc.Close()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-
-	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
-	tokenStore := tokens.NewGormStore(db)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
-	defer wp.Stop()
-
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
-
-	err = tokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
+	err := app.TokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", app.Config.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
@@ -1718,27 +1461,15 @@ func TestNFTDeployment(t *testing.T) {
 }
 
 func TestTemplateHandlers(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
+	app := getTestApp(t)
 
-	cfg := getTestConfig()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	templateStore := templates.NewGormStore(db)
-	templateService := templates.NewService(cfg, templateStore)
-	templateHandler := handlers.NewTemplates(testLogger, templateService)
+	handler := handlers.NewTemplates(testLogger, app.TemplateService)
 
 	router := mux.NewRouter()
-	router.Handle("/tokens", templateHandler.AddToken()).Methods(http.MethodPost)
-	router.Handle("/tokens", templateHandler.ListTokens(templates.NotSpecified)).Methods(http.MethodGet)
-	router.Handle("/tokens/{id_or_name}", templateHandler.GetToken()).Methods(http.MethodGet)
-	router.Handle("/tokens/{id}", templateHandler.RemoveToken()).Methods(http.MethodDelete)
+	router.Handle("/tokens", handler.AddToken()).Methods(http.MethodPost)
+	router.Handle("/tokens", handler.ListTokens(templates.NotSpecified)).Methods(http.MethodGet)
+	router.Handle("/tokens/{id_or_name}", handler.GetToken()).Methods(http.MethodGet)
+	router.Handle("/tokens/{id}", handler.RemoveToken()).Methods(http.MethodDelete)
 
 	addStepts := []httpTestStep{
 		{
@@ -1761,7 +1492,7 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add with invalid name",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, app.Config.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
 			expected:    `not a valid name: ""`,
@@ -1779,16 +1510,16 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add with valid body",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, app.Config.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, app.Config.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add duplicate",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, app.Config.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
 			expected:    `UNIQUE constraint failed: tokens.name`,
@@ -1799,7 +1530,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, app.Config.AdminAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1863,28 +1594,28 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add invalid type",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, app.Config.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, app.Config.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add FT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, app.Config.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, app.Config.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add NFT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, app.Config.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, app.Config.AdminAddress),
 			status:      http.StatusCreated,
 		},
 	}
@@ -1915,45 +1646,24 @@ func TestTemplateHandlers(t *testing.T) {
 }
 
 func TestTemplateService(t *testing.T) {
-	ignoreOpenCensus := goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start")
-	defer goleak.VerifyNone(t, ignoreOpenCensus)
-
-	cfg := getTestConfig()
-
-	db, err := gorm.New(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cfg.DatabaseDSN)
-	defer gorm.Close(db)
-
-	store := templates.NewGormStore(db)
-	service := templates.NewService(cfg, store)
+	app := getTestApp(t)
 
 	// Add a token for testing
-	token := templates.Token{Name: "RandomTokenName", Address: cfg.AdminAddress}
-	err = service.AddToken(&token)
-	if err != nil {
-		t.Fatal(err)
-	}
+	token := templates.Token{Name: "RandomTokenName", Address: app.Config.AdminAddress}
+	err := app.TemplateService.AddToken(&token)
+	fatal(t, err)
 
 	t.Run("Get token by name", func(t *testing.T) {
-		t1, err := service.GetTokenByName("RandomTokenName")
-		if err != nil {
-			t.Fatal(err)
-		}
+		t1, err := app.TemplateService.GetTokenByName("RandomTokenName")
+		fatal(t, err)
 
-		t2, err := service.GetTokenByName("randomtokenname")
-		if err != nil {
-			t.Fatal(err)
-		}
+		t2, err := app.TemplateService.GetTokenByName("randomtokenname")
+		fatal(t, err)
 
-		t3, err := service.GetTokenByName("randomTokenName")
-		if err != nil {
-			t.Fatal(err)
-		}
+		t3, err := app.TemplateService.GetTokenByName("randomTokenName")
+		fatal(t, err)
 
-		_, err = service.GetTokenByName("othername")
+		_, err = app.TemplateService.GetTokenByName("othername")
 		if err == nil {
 			t.Error("expected an error")
 		}

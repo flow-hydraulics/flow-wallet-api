@@ -2,8 +2,8 @@ package test
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
-	"os"
 	"testing"
 	"time"
 
@@ -56,6 +56,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
+	logger := log.New(ioutil.Discard, "", log.LstdFlags|log.Lshortfile)
+
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
@@ -65,7 +67,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(nil, jobStore, 100, 1)
+	wp := jobs.NewWorkerPool(logger, jobStore, 100, 1)
 	wpStop := func() { wp.Stop() }
 	t.Cleanup(wpStop)
 
@@ -93,9 +95,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		return event_types
 	}
 
-	le := log.New(os.Stdout, "[EVENT-POLLER] ", log.LstdFlags|log.Lshortfile)
 	listener := chain_events.NewListener(
-		le, fc, store, getTypes,
+		logger, fc, store, getTypes,
 		cfg.ChainListenerMaxBlocks,
 		1*time.Second,
 		cfg.ChainListenerStartingHeight,
