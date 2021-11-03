@@ -54,4 +54,4 @@ stop-emulator: emulator.pid
 	@kill `cat $<` && rm $<
 
 emulator.pid:
-	@cd flow && { flow emulator & echo $$! > ../$@; }
+	@cd flow && { flow emulator -b 100ms & echo $$! > ../$@; }
