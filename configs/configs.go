@@ -59,7 +59,8 @@ type Config struct {
 
 	// -- Templates --
 
-	EnabledTokens []string `env:"FLOW_WALLET_ENABLED_TOKENS" envSeparator:","`
+	EnabledTokens           []string `env:"FLOW_WALLET_ENABLED_TOKENS" envSeparator:","`
+	ScriptPathCreateAccount string   `env:"FLOW_WALLET_SCRIPT_PATH_CREATE_ACCOUNT" envDefault:""`
 
 	// -- Workerpool --
 
