@@ -45,14 +45,17 @@ var testLogger *log.Logger
 
 type TestApp struct {
 	Config     *configs.Config
+	FlowClient *client.Client
 	KeyManager keys.Manager
+	WorkerPool *jobs.WorkerPool
 
 	AccountService     *accounts.Service
 	TemplateService    *templates.Service
 	TokenService       *tokens.Service
 	TransactionService *transactions.Service
 
-	JobStore jobs.Store
+	AccountStore accounts.Store
+	JobStore     jobs.Store
 }
 
 type httpTestStep struct {
@@ -72,6 +75,20 @@ func fatal(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func deepCopy(v interface{}) (interface{}, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	vptr := reflect.New(reflect.TypeOf(v))
+	err = json.Unmarshal(data, vptr.Interface())
+	if err != nil {
+		return nil, err
+	}
+	return vptr.Elem().Interface(), err
 }
 
 func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.ResponseRecorder {
@@ -174,14 +191,17 @@ func getTestApp(t *testing.T) TestApp {
 
 	return TestApp{
 		Config:     cfg,
+		FlowClient: fc,
 		KeyManager: km,
+		WorkerPool: wp,
 
 		AccountService:     accountService,
 		TemplateService:    templateService,
 		TokenService:       tokenService,
 		TransactionService: transactionService,
 
-		JobStore: jobStore,
+		AccountStore: accountStore,
+		JobStore:     jobStore,
 	}
 }
 
@@ -262,6 +282,37 @@ func TestAccountServices(t *testing.T) {
 		}
 		if err3 == nil {
 			t.Log("expected 503 'max capacity reached, try again later' but got no error")
+		}
+	})
+
+	t.Run("create with custom init script", func(t *testing.T) {
+		// Create a copy of config so we can isolate changes
+		cp, err := deepCopy(app.Config)
+		fatal(t, err)
+		cfg2 := cp.(*configs.Config)
+
+		// Set custom script path
+		cfg2.ScriptPathCreateAccount = "./flow/cadence/transactions/custom_create_account.cdc"
+
+		// Create a new service with new config
+		service2 := accounts.NewService(
+			cfg2,
+			app.AccountStore,
+			app.KeyManager,
+			app.FlowClient,
+			app.WorkerPool,
+			app.TransactionService,
+		)
+
+		// Use the new service to create an account
+		_, _, err = service2.Create(context.Background(), true)
+
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+
+		if !strings.Contains(err.Error(), "Account initialized with custom script") {
+			t.Fatalf(`expected error to contain "Account initialized with custom script" got: %s`, err)
 		}
 	})
 }

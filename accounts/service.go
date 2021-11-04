@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
@@ -213,6 +214,16 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 		SetProposalKey(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Key.SequenceNumber).
 		SetPayer(adminAuthorizer.Address).
 		SetGasLimit(maxGasLimit)
+
+	// Check if we want to use a custom account create script
+	if s.cfg.ScriptPathCreateAccount != "" {
+		bytes, err := os.ReadFile(s.cfg.ScriptPathCreateAccount)
+		if err != nil {
+			return nil, "", err
+		}
+		// Overwrite the existing script
+		flowTx.SetScript(bytes)
+	}
 
 	// Payer signs the envelope
 	if err := flowTx.SignEnvelope(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Signer); err != nil {
