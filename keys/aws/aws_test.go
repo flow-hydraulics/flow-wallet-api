@@ -2,6 +2,8 @@ package aws
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
@@ -9,11 +11,16 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-func TestGenerate(t *testing.T) {
+var testCfg *configs.Config
+
+func TestMain(m *testing.M) {
+	var err error
+
 	opts := &configs.Options{EnvFilePath: "../../.env.test"}
-	testCfg, err := configs.ParseConfig(opts)
+	testCfg, err = configs.ParseConfig(opts)
 	if err != nil {
-		t.Fatal(err)
+		fmt.Println("could not parse config;", err)
+		os.Exit(1)
 	}
 
 	// Safety measures
@@ -21,6 +28,12 @@ func TestGenerate(t *testing.T) {
 	testCfg.DatabaseType = "sqlite"
 	testCfg.ChainID = flow.Emulator
 
+	exitVal := m.Run()
+
+	os.Exit(exitVal)
+}
+
+func TestGenerate(t *testing.T) {
 	if testCfg.DefaultKeyType != keys.AccountKeyTypeAWSKMS {
 		t.Skip("skipping since DefaultKeyType is not", keys.AccountKeyTypeAWSKMS)
 	}

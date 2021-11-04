@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
@@ -95,6 +94,8 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 	return f, pk, nil
 }
 
+// Signer creates a crypto.Signer for the given Flow address and private key
+// (AWS KMS key ARN)
 func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto.Signer, error) {
 	s, err := SignerForKey(ctx, address, key)
 
@@ -114,27 +115,20 @@ type AWSSigner struct {
 	hasher  crypto.Hasher
 }
 
-// SignerForKey returns a new Google Cloud KMS signer for an asymmetric key version.
+// SignerForKey returns a new AWSSigner for the given address & private key
 func SignerForKey(
 	ctx context.Context,
 	address flow.Address,
 	key keys.Private,
 ) (*AWSSigner, error) {
-	a, err := arn.Parse(key.Value) // Get the key info by ARN in key.Value
-	if err != nil {
-		return nil, err
+	if !arn.IsARN(key.Value) {
+		return nil, fmt.Errorf("private key does not contain a valid AWS KMS key ARN")
 	}
-
-	parts := strings.Split(a.Resource, "/")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid Resource in ARN; %s", a.Resource)
-	}
-	keyId := parts[1]
 
 	client := createKMSClient(ctx)
 
 	// Get the public key from AWS KMS
-	pbkOutput, err := client.GetPublicKey(ctx, &kms.GetPublicKeyInput{KeyId: aws.String(keyId)})
+	pbkOutput, err := client.GetPublicKey(ctx, &kms.GetPublicKeyInput{KeyId: aws.String(key.Value)})
 
 	if err != nil {
 		return nil, err
@@ -164,7 +158,7 @@ func SignerForKey(
 		ctx:     ctx,
 		client:  client,
 		address: address,
-		keyId:   keyId,
+		keyId:   key.Value,
 		hasher:  hasher,
 	}, nil
 }
