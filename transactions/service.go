@@ -48,23 +48,23 @@ func NewService(
 func (s *Service) Create(ctx context.Context, sync bool, proposerAddress string, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error) {
 	transaction, err := s.newTransaction(ctx, proposerAddress, code, args, tType)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("error while getting new transaction: %w", err)
 	}
 
 	if !sync {
 		err := s.store.InsertTransaction(transaction)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("error while inserting transaction in db: %w", err)
 		}
 
 		job, err := s.wp.CreateJob(TransactionJobType, transaction.TransactionId)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("error while creating job: %w", err)
 		}
 
 		err = s.wp.Schedule(job)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("error while scheduling job: %w", err)
 		}
 
 		return job, transaction, nil
@@ -199,7 +199,7 @@ func (s *Service) buildFlowTransaction(ctx context.Context, proposerAddress, cod
 	// Admin should always be the payer of the transaction fees.
 	payer, err := s.km.AdminAuthorizer(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while getting admin authorizer for payer: %w", err)
 	}
 
 	proposer, err := s.getProposalAuthorizer(ctx, proposerAddress)
@@ -254,7 +254,7 @@ func (s *Service) newTransaction(ctx context.Context, proposerAddress string, co
 
 	flowTx, err := s.buildFlowTransaction(ctx, proposerAddress, code, args)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while building transaction: %w", err)
 	}
 
 	tx.TransactionId = flowTx.ID().Hex()
@@ -272,14 +272,14 @@ func (s *Service) getProposalAuthorizer(ctx context.Context, proposerAddress str
 
 	var proposer keys.Authorizer
 	if proposerAddress == s.cfg.AdminAddress {
-		proposer, err = s.km.AdminAuthorizer(ctx)
+		proposer, err = s.km.AdminProposalKey(ctx)
 		if err != nil {
-			return keys.Authorizer{}, err
+			return keys.Authorizer{}, fmt.Errorf("error while getting admin authorizer: %w", err)
 		}
 	} else {
 		proposer, err = s.km.UserAuthorizer(ctx, flow.HexToAddress(proposerAddress))
 		if err != nil {
-			return keys.Authorizer{}, err
+			return keys.Authorizer{}, fmt.Errorf("error while getting user authorizer: %w", err)
 		}
 	}
 

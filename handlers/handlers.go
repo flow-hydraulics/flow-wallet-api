@@ -31,7 +31,7 @@ func handleError(rw http.ResponseWriter, logger *log.Logger, err error) {
 
 	// Check for "record not found" database error
 	if strings.Contains(err.Error(), "record not found") {
-		http.Error(rw, "record not found", http.StatusNotFound)
+		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
 

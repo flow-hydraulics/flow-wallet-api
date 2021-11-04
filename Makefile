@@ -28,8 +28,7 @@ reset: down dev
 
 .PHONY: run-tests
 run-tests:
-	@go test
-	@go test ./...
+	@go test ./... -p 1
 
 .PHONY: test
 test: start-emulator deploy run-tests
@@ -54,4 +53,4 @@ stop-emulator: emulator.pid
 	@kill `cat $<` && rm $<
 
 emulator.pid:
-	@cd flow && { flow emulator & echo $$! > ../$@; }
+	@cd flow && { flow emulator -b 100ms & echo $$! > ../$@; }
