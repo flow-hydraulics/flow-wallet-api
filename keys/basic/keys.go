@@ -8,6 +8,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/keys/aws"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/encryption"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/google"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/local"
@@ -41,7 +42,15 @@ func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *Ke
 		HashAlgo: crypto.StringToHashAlgorithm(cfg.DefaultHashAlgo),
 	}
 
-	crypter := encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
+	var crypter encryption.Crypter
+	switch cfg.EncryptionKeyType {
+	default:
+		crypter = encryption.NewAESCrypter([]byte(cfg.EncryptionKey))
+	case encryption.EncryptionKeyTypeGoogleKMS:
+		crypter = google.NewGoogleKMSCrypter([]byte(cfg.EncryptionKey))
+	case encryption.EncryptionKeyTypeAWSKMS:
+		crypter = aws.NewAWSKMSCrypter([]byte(cfg.EncryptionKey))
+	}
 
 	return &KeyManager{
 		store,
@@ -63,6 +72,8 @@ func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (*flow.
 			crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo))
 	case keys.AccountKeyTypeGoogleKMS:
 		return google.Generate(s.cfg, ctx, keyIndex, weight)
+	case keys.AccountKeyTypeAWSKMS:
+		return aws.Generate(s.cfg, ctx, keyIndex, weight)
 	}
 }
 
@@ -210,6 +221,11 @@ func signerForKey(ctx context.Context, address flow.Address, k keys.Private) (cr
 		}
 	case keys.AccountKeyTypeGoogleKMS:
 		sig, err = google.Signer(ctx, address, k)
+		if err != nil {
+			return nil, err
+		}
+	case keys.AccountKeyTypeAWSKMS:
+		sig, err = aws.Signer(ctx, address, k)
 		if err != nil {
 			return nil, err
 		}

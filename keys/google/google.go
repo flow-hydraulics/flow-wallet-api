@@ -13,6 +13,8 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
 )
 
+// Generate creates a new asymmetric signing & verification key in Google KMS
+// and returns the required data to use the key with the Flow blockchain
 func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *keys.Private, error) {
 	u := uuid.New()
 
@@ -52,6 +54,8 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 	return f, p, nil
 }
 
+// Signer creates a crypto.Signer for the given Flow address and private key
+// (KMS key resource name)
 func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto.Signer, error) {
 	c, err := cloudkms.NewClient(ctx)
 	if err != nil {

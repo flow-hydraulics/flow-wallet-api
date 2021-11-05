@@ -55,6 +55,7 @@ jobs:
           FLOW_WALLET_ACCESS_API_HOST: "localhost:3569"
           FLOW_WALLET_CHAIN_ID: "flow-emulator"
           FLOW_WALLET_ENCRYPTION_KEY: "faae4ed1c30f4e4555ee3a71f1044a8e"
+          FLOW_WALLET_ENCRYPTION_KEY_TYPE: "local"
           FLOW_WALLET_ENABLED_TOKENS: "FUSD:0xf8d6e0586b0a20c7:fusd,FlowToken:0x0ae53cb6e3f42a79:flowToken"
         run: go test ./... -p 1
 
