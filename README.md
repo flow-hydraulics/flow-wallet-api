@@ -3,7 +3,6 @@
 The Flow Wallet API is a REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure.
 This service can be used by an application that needs to manage Flow user accounts and the assets inside them.
 
-
 ## Features
 
 - Create new Flow accounts
@@ -16,7 +15,6 @@ This service can be used by an application that needs to manage Flow user accoun
 
 View full list of functionality in the [API documentation](https://flow-hydraulics.github.io/flow-wallet-api/).
 
-
 ## Background
 
 Some application developers may wish to manage Flow accounts in a fully-custodial fashion,
@@ -28,18 +26,15 @@ For security and/or legal reasons,
 some developers need to use a custody service running on-premises as part of their existing infrastructure,
 rather than a hosted 3rd-party solution.
 
-
 ### Example use cases
 
 - **FLOW/FUSD Hot Wallet** — an application that allows users to convert fiat currency to FLOW or FUSD. A single admin account would be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
 - **Exchange** — a cryptocurrency exchange that is listing FLOW and/or FUSD. Similar to the case above, one or more admin accounts may be used as a hot wallet for outgoing payments, and additional deposit accounts would be created to accept incoming payments.
 - **Web Wallet** — a user-facing wallet application that is compatible with Flow dapps. Each user account would be created and managed by the wallet service.
 
-
 ## API Specification
 
 View the [Wallet API documentation and OpenAPI (Swagger) specification](https://flow-hydraulics.github.io/flow-wallet-api/).
-
 
 ## Installation
 
@@ -48,7 +43,6 @@ The Wallet API is provided as a Docker image:
 ```sh
 docker pull ghcr.io/flow-hydraulics/flow-wallet-api:latest
 ```
-
 
 ### Basic example usage
 
@@ -84,9 +78,13 @@ Once you're finished, run this to stop the containers:
 docker-compose down
 ```
 
-
 ## Configuration
 
+### Updates on async requests (webhook)
+
+If you have the possibility to setup a webhook endpoint, you can set `FLOW_WALLET_JOB_STATUS_WEBHOOK` to receive updates on async requests (requests which return a job). The wallet will send a `POST` request to this URL containing the job whenever the status of the job is updated.
+
+**NOTE:** The wallet expects a response with status code **200** and will retry if unsuccessful.
 
 ### Enabled fungible tokens
 
@@ -99,7 +97,6 @@ A comma separated list of _fungible tokens_ and their corresponding addresses en
 Examples:
 
     FLOW_WALLET_ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd
-
 
 ### Database
 
@@ -121,7 +118,6 @@ Examples of Database DSN
 For more: https://gorm.io/docs/connecting_to_the_database.html
 
 To learn more about database schema versioning and migrations, read [MIGRATIONS.md](MIGRATIONS.MD).
-
 
 ### Google KMS setup
 
@@ -159,7 +155,6 @@ Configure Google KMS as the key storage for `flow-wallet-api` and set the necess
 | LocationID      | `FLOW_WALLET_GOOGLE_KMS_LOCATION_ID` | GCP Location ID  | -       | `europe-north1`, `us-west1` |
 | KeyRingID       | `FLOW_WALLET_GOOGLE_KMS_KEYRING_ID`  | GCP Key Ring ID  | -       | `example-wallet-keyring`    |
 
-
 ### Google KMS for admin account
 
 If you want to use a key stored in Google KMS for the admin account, just pass the resource identifier as the private key (`FLOW_WALLET_ADMIN_PRIVATE_KEY`) and set `FLOW_WALLET_ADMIN_KEY_TYPE` to `google_kms`.
@@ -185,7 +180,6 @@ Example environment:
 
 NOTE: This will mess up the docker-compose setup (emulator won't start) as it uses `FLOW_WALLET_ADMIN_PRIVATE_KEY` as `FLOW_SERVICEPRIVATEKEY`. It will cause an encoding error on the emulator.
 
-
 ### Google KMS key for database encryption
 
 Before configuring a Google KMS key for database encryption please refer to the official guide for setting up a symmetric encryption key;
@@ -194,17 +188,15 @@ https://cloud.google.com/kms/docs/encrypt-decrypt#before_you_begin
 
 If you want to use an Google KMS symmetric encryption key for encrypting the stored account keys, please refer to the following configuration settings;
 
-| Config variable   | Environment variable              | Description                                            | Default | Examples value for Google KMS |
-| ----------------- | --------------------------------- | ------------------------------------------------------ | ------- | ----------------------------- |
-| EncryptionKeyType | `FLOW_WALLET_ENCRYPTION_KEY_TYPE` | Encryption key type                                    | `local` | `google_kms`                  |
-| EncryptionKey     | `FLOW_WALLET_ENCRYPTION_KEY`      | KMS encryption key resource name                       | -       | `projects/my-project/locations/us-west1/keyRings/my-keyring/cryptoKeys/my-encryption-key`                  |
-
+| Config variable   | Environment variable              | Description                      | Default | Examples value for Google KMS                                                             |
+| ----------------- | --------------------------------- | -------------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| EncryptionKeyType | `FLOW_WALLET_ENCRYPTION_KEY_TYPE` | Encryption key type              | `local` | `google_kms`                                                                              |
+| EncryptionKey     | `FLOW_WALLET_ENCRYPTION_KEY`      | KMS encryption key resource name | -       | `projects/my-project/locations/us-west1/keyRings/my-keyring/cryptoKeys/my-encryption-key` |
 
 ### AWS KMS setup
 
 **Note**: In order to use AWS KMS for remote key management you'll need an AWS account.
 **Note**: Custom key stores are not supported.
-
 
 #### Pre-requisites:
 
@@ -223,15 +215,14 @@ Configure AWS KMS as the key storage for `flow-wallet-api` and set the necessary
 | --------------- | ------------------------------ | ---------------- | ------- | ----------------- |
 | DefaultKeyType  | `FLOW_WALLET_DEFAULT_KEY_TYPE` | Default key type | `local` | `aws_kms`         |
 
-
 ### AWS KMS for admin account
 
 If you want to use a key stored in AWS KMS for the admin account, please refer to the following configuration settings;
 
-| Config variable | Environment variable            | Description           | Default | Example value for AWS KMS |
-| --------------- | ------------------------------- | --------------------- | ------- | ------------------------- |
-| AdminKeyType    | `FLOW_WALLET_ADMIN_KEY_TYPE`    | Admin key type        | `local` | `aws_kms`                 |
-| AdminPrivateKey | `FLOW_WALLET_ADMIN_PRIVATE_KEY` | Admin private key ARN | -       | `arn:aws:kms:eu-central-1:012345678910:key/00000000-aaaa-bbbb-cccc-12345678910`         |
+| Config variable | Environment variable            | Description           | Default | Example value for AWS KMS                                                       |
+| --------------- | ------------------------------- | --------------------- | ------- | ------------------------------------------------------------------------------- |
+| AdminKeyType    | `FLOW_WALLET_ADMIN_KEY_TYPE`    | Admin key type        | `local` | `aws_kms`                                                                       |
+| AdminPrivateKey | `FLOW_WALLET_ADMIN_PRIVATE_KEY` | Admin private key ARN | -       | `arn:aws:kms:eu-central-1:012345678910:key/00000000-aaaa-bbbb-cccc-12345678910` |
 
 When testing make sure to add the key to the admin account. You can convert the AWS public key (e.g. `aws.pem`) you downloaded/copied from AWS with flow-cli;
 
@@ -239,21 +230,18 @@ When testing make sure to add the key to the admin account. You can convert the 
 flow keys decode pem --from-file=aws.pem --sig-algo "ECDSA_secp256k1"
 ```
 
-
 ### AWS KMS for encrypting stored keys
 
 If you want to use an AWS KMS symmetric encryption key for encrypting the stored account keys, please refer to the following configuration settings;
 
-| Config variable   | Environment variable              | Description                                            | Default | Examples value for AWS KMS |
-| ----------------- | --------------------------------- | ------------------------------------------------------ | ------- | -------------------------- |
-| EncryptionKeyType | `FLOW_WALLET_ENCRYPTION_KEY_TYPE` | Encryption key type                                    | `local` | `aws_kms`                  |
-| EncryptionKey     | `FLOW_WALLET_ENCRYPTION_KEY`      | KMS encryption key ARN                                 | -       | `arn:aws:kms:eu-central-1:012345678910:key/00000000-aaaa-bbbb-cccc-12345678910`                  |
-
+| Config variable   | Environment variable              | Description            | Default | Examples value for AWS KMS                                                      |
+| ----------------- | --------------------------------- | ---------------------- | ------- | ------------------------------------------------------------------------------- |
+| EncryptionKeyType | `FLOW_WALLET_ENCRYPTION_KEY_TYPE` | Encryption key type    | `local` | `aws_kms`                                                                       |
+| EncryptionKey     | `FLOW_WALLET_ENCRYPTION_KEY`      | KMS encryption key ARN | -       | `arn:aws:kms:eu-central-1:012345678910:key/00000000-aaaa-bbbb-cccc-12345678910` |
 
 ### All possible configuration variables
 
 Refer to [configs/configs.go](configs/configs.go) for details and documentation.
-
 
 ## Credit
 

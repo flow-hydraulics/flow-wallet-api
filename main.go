@@ -101,7 +101,13 @@ func runServer(cfg *configs.Config) {
 	tokenStore := tokens.NewGormStore(db)
 
 	// Create a worker pool
-	wp := jobs.NewWorkerPool(lj, jobStore, cfg.WorkerQueueCapacity, cfg.WorkerCount)
+	wp := jobs.NewWorkerPool(
+		lj,
+		jobStore,
+		cfg.WorkerQueueCapacity,
+		cfg.WorkerCount,
+		jobs.WithJobStatusWebhook(cfg.JobStatusWebhook),
+	)
 	defer func() {
 		ls.Println("Stopping worker pool..")
 		wp.Stop()

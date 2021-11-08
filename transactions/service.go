@@ -324,6 +324,8 @@ func (s *Service) executeTransactionJob(j *jobs.Job) error {
 		return jobs.ErrInvalidJobType
 	}
 
+	j.ShouldSendNotification = true
+
 	ctx := context.Background()
 
 	tx, err := s.store.Transaction(j.TransactionID)

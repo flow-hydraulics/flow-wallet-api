@@ -13,8 +13,6 @@ type Result struct {
 	TransactionID string
 }
 
-type Process func(result *Result) error
-
 // State is a type for Job state.
 type State string
 
@@ -29,22 +27,23 @@ const (
 
 // Job database model
 type Job struct {
-	ID            uuid.UUID      `gorm:"column:id;primary_key;type:uuid;"`
-	Type          string         `gorm:"column:type"`
-	State         State          `gorm:"column:state;default:INIT"`
-	Error         string         `gorm:"column:error"`
-	Result        string         `gorm:"column:result"`
-	TransactionID string         `gorm:"column:transaction_id"`
-	ExecCount     int            `gorm:"column:exec_count;default:0"`
-	CreatedAt     time.Time      `gorm:"column:created_at"`
-	UpdatedAt     time.Time      `gorm:"column:updated_at"`
-	DeletedAt     gorm.DeletedAt `gorm:"column:deleted_at;index"`
-	Do            Process        `gorm:"-"`
+	ID                     uuid.UUID      `gorm:"column:id;primary_key;type:uuid;"`
+	Type                   string         `gorm:"column:type"`
+	State                  State          `gorm:"column:state;default:INIT"`
+	Error                  string         `gorm:"column:error"`
+	Result                 string         `gorm:"column:result"`
+	TransactionID          string         `gorm:"column:transaction_id"`
+	ExecCount              int            `gorm:"column:exec_count;default:0"`
+	CreatedAt              time.Time      `gorm:"column:created_at"`
+	UpdatedAt              time.Time      `gorm:"column:updated_at"`
+	DeletedAt              gorm.DeletedAt `gorm:"column:deleted_at;index"`
+	ShouldSendNotification bool           `gorm:"-"` // Whether or not to notify admin (via webhook for example)
 }
 
 // Job HTTP response
 type JSONResponse struct {
 	ID            uuid.UUID `json:"jobId"`
+	Type          string    `json:"type"`
 	State         State     `json:"state"`
 	Error         string    `json:"error"`
 	Result        string    `json:"result"`
@@ -56,6 +55,7 @@ type JSONResponse struct {
 func (j Job) ToJSONResponse() JSONResponse {
 	return JSONResponse{
 		ID:            j.ID,
+		Type:          j.Type,
 		State:         j.State,
 		Error:         j.Error,
 		Result:        j.Result,

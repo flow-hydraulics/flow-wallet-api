@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -46,30 +47,42 @@ type WorkerPool struct {
 	workerCount       uint
 	dbJobPollInterval time.Duration
 	stopChan          chan struct{}
+
+	notificationConfig *NotificationConfig
 }
 
-func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint) *WorkerPool {
+func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
 	if logger == nil {
 		// Make sure we always have a logger
 		logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	}
-	wg := &sync.WaitGroup{}
-	jobChan := make(chan *Job, capacity)
+
 	pool := &WorkerPool{
+		wg:        &sync.WaitGroup{},
+		jobChan:   make(chan *Job, capacity),
+		stopChan:  make(chan struct{}),
 		executors: make(map[string]ExecutorFunc),
 
 		logger:            logger,
-		wg:                wg,
 		store:             db,
-		jobChan:           jobChan,
 		capacity:          capacity,
 		workerCount:       workerCount,
 		dbJobPollInterval: defaultDBJobPollInterval,
-		stopChan:          make(chan struct{}),
+
+		notificationConfig: &NotificationConfig{},
 	}
 
 	pool.startWorkers()
 	pool.startDBJobScheduler()
+
+	// Register asynchronous job executor.
+	pool.RegisterExecutor(SendJobStatusJobType, pool.executeSendJobStatus)
+
+	// Go through options
+	for _, opt := range opts {
+		opt(pool)
+	}
+
 	return pool
 }
 
@@ -138,7 +151,7 @@ func (wp *WorkerPool) startDBJobScheduler() {
 			o := datastore.ParseListOptions(0, 0)
 			jobs, err := wp.store.SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod, o)
 			if err != nil {
-				wp.logger.Println("WARNING: Could not fetch schedulable jobs from DB: ", err)
+				wp.logger.Printf("WARNING: Could not fetch schedulable jobs from DB: %s", err)
 				continue
 			}
 
@@ -216,8 +229,45 @@ func (wp *WorkerPool) process(job *Job) {
 	if err := wp.store.UpdateJob(job); err != nil {
 		wp.logger.Printf("WARNING: Could not update DB entry for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
 	}
+
+	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
+		if err := ScheduleJobStatusNotification(wp, job); err != nil {
+			wp.logger.Printf("WARNING: Could not schedule a status update notification for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
+		}
+	}
+}
+
+func (wp *WorkerPool) executeSendJobStatus(j *Job) error {
+	if j.Type != SendJobStatusJobType {
+		return ErrInvalidJobType
+	}
+
+	j.ShouldSendNotification = false
+
+	return wp.notificationConfig.SendJobStatus(j.Result)
 }
 
 func PermanentFailure(err error) error {
 	return fmt.Errorf("%w: %s", ErrPermanentFailure, err.Error())
+}
+
+func ScheduleJobStatusNotification(wp *WorkerPool, parent *Job) error {
+	job, err := wp.CreateJob(SendJobStatusJobType, "")
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(parent.ToJSONResponse())
+	if err != nil {
+		return err
+	}
+
+	// Store the notification content of the parent job in Result of the new job
+	job.Result = string(b)
+
+	if err := wp.store.UpdateJob(job); err != nil {
+		return err
+	}
+
+	return wp.Schedule(job)
 }
