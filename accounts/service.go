@@ -277,6 +277,8 @@ func (s *Service) executeAccountCreateJob(j *jobs.Job) error {
 		return jobs.ErrInvalidJobType
 	}
 
+	j.ShouldSendNotification = true
+
 	ctx := context.Background()
 
 	a, txID, err := s.createAccount(ctx)
