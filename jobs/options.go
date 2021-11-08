@@ -12,7 +12,7 @@ func WithJobStatusWebhook(u string) WorkerPoolOption {
 
 		valid, err := url.ParseRequestURI(u)
 		if err != nil {
-			panic(err)
+			panic("invalid job status webhook url")
 		}
 
 		if wp.notificationConfig == nil {
