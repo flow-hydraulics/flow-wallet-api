@@ -1,12 +1,11 @@
 package jobs
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -90,91 +89,172 @@ func TestScheduleSendNotification(t *testing.T) {
 }
 
 func TestExecuteSendNotification(t *testing.T) {
-	notification := ""
+	t.Run("valid job should send", func(t *testing.T) {
+		var webhookJob Job
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&webhookJob); err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer svr.Close()
 
-	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Fatal(err)
+		writer := &dummyWriter{T: t}
+
+		wp := WorkerPool{
+			executors: make(map[string]ExecutorFunc),
+			jobChan:   make(chan *Job, 1),
+			logger:    log.New(writer, "", 0),
+			store:     &dummyStore{},
 		}
-		notification = string(bodyBytes)
-		fmt.Fprintf(w, "ok")
-	}))
-	defer svr.Close()
 
-	writer := &dummyWriter{T: t}
+		WithJobStatusWebhook(svr.URL)(&wp)
 
-	wp := WorkerPool{
-		executors: make(map[string]ExecutorFunc),
-		jobChan:   make(chan *Job, 1),
-		logger:    log.New(writer, "", 0),
-		store:     &dummyStore{},
-	}
+		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
-	WithJobStatusWebhook(svr.URL)(&wp)
+		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+			j.ShouldSendNotification = true
+			return nil
+		})
 
-	wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
+		job, err := wp.CreateJob("TestJobType", "")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	wp.RegisterExecutor("TestJobType", func(j *Job) error {
-		j.ShouldSendNotification = true
-		return nil
+		wp.process(job)
+		wp.process(<-wp.jobChan)
+
+		if webhookJob.Type != "TestJobType" {
+			t.Fatalf("expected webhook endpoint to have received a notification")
+		}
+
+		if webhookJob.State != Complete {
+			t.Fatalf("expected job to be in state '%s' got '%s'", Complete, webhookJob.State)
+		}
+
+		if len(writer.record) > 0 {
+			t.Fatalf("did not expect a warning, got %s", writer.record)
+		}
 	})
 
-	job, err := wp.CreateJob("TestJobType", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Run("failed job should send", func(t *testing.T) {
+		var webhookJob Job
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&webhookJob); err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer svr.Close()
 
-	wp.process(job)
-	wp.process(<-wp.jobChan)
+		writer := &dummyWriter{T: t}
 
-	if notification == "" || !strings.Contains(notification, "TestJobType") {
-		t.Fatalf("expected webhook endpoint to have received a notification")
-	}
+		wp := WorkerPool{
+			executors: make(map[string]ExecutorFunc),
+			jobChan:   make(chan *Job, 1),
+			logger:    log.New(writer, "", 0),
+			store:     &dummyStore{},
+		}
 
-	if len(writer.record) > 0 {
-		t.Fatalf("did not expect a warning, got %s", writer.record)
-	}
-}
+		WithJobStatusWebhook(svr.URL)(&wp)
 
-func TestExecuteSendNotificationFail(t *testing.T) {
-	svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "test error", http.StatusBadGateway)
-	}))
-	defer svr.Close()
+		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
-	writer := &dummyWriter{T: t}
+		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+			j.ShouldSendNotification = true
+			return ErrPermanentFailure
+		})
 
-	wp := WorkerPool{
-		executors: make(map[string]ExecutorFunc),
-		jobChan:   make(chan *Job, 1),
-		logger:    log.New(writer, "", 0),
-		store:     &dummyStore{},
-	}
+		job, err := wp.CreateJob("TestJobType", "")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	WithJobStatusWebhook(svr.URL)(&wp)
+		wp.process(job)
+		wp.process(<-wp.jobChan)
 
-	wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
+		if webhookJob.Type != "TestJobType" {
+			t.Fatalf("expected webhook endpoint to have received a notification")
+		}
 
-	wp.RegisterExecutor("TestJobType", func(j *Job) error {
-		j.ShouldSendNotification = true
-		return nil
+		if webhookJob.State != Failed {
+			t.Fatalf("expected job to be in state '%s' got '%s'", Failed, webhookJob.State)
+		}
+
+		if len(writer.record) == 0 {
+			t.Fatalf("expected a warning, got %s", writer.record)
+		}
 	})
 
-	job, err := wp.CreateJob("TestJobType", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Run("erroring job should not send", func(t *testing.T) {
+		writer := &dummyWriter{T: t}
 
-	wp.process(job)
-	sendNotificationJob := <-wp.jobChan
-	wp.process(sendNotificationJob)
+		wp := WorkerPool{
+			executors: make(map[string]ExecutorFunc),
+			jobChan:   make(chan *Job, 1),
+			logger:    log.New(writer, "", 0),
+			store:     &dummyStore{},
+		}
 
-	if len(writer.record) != 1 {
-		t.Errorf("expected there to be one warning, got %s", writer.record)
-	}
+		WithJobStatusWebhook("http://localhost")(&wp)
 
-	if sendNotificationJob.State != Error {
-		t.Errorf("expected send notification job to be in '%s' state, got '%s'", Error, sendNotificationJob.State)
-	}
+		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
+
+		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+			j.ShouldSendNotification = true
+			return fmt.Errorf("test error")
+		})
+
+		job, err := wp.CreateJob("TestJobType", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		wp.process(job)
+
+		if len(wp.jobChan) != 0 {
+			t.Errorf("did not expect a job to be queued")
+		}
+	})
+
+	t.Run("valid job should send but get an endpoint error and retry send", func(t *testing.T) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "test error", http.StatusBadGateway)
+		}))
+		defer svr.Close()
+
+		writer := &dummyWriter{T: t}
+
+		wp := WorkerPool{
+			executors: make(map[string]ExecutorFunc),
+			jobChan:   make(chan *Job, 1),
+			logger:    log.New(writer, "", 0),
+			store:     &dummyStore{},
+		}
+
+		WithJobStatusWebhook(svr.URL)(&wp)
+
+		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
+
+		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+			j.ShouldSendNotification = true
+			return nil
+		})
+
+		job, err := wp.CreateJob("TestJobType", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		wp.process(job)
+		sendNotificationJob := <-wp.jobChan
+		wp.process(sendNotificationJob)
+
+		if len(writer.record) != 1 {
+			t.Errorf("expected there to be one warning, got %s", writer.record)
+		}
+
+		if sendNotificationJob.State != Error {
+			t.Errorf("expected send notification job to be in '%s' state, got '%s'", Error, sendNotificationJob.State)
+		}
+	})
 }

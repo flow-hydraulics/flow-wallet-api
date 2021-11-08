@@ -230,7 +230,7 @@ func (wp *WorkerPool) process(job *Job) {
 		wp.logger.Printf("WARNING: Could not update DB entry for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
 	}
 
-	if job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
+	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
 		if err := ScheduleJobStatusNotification(wp, job); err != nil {
 			wp.logger.Printf("WARNING: Could not schedule a status update notification for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
 		}
