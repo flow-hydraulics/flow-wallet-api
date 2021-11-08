@@ -10,17 +10,17 @@ import (
 const SendJobStatusJobType = "send_job_status"
 
 type NotificationConfig struct {
-	jobStatusWebHookUrl *url.URL
+	jobStatusWebhookUrl *url.URL
 }
 
 func (cfg *NotificationConfig) ShouldSendJobStatus() bool {
-	return cfg.jobStatusWebHookUrl != nil
+	return cfg.jobStatusWebhookUrl != nil
 }
 
 func (cfg *NotificationConfig) SendJobStatus(content string) error {
 	// Handle each job status notification endpoint separately
 
-	if err := cfg.SendJobStatusWebHook(content); err != nil {
+	if err := cfg.SendJobStatusWebhook(content); err != nil {
 		return err
 	}
 
@@ -31,13 +31,13 @@ func (cfg *NotificationConfig) SendJobStatus(content string) error {
 	return nil
 }
 
-func (cfg *NotificationConfig) SendJobStatusWebHook(content string) error {
-	if cfg.jobStatusWebHookUrl == nil {
-		// Do nothing as config has no 'jobStatusWebHookUrl'
+func (cfg *NotificationConfig) SendJobStatusWebhook(content string) error {
+	if cfg.jobStatusWebhookUrl == nil {
+		// Do nothing as config has no 'jobStatusWebhookUrl'
 		return nil
 	}
 
-	resp, err := http.Post(cfg.jobStatusWebHookUrl.String(), "application/json", bytes.NewBuffer([]byte(content)))
+	resp, err := http.Post(cfg.jobStatusWebhookUrl.String(), "application/json", bytes.NewBuffer([]byte(content)))
 	if err != nil {
 		return fmt.Errorf("error while sending to webhook: %w", err)
 	}

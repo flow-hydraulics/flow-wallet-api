@@ -46,7 +46,7 @@ func TestScheduleSendNotification(t *testing.T) {
 		store:     &dummyStore{},
 	}
 
-	WithJobStatusWebHook("http://localhost")(&wp)
+	WithJobStatusWebhook("http://localhost")(&wp)
 
 	sendNotificationCalled := false
 
@@ -111,7 +111,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		store:     &dummyStore{},
 	}
 
-	WithJobStatusWebHook(svr.URL)(&wp)
+	WithJobStatusWebhook(svr.URL)(&wp)
 
 	wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
@@ -152,7 +152,7 @@ func TestExecuteSendNotificationFail(t *testing.T) {
 		store:     &dummyStore{},
 	}
 
-	WithJobStatusWebHook(svr.URL)(&wp)
+	WithJobStatusWebhook(svr.URL)(&wp)
 
 	wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 

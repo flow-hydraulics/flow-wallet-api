@@ -4,7 +4,7 @@ import "net/url"
 
 type WorkerPoolOption func(*WorkerPool)
 
-func WithJobStatusWebHook(u string) WorkerPoolOption {
+func WithJobStatusWebhook(u string) WorkerPoolOption {
 	return func(wp *WorkerPool) {
 		if u == "" {
 			return
@@ -19,6 +19,6 @@ func WithJobStatusWebHook(u string) WorkerPoolOption {
 			wp.notificationConfig = &NotificationConfig{}
 		}
 
-		wp.notificationConfig.jobStatusWebHookUrl = valid
+		wp.notificationConfig.jobStatusWebhookUrl = valid
 	}
 }

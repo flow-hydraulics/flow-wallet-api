@@ -106,7 +106,7 @@ func runServer(cfg *configs.Config) {
 		jobStore,
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
-		jobs.WithJobStatusWebHook(cfg.JobStatusWebook),
+		jobs.WithJobStatusWebhook(cfg.JobStatusWebhook),
 	)
 	defer func() {
 		ls.Println("Stopping worker pool..")
