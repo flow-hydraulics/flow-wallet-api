@@ -79,7 +79,7 @@ type Config struct {
 	// too many transactions and find that the queue is often backlogged.
 	WorkerCount uint `env:"FLOW_WALLET_WORKER_COUNT" envDefault:"100"`
 	// Webhook endpoint to receive job status updates
-	JobStatusWebook string `env:"FLOW_WALLET_JOB_STATUS_WEBHOOK" envDefault:""`
+	JobStatusWebhook string `env:"FLOW_WALLET_JOB_STATUS_WEBHOOK" envDefault:""`
 
 	// -- Google KMS --
 
