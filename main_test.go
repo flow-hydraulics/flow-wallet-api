@@ -44,7 +44,6 @@ const (
 var testLogger *log.Logger
 
 type TestApp struct {
-	Config     *configs.Config
 	FlowClient *client.Client
 	KeyManager keys.Manager
 	WorkerPool *jobs.WorkerPool
@@ -75,20 +74,6 @@ func fatal(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-func deepCopy(v interface{}) (interface{}, error) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-
-	vptr := reflect.New(reflect.TypeOf(v))
-	err = json.Unmarshal(data, vptr.Interface())
-	if err != nil {
-		return nil, err
-	}
-	return vptr.Elem().Interface(), err
 }
 
 func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.ResponseRecorder {
@@ -149,7 +134,7 @@ func getTestConfig(t *testing.T) *configs.Config {
 	return cfg
 }
 
-func getTestApp(t *testing.T) TestApp {
+func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	t.Helper()
 
 	leakIgnores := []goleak.Option{
@@ -158,13 +143,24 @@ func getTestApp(t *testing.T) TestApp {
 		goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),              // Ignore goroutine leak from AWS KMS
 	}
 
-	cfg := getTestConfig(t)
+	t.Cleanup(func() {
+		if !ignoreLeaks {
+			goleak.VerifyNone(t, leakIgnores...)
+		}
+	})
 
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	fatal(t, err)
+	t.Cleanup(func() {
+		fc.Close()
+	})
 
 	db, err := gorm.New(cfg)
 	fatal(t, err)
+	t.Cleanup(func() {
+		gorm.Close(db)
+		os.Remove(cfg.DatabaseDSN)
+	})
 
 	accountStore := accounts.NewGormStore(db)
 	jobStore := jobs.NewGormStore(db)
@@ -176,6 +172,9 @@ func getTestApp(t *testing.T) TestApp {
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(testLogger, jobStore, 100, 1)
+	t.Cleanup(func() {
+		wp.Stop()
+	})
 
 	templateService := templates.NewService(cfg, templateStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
@@ -185,16 +184,7 @@ func getTestApp(t *testing.T) TestApp {
 	err = accountService.InitAdminAccount(context.Background())
 	fatal(t, err)
 
-	t.Cleanup(func() {
-		wp.Stop()
-		gorm.Close(db)
-		os.Remove(cfg.DatabaseDSN)
-		fc.Close()
-		goleak.VerifyNone(t, leakIgnores...)
-	})
-
 	return TestApp{
-		Config:     cfg,
 		FlowClient: fc,
 		KeyManager: km,
 		WorkerPool: wp,
@@ -218,7 +208,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestAccountServices(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	t.Run("admin init", func(t *testing.T) {
 		ctx := context.Background()
@@ -231,7 +222,7 @@ func TestAccountServices(t *testing.T) {
 		keyCount, err := app.KeyManager.InitAdminProposalKeys(ctx)
 		fatal(t, err)
 
-		if keyCount != app.Config.AdminProposalKeyCount {
+		if keyCount != cfg.AdminProposalKeyCount {
 			t.Fatal("incorrect number of admin proposal keys")
 		}
 	})
@@ -290,26 +281,14 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("create with custom init script", func(t *testing.T) {
-		// Create a copy of config so we can isolate changes
-		cp, err := deepCopy(app.Config)
-		fatal(t, err)
-		cfg2 := cp.(*configs.Config)
-
+		cfg2 := getTestConfig(t)
 		// Set custom script path
 		cfg2.ScriptPathCreateAccount = "./flow/cadence/transactions/custom_create_account.cdc"
 
-		// Create a new service with new config
-		service2 := accounts.NewService(
-			cfg2,
-			app.AccountStore,
-			app.KeyManager,
-			app.FlowClient,
-			app.WorkerPool,
-			app.TransactionService,
-		)
+		app2 := getTestApp(t, cfg2, true)
 
 		// Use the new service to create an account
-		_, _, err = service2.Create(context.Background(), true)
+		_, _, err := app2.AccountService.Create(context.Background(), true)
 
 		if err == nil {
 			t.Fatal("expected an error")
@@ -322,7 +301,8 @@ func TestAccountServices(t *testing.T) {
 }
 
 func TestAccountHandlers(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	handler := handlers.NewAccounts(testLogger, app.AccountService)
 
@@ -350,7 +330,7 @@ func TestAccountHandlers(t *testing.T) {
 			name:     "list db empty",
 			method:   http.MethodGet,
 			url:      "/",
-			expected: fmt.Sprintf(`(?m)^\[{"address":"%s".*}\]$`, app.Config.AdminAddress),
+			expected: fmt.Sprintf(`(?m)^\[{"address":"%s".*}\]$`, cfg.AdminAddress),
 			status:   http.StatusOK,
 		},
 		{
@@ -438,7 +418,8 @@ func TestAccountHandlers(t *testing.T) {
 }
 
 func TestAccountTransactionHandlers(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	handler := handlers.NewTransactions(testLogger, app.TransactionService)
 
@@ -451,14 +432,14 @@ func TestAccountTransactionHandlers(t *testing.T) {
 	token, err := app.TemplateService.GetTokenByName("FlowToken")
 	fatal(t, err)
 
-	tFlow := templates.FungibleTransferCode(app.Config.ChainID, token)
+	tFlow := templates.FungibleTransferCode(cfg.ChainID, token)
 	tFlowBytes, err := json.Marshal(tFlow)
 	fatal(t, err)
 
 	validTransferFlow := fmt.Sprintf(`{
 		"code":%s,
 		"arguments":[{"type":"UFix64","value":"1.0"},{"type":"Address","value":"%s"}]
-	}`, tFlowBytes, app.Config.AdminAddress)
+	}`, tFlowBytes, cfg.AdminAddress)
 
 	validHello := `{
 		"code":"transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}",
@@ -486,7 +467,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 		{
 			name:     "list db empty",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected: `(?m)^\[\]$`,
 			status:   http.StatusOK,
 		},
@@ -502,7 +483,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -511,7 +492,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -521,7 +502,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    "Unsupported content type",
 			status:      http.StatusUnsupportedMediaType,
 			sync:        true,
@@ -531,7 +512,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validTransferFlow),
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -541,7 +522,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        nil,
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    "empty body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -551,7 +532,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(""),
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    "empty body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -561,7 +542,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader("notvalidobject"),
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    "invalid body",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -571,7 +552,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(invalidHello),
-			url:         fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected:    "Parsing failed",
 			status:      http.StatusBadRequest,
 			sync:        true,
@@ -589,28 +570,28 @@ func TestAccountTransactionHandlers(t *testing.T) {
 		{
 			name:     "list db not empty",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions", app.Config.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions", cfg.AdminAddress),
 			expected: `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "details invalid id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/invalid-id", app.Config.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/invalid-id", cfg.AdminAddress),
 			expected: "not a valid transaction id",
 			status:   http.StatusBadRequest,
 		},
 		{
 			name:     "details unknown id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921", app.Config.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921", cfg.AdminAddress),
 			expected: "transaction not found",
 			status:   http.StatusNotFound,
 		},
 		{
 			name:     "details known id",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/%s/transactions/<id>", app.Config.AdminAddress),
+			url:      fmt.Sprintf("/%s/transactions/<id>", cfg.AdminAddress),
 			expected: `(?m)^{"transactionId":".+"}$`,
 			status:   http.StatusOK,
 		},
@@ -626,7 +607,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			contentType: "application/json",
 			body:        strings.NewReader(validHello),
-			url:         fmt.Sprintf("/%s/sign", app.Config.AdminAddress),
+			url:         fmt.Sprintf("/%s/sign", cfg.AdminAddress),
 			expected:    `(?m)^{"code":".*","arguments":\[.*\],"referenceBlockId":"(0x)?[0-9a-f]+","gasLimit":\d+,"proposalKey":{"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"sequenceNumber":\d+},"payer":"(0x)?[0-9a-f]+","authorizers":\[(("[(0x)?[0-9a-f]+"),?)*\],"payloadSignatures":(null|\[({"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"signature":"[0-9a-f]+"},?)*\]),"envelopeSignatures":\[({"address":"(0x)?[0-9a-f]+","keyIndex":\d+,"signature":"[0-9a-f]+"},?)*\]}$`,
 			status:      http.StatusCreated,
 			sync:        true,
@@ -684,7 +665,8 @@ func TestAccountTransactionHandlers(t *testing.T) {
 }
 
 func TestTransactionHandlers(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	handler := handlers.NewTransactions(testLogger, app.TransactionService)
 
@@ -695,12 +677,12 @@ func TestTransactionHandlers(t *testing.T) {
 	token, err := app.TemplateService.GetTokenByName("FlowToken")
 	fatal(t, err)
 
-	transferFlow := templates.FungibleTransferCode(app.Config.ChainID, token)
+	transferFlow := templates.FungibleTransferCode(cfg.ChainID, token)
 
 	_, transaction1, err := app.TransactionService.Create(
 		context.Background(),
 		true,
-		app.Config.AdminAddress,
+		cfg.AdminAddress,
 		"transaction() { prepare(signer: AuthAccount){} execute { log(\"Hello World!\") }}",
 		nil,
 		transactions.General,
@@ -710,11 +692,11 @@ func TestTransactionHandlers(t *testing.T) {
 	_, transaction2, err := app.TransactionService.Create(
 		context.Background(),
 		true,
-		app.Config.AdminAddress,
+		cfg.AdminAddress,
 		transferFlow,
 		[]transactions.Argument{
 			cadence.UFix64(1.0),
-			cadence.NewAddress(flow.HexToAddress(app.Config.AdminAddress)),
+			cadence.NewAddress(flow.HexToAddress(cfg.AdminAddress)),
 		},
 		transactions.General,
 	)
@@ -806,7 +788,8 @@ func TestTransactionHandlers(t *testing.T) {
 }
 
 func TestScriptsHandlers(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	handler := handlers.NewTransactions(testLogger, app.TransactionService)
 
@@ -849,7 +832,7 @@ func TestScriptsHandlers(t *testing.T) {
 			body: strings.NewReader(fmt.Sprintf(`{
 				"code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
 				"arguments":[{"type":"Address","value":"%s"}]
-			}`, app.Config.AdminAddress)),
+			}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			expected:    "\\d+",
 			status:      http.StatusOK,
@@ -888,7 +871,8 @@ func TestScriptsHandlers(t *testing.T) {
 }
 
 func TestTokenServices(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
@@ -899,7 +883,7 @@ func TestTokenServices(t *testing.T) {
 		_, _, err = app.TokenService.CreateWithdrawal(
 			context.Background(),
 			true,
-			app.Config.AdminAddress,
+			cfg.AdminAddress,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
 				Recipient: account.Address,
@@ -915,7 +899,7 @@ func TestTokenServices(t *testing.T) {
 			account.Address,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
-				Recipient: app.Config.AdminAddress,
+				Recipient: cfg.AdminAddress,
 				FtAmount:  "1.0",
 			},
 		)
@@ -938,7 +922,7 @@ func TestTokenServices(t *testing.T) {
 			account.Address,
 			tokens.WithdrawalRequest{
 				TokenName: "FlowToken",
-				Recipient: app.Config.AdminAddress,
+				Recipient: cfg.AdminAddress,
 				FtAmount:  "1.0",
 			},
 		)
@@ -954,7 +938,7 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Make sure FUSD is deployed
-		err := app.TokenService.DeployTokenContractForAccount(ctx, true, tokenName, app.Config.AdminAddress)
+		err := app.TokenService.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 				t.Fatal(err)
@@ -962,7 +946,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = app.TokenService.Setup(ctx, true, tokenName, app.Config.AdminAddress)
+		_, _, err = app.TokenService.Setup(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "vault exists") {
 				t.Fatal(err)
@@ -985,7 +969,7 @@ func TestTokenServices(t *testing.T) {
 		_, _, err = app.TokenService.CreateWithdrawal(
 			ctx,
 			true,
-			app.Config.AdminAddress,
+			cfg.AdminAddress,
 			tokens.WithdrawalRequest{
 				TokenName: tokenName,
 				Recipient: account.Address,
@@ -1018,7 +1002,8 @@ func TestTokenServices(t *testing.T) {
 }
 
 func TestTokenHandlers(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	handler := handlers.NewTokens(testLogger, app.TokenService)
 
@@ -1075,7 +1060,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	exampleNft := templates.Token{
 		Name:     "ExampleNFT",
-		Address:  app.Config.AdminAddress,
+		Address:  cfg.AdminAddress,
 		Type:     templates.NFT,
 		Setup:    string(setupBytes),
 		Transfer: string(transferBytes),
@@ -1109,7 +1094,7 @@ func TestTokenHandlers(t *testing.T) {
 	_, testTransferFT, err := app.TokenService.CreateWithdrawal(
 		context.Background(),
 		true,
-		app.Config.AdminAddress,
+		cfg.AdminAddress,
 		tokens.WithdrawalRequest{
 			TokenName: flowToken.Name,
 			Recipient: testAccount.Address,
@@ -1181,9 +1166,9 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Mint ExampleNFTs for account 0
-	mintCode := templates.TokenCode(app.Config.ChainID, &exampleNft, string(mintBytes))
+	mintCode := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
 	for i := 0; i < 3; i++ {
-		_, _, err := app.TransactionService.Create(context.Background(), true, app.Config.AdminAddress, mintCode,
+		_, _, err := app.TransactionService.Create(context.Background(), true, cfg.AdminAddress, mintCode,
 			[]transactions.Argument{cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address))},
 			transactions.General)
 		fatal(t, err)
@@ -1261,7 +1246,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
 			expected:    `(?m)^{"jobId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -1271,7 +1256,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":"1.0"}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
 			expected:    `(?m)^{"transactionId":".+"}$`,
 			status:      http.StatusCreated,
 		},
@@ -1280,7 +1265,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
 			expected:    "not a valid address",
 			status:      http.StatusBadRequest,
 		},
@@ -1289,7 +1274,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, testAccount.Address)),
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
 			expected:    "missing decimal point",
 			status:      http.StatusBadRequest,
 		},
@@ -1297,7 +1282,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "create ExampleNFT withdrawal valid sync",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, app.Config.AdminAddress, nftIDs[1].ToGoValue())),
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, cfg.AdminAddress, nftIDs[1].ToGoValue())),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", testAccounts[0].Address, exampleNft.Name),
 			expected:    `(?m)^{"transactionId":".+"}$`,
@@ -1307,7 +1292,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "create ExampleNFT withdrawal with missing NFT",
 			sync:        true,
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, app.Config.AdminAddress, nftIDs[1].ToGoValue())),
+			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","nftId":%d}`, cfg.AdminAddress, nftIDs[1].ToGoValue())),
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/non-fungible-tokens/%s/withdrawals", testAccounts[1].Address, exampleNft.Name),
 			expected:    `missing NFT`,
@@ -1321,7 +1306,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "list fungible token withdrawals valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", app.Config.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals", cfg.AdminAddress, flowToken.Name),
 			expected:    `(?m)^\[{"transactionId":".+".*}\]$`,
 			status:      http.StatusOK,
 		},
@@ -1345,7 +1330,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get withdrawal details valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", app.Config.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", cfg.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
 			expected:    fmt.Sprintf(`(?m)^{"transactionId":"%s".*}$`, testTransferFT.TransactionId),
 			status:      http.StatusOK,
 		},
@@ -1357,7 +1342,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get fungible token withdrawal details valid",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", app.Config.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/%s", cfg.AdminAddress, flowToken.Name, testTransferFT.TransactionId),
 			expected:    fmt.Sprintf(`(?m)^{"transactionId":"%s".*}$`, testTransferFT.TransactionId),
 			status:      http.StatusOK,
 		},
@@ -1373,7 +1358,7 @@ func TestTokenHandlers(t *testing.T) {
 			name:        "get withdrawal details invalid transaction id",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/invalid-transaction-id", app.Config.AdminAddress, flowToken.Name),
+			url:         fmt.Sprintf("/%s/fungible-tokens/%s/withdrawals/invalid-transaction-id", cfg.AdminAddress, flowToken.Name),
 			expected:    "not a valid transaction id",
 			status:      http.StatusBadRequest,
 		},
@@ -1505,9 +1490,10 @@ func TestTokenHandlers(t *testing.T) {
 func TestNFTDeployment(t *testing.T) {
 	t.Skip("currently not supported")
 
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
-	err := app.TokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", app.Config.AdminAddress)
+	err := app.TokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
@@ -1516,7 +1502,8 @@ func TestNFTDeployment(t *testing.T) {
 }
 
 func TestTemplateHandlers(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	handler := handlers.NewTemplates(testLogger, app.TemplateService)
 
@@ -1547,7 +1534,7 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add with invalid name",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, app.Config.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
 			expected:    `not a valid name: ""`,
@@ -1565,16 +1552,16 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add with valid body",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, app.Config.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, app.Config.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add duplicate",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, app.Config.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
 			expected:    `UNIQUE constraint failed: tokens.name`,
@@ -1585,7 +1572,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, app.Config.AdminAddress),
+			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, cfg.AdminAddress),
 			status:      http.StatusOK,
 		},
 	}
@@ -1649,28 +1636,28 @@ func TestTemplateHandlers(t *testing.T) {
 		{
 			name:        "Add invalid type",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, app.Config.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, app.Config.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add FT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, app.Config.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, app.Config.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 		{
 			name:        "Add NFT valid",
 			method:      http.MethodPost,
-			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, app.Config.AdminAddress)),
+			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/tokens",
-			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, app.Config.AdminAddress),
+			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
 	}
@@ -1701,10 +1688,11 @@ func TestTemplateHandlers(t *testing.T) {
 }
 
 func TestTemplateService(t *testing.T) {
-	app := getTestApp(t)
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
 
 	// Add a token for testing
-	token := templates.Token{Name: "RandomTokenName", Address: app.Config.AdminAddress}
+	token := templates.Token{Name: "RandomTokenName", Address: cfg.AdminAddress}
 	err := app.TemplateService.AddToken(&token)
 	fatal(t, err)
 
