@@ -319,14 +319,12 @@ func (s *Service) sendTransaction(ctx context.Context, tx *Transaction) error {
 	return nil
 }
 
-func (s *Service) executeTransactionJob(j *jobs.Job) error {
+func (s *Service) executeTransactionJob(ctx context.Context, j *jobs.Job) error {
 	if j.Type != TransactionJobType {
 		return jobs.ErrInvalidJobType
 	}
 
 	j.ShouldSendNotification = true
-
-	ctx := context.Background()
 
 	tx, err := s.store.Transaction(j.TransactionID)
 	if err != nil {

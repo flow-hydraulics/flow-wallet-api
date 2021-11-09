@@ -272,14 +272,12 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	return account, flowTx.ID().String(), nil
 }
 
-func (s *Service) executeAccountCreateJob(j *jobs.Job) error {
+func (s *Service) executeAccountCreateJob(ctx context.Context, j *jobs.Job) error {
 	if j.Type != AccountCreateJobType {
 		return jobs.ErrInvalidJobType
 	}
 
 	j.ShouldSendNotification = true
-
-	ctx := context.Background()
 
 	a, txID, err := s.createAccount(ctx)
 	if err != nil {

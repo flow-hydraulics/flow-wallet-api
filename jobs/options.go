@@ -1,10 +1,13 @@
 package jobs
 
-import "net/url"
+import (
+	"net/url"
+	"time"
+)
 
 type WorkerPoolOption func(*WorkerPool)
 
-func WithJobStatusWebhook(u string) WorkerPoolOption {
+func WithJobStatusWebhook(u string, timeout time.Duration) WorkerPoolOption {
 	return func(wp *WorkerPool) {
 		if u == "" {
 			return
@@ -20,5 +23,6 @@ func WithJobStatusWebhook(u string) WorkerPoolOption {
 		}
 
 		wp.notificationConfig.jobStatusWebhookUrl = valid
+		wp.notificationConfig.jobStatusWebhookTimeout = timeout
 	}
 }

@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -38,24 +39,27 @@ func (writer *dummyWriter) Write(p []byte) (n int, err error) {
 func TestScheduleSendNotification(t *testing.T) {
 	writer := &dummyWriter{T: t}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	wp := WorkerPool{
-		executors: make(map[string]ExecutorFunc),
-		jobChan:   make(chan *Job, 1),
-		logger:    log.New(writer, "", 0),
-		store:     &dummyStore{},
+		context:       ctx,
+		cancelContext: cancel,
+		executors:     make(map[string]ExecutorFunc),
+		jobChan:       make(chan *Job, 1),
+		logger:        log.New(writer, "", 0),
+		store:         &dummyStore{},
 	}
 
-	WithJobStatusWebhook("http://localhost")(&wp)
+	WithJobStatusWebhook("http://localhost", time.Minute)(&wp)
 
 	sendNotificationCalled := false
 
-	wp.RegisterExecutor(SendJobStatusJobType, func(j *Job) error {
+	wp.RegisterExecutor(SendJobStatusJobType, func(ctx context.Context, j *Job) error {
 		j.ShouldSendNotification = false
 		sendNotificationCalled = true
 		return nil
 	})
 
-	wp.RegisterExecutor("TestJobType", func(j *Job) error {
+	wp.RegisterExecutor("TestJobType", func(ctx context.Context, j *Job) error {
 		j.ShouldSendNotification = true
 		return nil
 	})
@@ -100,18 +104,21 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		writer := &dummyWriter{T: t}
 
+		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			executors: make(map[string]ExecutorFunc),
-			jobChan:   make(chan *Job, 1),
-			logger:    log.New(writer, "", 0),
-			store:     &dummyStore{},
+			context:       ctx,
+			cancelContext: cancel,
+			executors:     make(map[string]ExecutorFunc),
+			jobChan:       make(chan *Job, 1),
+			logger:        log.New(writer, "", 0),
+			store:         &dummyStore{},
 		}
 
-		WithJobStatusWebhook(svr.URL)(&wp)
+		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
-		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+		wp.RegisterExecutor("TestJobType", func(ctx context.Context, j *Job) error {
 			j.ShouldSendNotification = true
 			return nil
 		})
@@ -148,18 +155,21 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		writer := &dummyWriter{T: t}
 
+		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			executors: make(map[string]ExecutorFunc),
-			jobChan:   make(chan *Job, 1),
-			logger:    log.New(writer, "", 0),
-			store:     &dummyStore{},
+			context:       ctx,
+			cancelContext: cancel,
+			executors:     make(map[string]ExecutorFunc),
+			jobChan:       make(chan *Job, 1),
+			logger:        log.New(writer, "", 0),
+			store:         &dummyStore{},
 		}
 
-		WithJobStatusWebhook(svr.URL)(&wp)
+		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
-		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+		wp.RegisterExecutor("TestJobType", func(ctx context.Context, j *Job) error {
 			j.ShouldSendNotification = true
 			return ErrPermanentFailure
 		})
@@ -188,18 +198,21 @@ func TestExecuteSendNotification(t *testing.T) {
 	t.Run("erroring job should not send", func(t *testing.T) {
 		writer := &dummyWriter{T: t}
 
+		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			executors: make(map[string]ExecutorFunc),
-			jobChan:   make(chan *Job, 1),
-			logger:    log.New(writer, "", 0),
-			store:     &dummyStore{},
+			context:       ctx,
+			cancelContext: cancel,
+			executors:     make(map[string]ExecutorFunc),
+			jobChan:       make(chan *Job, 1),
+			logger:        log.New(writer, "", 0),
+			store:         &dummyStore{},
 		}
 
-		WithJobStatusWebhook("http://localhost")(&wp)
+		WithJobStatusWebhook("http://localhost", time.Minute)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
-		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+		wp.RegisterExecutor("TestJobType", func(ctx context.Context, j *Job) error {
 			j.ShouldSendNotification = true
 			return fmt.Errorf("test error")
 		})
@@ -224,18 +237,21 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		writer := &dummyWriter{T: t}
 
+		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			executors: make(map[string]ExecutorFunc),
-			jobChan:   make(chan *Job, 1),
-			logger:    log.New(writer, "", 0),
-			store:     &dummyStore{},
+			context:       ctx,
+			cancelContext: cancel,
+			executors:     make(map[string]ExecutorFunc),
+			jobChan:       make(chan *Job, 1),
+			logger:        log.New(writer, "", 0),
+			store:         &dummyStore{},
 		}
 
-		WithJobStatusWebhook(svr.URL)(&wp)
+		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
-		wp.RegisterExecutor("TestJobType", func(j *Job) error {
+		wp.RegisterExecutor("TestJobType", func(ctx context.Context, j *Job) error {
 			j.ShouldSendNotification = true
 			return nil
 		})
