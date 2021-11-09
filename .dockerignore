@@ -26,6 +26,7 @@ flow/
 api/
 .github/
 examples/
+docker/
 
 # Not required for build
 flow/
