@@ -114,7 +114,7 @@ func (l *Listener) Start() *Listener {
 				return
 			case <-l.ticker.C:
 				lockErr := l.db.LockedStatus(func(status *ListenerStatus) error {
-					latestBlock, err := l.fc.GetLatestBlock(ctx, true)
+					latestBlock, err := l.fc.GetLatestBlockHeader(ctx, true)
 					if err != nil {
 						return err
 					}
@@ -157,7 +157,7 @@ func (l *Listener) initHeight() error {
 			// If starting fresh, we need to start from the latest block as we can't
 			// know what is the root of the current spork.
 			// Data on Flow is only accessible for the current spork height.
-			latestBlock, err := l.fc.GetLatestBlock(context.Background(), true)
+			latestBlock, err := l.fc.GetLatestBlockHeader(context.Background(), true)
 			if err != nil {
 				return err
 			}
