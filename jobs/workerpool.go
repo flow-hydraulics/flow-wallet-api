@@ -132,6 +132,14 @@ func (wp *WorkerPool) Stop() {
 	wp.wg.Wait()
 }
 
+func (wp *WorkerPool) Capacity() uint {
+	return wp.capacity
+}
+
+func (wp *WorkerPool) QueueSize() uint {
+	return uint(len(wp.jobChan))
+}
+
 func (wp *WorkerPool) accept(job *Job) bool {
 	err := wp.store.IncreaseExecCount(job)
 	if err != nil {

@@ -135,6 +135,7 @@ func runServer(cfg *configs.Config) {
 		TokenService:    tokenService,
 	})
 
+	ls.Print("Initializing admin account...")
 	err = accountService.InitAdminAccount(context.Background())
 	if err != nil {
 		ls.Fatal(err)
@@ -233,7 +234,7 @@ func runServer(cfg *configs.Config) {
 	srv := &http.Server{
 		Handler:      h,
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: cfg.ServerWriteTimeout,
 		ReadTimeout:  15 * time.Second,
 	}
 

@@ -86,6 +86,12 @@ If you have the possibility to setup a webhook endpoint, you can set `FLOW_WALLE
 
 **NOTE:** The wallet expects a response with status code **200** and will retry if unsuccessful.
 
+### Configuring the server write timeout
+
+When making `sync` requests it's sometimes required to adjust the server's write timeout (the maximum duration that the server waits for a response to be written) to account for longer block times etc. Try increasing `FLOW_WALLET_SERVER_WRITE_TIMEOUT` if you're experiencing issues with `sync` requests, `FLOW_WALLET_SERVER_WRITE_TIMEOUT=60s` for example.
+
+**NOTE:** Using `sync` requests in production is not recommended, use asynchronous requests (default) & optionally configure a webhook to receive job updates instead.
+
 ### Enabled fungible tokens
 
 A comma separated list of _fungible tokens_ and their corresponding addresses enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined.
