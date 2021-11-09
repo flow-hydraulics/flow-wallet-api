@@ -1327,7 +1327,7 @@ components:
 
     sync:
       name: sync
-      description: Use any non-empty value to run the request synchronously.
+      description: Use any non-empty value to run the request synchronously. ⚠️ NOT recommended for production (mainnet).
       in: query
       required: false
       schema:
