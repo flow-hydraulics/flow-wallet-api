@@ -79,7 +79,11 @@ type Config struct {
 	// too many transactions and find that the queue is often backlogged.
 	WorkerCount uint `env:"FLOW_WALLET_WORKER_COUNT" envDefault:"100"`
 	// Webhook endpoint to receive job status updates
-	JobStatusWebhook string `env:"FLOW_WALLET_JOB_STATUS_WEBHOOK" envDefault:""`
+	JobStatusWebhookUrl string `env:"FLOW_WALLET_JOB_STATUS_WEBHOOK" envDefault:""`
+	// Duration for which to wait for a response, if 0 wait indefinitely. Default: 30s.
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+	// For more info: https://pkg.go.dev/time#ParseDuration
+	JobStatusWebhookTimeout time.Duration `env:"FLOW_WALLET_JOB_STATUS_WEBHOOK_TIMEOUT" envDefault:"30s"`
 
 	// -- Google KMS --
 
@@ -89,7 +93,7 @@ type Config struct {
 
 	// -- Misc --
 
-	// Duration for which to wait for a transaction seal, if 0 wait indefinitely.
+	// Duration for which to wait for a transaction seal, if 0 wait indefinitely. Default: 0.
 	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 	// For more info: https://pkg.go.dev/time#ParseDuration
 	TransactionTimeout time.Duration `env:"FLOW_WALLET_TRANSACTION_TIMEOUT" envDefault:"0"`

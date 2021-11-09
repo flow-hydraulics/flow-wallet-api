@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"testing"
@@ -19,7 +20,7 @@ func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
-	jobFunc := func(j *jobs.Job) error {
+	jobFunc := func(ctx context.Context, j *jobs.Job) error {
 		defer executedWG.Done()
 		return nil
 	}
@@ -67,7 +68,7 @@ func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
-	jobFunc := func(j *jobs.Job) error {
+	jobFunc := func(ctx context.Context, j *jobs.Job) error {
 		defer executedWG.Done()
 		return errors.New("test job executor error returned on purpose")
 	}
@@ -115,7 +116,7 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
-	jobFunc := func(j *jobs.Job) error {
+	jobFunc := func(ctx context.Context, j *jobs.Job) error {
 		defer executedWG.Done()
 		return jobs.PermanentFailure(errors.New("test job executor error returned on purpose"))
 	}
@@ -162,7 +163,7 @@ func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
-	jobFunc := func(j *jobs.Job) error {
+	jobFunc := func(ctx context.Context, j *jobs.Job) error {
 		defer executedWG.Done()
 		return nil
 	}
@@ -217,7 +218,7 @@ func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
-	jobFunc := func(j *jobs.Job) error {
+	jobFunc := func(ctx context.Context, j *jobs.Job) error {
 		defer executedWG.Done()
 		return nil
 	}
@@ -282,7 +283,7 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 
 	jobType := "job"
-	jobFunc := func(j *jobs.Job) error {
+	jobFunc := func(ctx context.Context, j *jobs.Job) error {
 		t.Fatal("failed job executed")
 		return nil
 	}

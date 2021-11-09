@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,19 +35,21 @@ var (
 	reSchedulableGracePeriod = 1 * time.Minute
 )
 
-type ExecutorFunc func(j *Job) error
+type ExecutorFunc func(ctx context.Context, j *Job) error
 
 type WorkerPool struct {
-	executors map[string]ExecutorFunc
+	wg            *sync.WaitGroup
+	jobChan       chan *Job
+	stopChan      chan struct{}
+	context       context.Context
+	cancelContext context.CancelFunc
+	executors     map[string]ExecutorFunc
 
 	logger            *log.Logger
-	wg                *sync.WaitGroup
 	store             Store
-	jobChan           chan *Job
 	capacity          uint
 	workerCount       uint
 	dbJobPollInterval time.Duration
-	stopChan          chan struct{}
 
 	notificationConfig *NotificationConfig
 }
@@ -57,11 +60,15 @@ func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint
 		logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	pool := &WorkerPool{
-		wg:        &sync.WaitGroup{},
-		jobChan:   make(chan *Job, capacity),
-		stopChan:  make(chan struct{}),
-		executors: make(map[string]ExecutorFunc),
+		wg:            &sync.WaitGroup{},
+		jobChan:       make(chan *Job, capacity),
+		stopChan:      make(chan struct{}),
+		context:       ctx,
+		cancelContext: cancel,
+		executors:     make(map[string]ExecutorFunc),
 
 		logger:            logger,
 		store:             db,
@@ -121,6 +128,7 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 func (wp *WorkerPool) Stop() {
 	close(wp.stopChan)
 	close(wp.jobChan)
+	wp.cancelContext()
 	wp.wg.Wait()
 }
 
@@ -212,7 +220,7 @@ func (wp *WorkerPool) process(job *Job) {
 		return
 	}
 
-	err := executor(job)
+	err := executor(wp.context, job)
 	if err != nil {
 		if job.ExecCount > maxJobErrorCount || errors.Is(err, ErrPermanentFailure) {
 			job.State = Failed
@@ -237,14 +245,14 @@ func (wp *WorkerPool) process(job *Job) {
 	}
 }
 
-func (wp *WorkerPool) executeSendJobStatus(j *Job) error {
+func (wp *WorkerPool) executeSendJobStatus(ctx context.Context, j *Job) error {
 	if j.Type != SendJobStatusJobType {
 		return ErrInvalidJobType
 	}
 
 	j.ShouldSendNotification = false
 
-	return wp.notificationConfig.SendJobStatus(j.Result)
+	return wp.notificationConfig.SendJobStatus(ctx, j.Result)
 }
 
 func PermanentFailure(err error) error {

@@ -2,25 +2,28 @@ package jobs
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const SendJobStatusJobType = "send_job_status"
 
 type NotificationConfig struct {
-	jobStatusWebhookUrl *url.URL
+	jobStatusWebhookUrl     *url.URL
+	jobStatusWebhookTimeout time.Duration
 }
 
 func (cfg *NotificationConfig) ShouldSendJobStatus() bool {
 	return cfg.jobStatusWebhookUrl != nil
 }
 
-func (cfg *NotificationConfig) SendJobStatus(content string) error {
+func (cfg *NotificationConfig) SendJobStatus(ctx context.Context, content string) error {
 	// Handle each job status notification endpoint separately
 
-	if err := cfg.SendJobStatusWebhook(content); err != nil {
+	if err := cfg.SendJobStatusWebhook(ctx, content); err != nil {
 		return err
 	}
 
@@ -31,15 +34,26 @@ func (cfg *NotificationConfig) SendJobStatus(content string) error {
 	return nil
 }
 
-func (cfg *NotificationConfig) SendJobStatusWebhook(content string) error {
+func (cfg *NotificationConfig) SendJobStatusWebhook(ctx context.Context, content string) error {
 	if cfg.jobStatusWebhookUrl == nil {
 		// Do nothing as config has no 'jobStatusWebhookUrl'
 		return nil
 	}
 
-	resp, err := http.Post(cfg.jobStatusWebhookUrl.String(), "application/json", bytes.NewBuffer([]byte(content)))
+	client := http.Client{
+		Timeout: cfg.jobStatusWebhookTimeout,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", cfg.jobStatusWebhookUrl.String(), bytes.NewBuffer([]byte(content)))
 	if err != nil {
-		return fmt.Errorf("error while sending to webhook: %w", err)
+		return fmt.Errorf("error while creating webhook request: %w", err)
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error while sending webhook request: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
