@@ -125,7 +125,7 @@ func transferTokens(t *testing.T, ctx context.Context, fc *client.Client, km key
 		t.Fatal(err)
 	}
 
-	_, err = flow_helpers.WaitForSeal(ctx, fc, tx.ID(), max_tx_wait)
+	_, err = flow_helpers.WaitForSeal(ctx, fc.GetTransactionResult, tx.ID(), max_tx_wait)
 	if err != nil {
 		t.Fatal(err)
 	}

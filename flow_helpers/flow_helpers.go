@@ -10,9 +10,13 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
+	"github.com/jpillora/backoff"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	"google.golang.org/grpc"
 )
+
+type GetTransactionResultFunc func(ctx context.Context, id flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
 
 const hexPrefix = "0x"
 
@@ -30,11 +34,18 @@ func LatestBlockId(ctx context.Context, c *client.Client) (*flow.Identifier, err
 // - the transaction gets an error status
 // - the transaction gets a "TransactionStatusSealed" or "TransactionStatusExpired" status
 // - timeout is reached
-func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
+func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
 	var (
 		result *flow.TransactionResult
 		err    error
 	)
+
+	b := &backoff.Backoff{
+		Min:    100 * time.Millisecond,
+		Max:    time.Minute,
+		Factor: 5,
+		Jitter: true,
+	}
 
 	if timeout > 0 {
 		var cancel context.CancelFunc
@@ -43,7 +54,7 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 	}
 
 	for {
-		result, err = c.GetTransactionResult(ctx, id)
+		result, err = getResult(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +74,7 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 			return result, nil
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(b.Duration())
 	}
 }
 
@@ -72,7 +83,7 @@ func SendAndWait(ctx context.Context, c *client.Client, tx flow.Transaction, tim
 	if err := c.SendTransaction(ctx, tx); err != nil {
 		return nil, err
 	}
-	return WaitForSeal(ctx, c, tx.ID(), timeout)
+	return WaitForSeal(ctx, c.GetTransactionResult, tx.ID(), timeout)
 }
 
 func HexString(str string) string {
