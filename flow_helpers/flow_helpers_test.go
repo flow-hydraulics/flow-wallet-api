@@ -1,11 +1,14 @@
 package flow_helpers
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/onflow/flow-go-sdk"
+	"google.golang.org/grpc"
 )
 
 func TestAddressValidationAndFormatting(t *testing.T) {
@@ -34,6 +37,32 @@ func TestAddressValidationAndFormatting(t *testing.T) {
 
 		if _, err := ValidateAddress("", flow.Emulator); err == nil {
 			t.Error("Expected an error")
+		}
+	})
+}
+
+func TestWaitForSeal(t *testing.T) {
+	t.Run("backoff", func(t *testing.T) {
+		ctx := context.Background()
+		callCount := 0
+		getResult := func(ctx context.Context, id flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error) {
+			callCount++
+
+			status := flow.TransactionStatusPending
+
+			if callCount >= 3 {
+				status = flow.TransactionStatusSealed
+			}
+
+			return &flow.TransactionResult{Status: status}, nil
+		}
+
+		start := time.Now()
+
+		WaitForSeal(ctx, getResult, flow.EmptyID, 0)
+
+		if time.Since(start) < 500*time.Millisecond {
+			t.Fatal("expected wait to take longer")
 		}
 	})
 }

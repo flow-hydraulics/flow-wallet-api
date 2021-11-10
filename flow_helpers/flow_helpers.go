@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
+	"github.com/jpillora/backoff"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
@@ -39,6 +40,13 @@ func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flo
 		err    error
 	)
 
+	b := &backoff.Backoff{
+		Min:    100 * time.Millisecond,
+		Max:    time.Minute,
+		Factor: 5,
+		Jitter: true,
+	}
+
 	if timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
@@ -66,7 +74,7 @@ func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flo
 			return result, nil
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(b.Duration())
 	}
 }
 
@@ -75,7 +83,7 @@ func SendAndWait(ctx context.Context, c *client.Client, tx flow.Transaction, tim
 	if err := c.SendTransaction(ctx, tx); err != nil {
 		return nil, err
 	}
-	return WaitForSeal(ctx, c, tx.ID(), timeout)
+	return WaitForSeal(ctx, c.GetTransactionResult, tx.ID(), timeout)
 }
 
 func HexString(str string) string {
