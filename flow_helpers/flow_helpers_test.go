@@ -59,7 +59,9 @@ func TestWaitForSeal(t *testing.T) {
 
 		start := time.Now()
 
-		WaitForSeal(ctx, getResult, flow.EmptyID, 0)
+		if _, err := WaitForSeal(ctx, getResult, flow.EmptyID, 0); err != nil {
+			t.Fatalf("did not expect an error, got: %s", err)
+		}
 
 		if time.Since(start) < 500*time.Millisecond {
 			t.Fatal("expected wait to take longer")
