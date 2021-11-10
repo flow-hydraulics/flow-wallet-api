@@ -18,7 +18,7 @@ const hexPrefix = "0x"
 
 // LatestBlockId retuns the flow.Identifier for the latest block in the chain.
 func LatestBlockId(ctx context.Context, c *client.Client) (*flow.Identifier, error) {
-	block, err := c.GetLatestBlock(ctx, true)
+	block, err := c.GetLatestBlockHeader(ctx, true)
 	if err != nil {
 		return nil, err
 	}
