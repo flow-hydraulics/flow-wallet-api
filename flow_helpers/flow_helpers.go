@@ -12,7 +12,10 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	"google.golang.org/grpc"
 )
+
+type GetTransactionResultFunc func(ctx context.Context, id flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
 
 const hexPrefix = "0x"
 
@@ -30,7 +33,7 @@ func LatestBlockId(ctx context.Context, c *client.Client) (*flow.Identifier, err
 // - the transaction gets an error status
 // - the transaction gets a "TransactionStatusSealed" or "TransactionStatusExpired" status
 // - timeout is reached
-func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
+func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
 	var (
 		result *flow.TransactionResult
 		err    error
@@ -43,7 +46,7 @@ func WaitForSeal(ctx context.Context, c *client.Client, id flow.Identifier, time
 	}
 
 	for {
-		result, err = c.GetTransactionResult(ctx, id)
+		result, err = getResult(ctx, id)
 		if err != nil {
 			return nil, err
 		}
