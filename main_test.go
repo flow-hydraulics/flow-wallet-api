@@ -171,7 +171,7 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(testLogger, jobStore, 100, 1)
+	wp := jobs.NewWorkerPool(testLogger, jobStore, 5, 1)
 	t.Cleanup(func() {
 		wp.Stop()
 	})
@@ -265,18 +265,28 @@ func TestAccountServices(t *testing.T) {
 		}
 	})
 
-	t.Run("async create thrice", func(t *testing.T) {
-		_, _, err1 := app.AccountService.Create(context.Background(), false) // Goes immediately to processing
-		_, _, err2 := app.AccountService.Create(context.Background(), false) // Queues - queue now full
-		_, _, err3 := app.AccountService.Create(context.Background(), false) // Should not fit, sometimes does
-		if err1 != nil {
-			t.Error(err1)
+	t.Run("async create exceeding worker pool capacity", func(t *testing.T) {
+		// Fill the queue, capacity + 1 since first job goes directly to processing
+		for i := 0; i < int(app.WorkerPool.Capacity())+1; i++ {
+			_, _, unexpectedErr := app.AccountService.Create(context.Background(), false)
+			if unexpectedErr != nil {
+				t.Error(unexpectedErr)
+			}
 		}
-		if err2 != nil {
-			t.Error(err2)
+
+		if app.WorkerPool.QueueSize() < app.WorkerPool.Capacity() {
+			t.Error("expected workerpool queue to be full")
 		}
-		if err3 == nil {
-			t.Log("expected 503 'max capacity reached, try again later' but got no error")
+
+		// Exceed the capacity & check that the state is correct
+		j, _, err := app.AccountService.Create(context.Background(), false) // Should not fit, unless jobs got processed
+
+		if err != nil {
+			t.Error(err)
+		}
+
+		if j.State != jobs.NoAvailableWorkers {
+			t.Errorf("expected job state to be %s, found %s", jobs.NoAvailableWorkers, j.State)
 		}
 	})
 
