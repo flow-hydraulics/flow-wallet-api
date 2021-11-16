@@ -59,10 +59,11 @@ type Config struct {
 
 	// -- Host and chain access --
 
-	Host          string       `env:"FLOW_WALLET_HOST"`
-	Port          int          `env:"FLOW_WALLET_PORT" envDefault:"3000"`
-	AccessAPIHost string       `env:"FLOW_WALLET_ACCESS_API_HOST,notEmpty"`
-	ChainID       flow.ChainID `env:"FLOW_WALLET_CHAIN_ID" envDefault:"flow-emulator"`
+	Host                 string        `env:"FLOW_WALLET_HOST"`
+	Port                 int           `env:"FLOW_WALLET_PORT" envDefault:"3000"`
+	ServerRequestTimeout time.Duration `env:"FLOW_WALLET_SERVER_REQUEST_TIMEOUT" envDefault:"60s"`
+	AccessAPIHost        string        `env:"FLOW_WALLET_ACCESS_API_HOST,notEmpty"`
+	ChainID              flow.ChainID  `env:"FLOW_WALLET_CHAIN_ID" envDefault:"flow-emulator"`
 
 	// -- Templates --
 

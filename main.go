@@ -225,7 +225,8 @@ func runServer(cfg *configs.Config) {
 	}
 
 	// Define middleware
-	h := handlers.UseCors(r)
+	h := http.TimeoutHandler(r, cfg.ServerRequestTimeout, "request timed out")
+	h = handlers.UseCors(h)
 	h = handlers.UseLogging(os.Stdout, h)
 	h = handlers.UseCompress(h)
 
@@ -233,8 +234,8 @@ func runServer(cfg *configs.Config) {
 	srv := &http.Server{
 		Handler:      h,
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 0, // Disabled, set cfg.ServerRequestTimeout instead
+		ReadTimeout:  0, // Disabled, set cfg.ServerRequestTimeout instead
 	}
 
 	// Run our server in a goroutine so that it doesn't block.
