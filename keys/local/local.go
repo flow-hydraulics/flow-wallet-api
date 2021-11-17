@@ -2,6 +2,7 @@
 package local
 
 import (
+	"context"
 	"crypto/rand"
 	"strings"
 
@@ -45,7 +46,7 @@ func Generate(
 	return f, p, nil
 }
 
-func Signer(key keys.Private) (crypto.Signer, error) {
+func Signer(ctx context.Context, key keys.Private) (crypto.Signer, error) {
 	p, err := crypto.DecodePrivateKeyHex(key.SignAlgo, key.Value)
 	if err != nil {
 		return crypto.InMemorySigner{}, err

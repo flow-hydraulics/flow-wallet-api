@@ -54,9 +54,9 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 	return f, p, nil
 }
 
-// Signer creates a crypto.Signer for the given Flow address and private key
+// Signer creates a crypto.Signer for the given private key
 // (KMS key resource name)
-func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto.Signer, error) {
+func Signer(ctx context.Context, key keys.Private) (crypto.Signer, error) {
 	c, err := cloudkms.NewClient(ctx)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto
 		return nil, err
 	}
 
-	s, err := c.SignerForKey(ctx, address, k)
+	s, err := c.SignerForKey(ctx, k)
 
 	if err != nil {
 		return nil, err

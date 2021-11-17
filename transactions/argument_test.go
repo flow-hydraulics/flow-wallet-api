@@ -18,7 +18,7 @@ func Test_AsCadence(t *testing.T) {
 		{
 			name:      "decode single string argument",
 			inputJson: `[{"type":"String","value":"Hello"}]`,
-			expected:  []cadence.Value{cadence.NewString("Hello")},
+			expected:  []cadence.Value{cadence.String("Hello")},
 		},
 		{
 			name:      "decode single Uint64 argument",
@@ -28,7 +28,7 @@ func Test_AsCadence(t *testing.T) {
 		{
 			name:      "decode two arguments",
 			inputJson: `[{"type":"String","value":"Hello"},{"type":"UInt64","value":"1"}]`,
-			expected:  []cadence.Value{cadence.NewString("Hello"), cadence.NewUInt64(1)},
+			expected:  []cadence.Value{cadence.String("Hello"), cadence.NewUInt64(1)},
 		},
 		{
 			name:      "decode empty array",

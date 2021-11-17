@@ -215,17 +215,17 @@ func signerForKey(ctx context.Context, address flow.Address, k keys.Private) (cr
 	default:
 		return nil, fmt.Errorf("key.Type not recognised: %s", k.Type)
 	case keys.AccountKeyTypeLocal:
-		sig, err = local.Signer(k)
+		sig, err = local.Signer(ctx, k)
 		if err != nil {
 			return nil, err
 		}
 	case keys.AccountKeyTypeGoogleKMS:
-		sig, err = google.Signer(ctx, address, k)
+		sig, err = google.Signer(ctx, k)
 		if err != nil {
 			return nil, err
 		}
 	case keys.AccountKeyTypeAWSKMS:
-		sig, err = aws.Signer(ctx, address, k)
+		sig, err = aws.Signer(ctx, k)
 		if err != nil {
 			return nil, err
 		}
