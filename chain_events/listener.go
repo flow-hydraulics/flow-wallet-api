@@ -178,7 +178,11 @@ func (l *Listener) initHeight() error {
 
 func (l *Listener) Stop() {
 	l.logger.Println("stopping...")
-	l.ticker.Stop()
-	l.done <- true
+	if l.ticker != nil {
+		l.ticker.Stop()
+	}
+	if l.done != nil {
+		l.done <- true
+	}
 	l.ticker = nil
 }
