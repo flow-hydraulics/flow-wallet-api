@@ -298,13 +298,23 @@ func TestAccountServices(t *testing.T) {
 		app2 := getTestApp(t, cfg2, true)
 
 		// Use the new service to create an account
-		_, _, err := app2.AccountService.Create(context.Background(), true)
+		job, _, err := app2.AccountService.Create(context.Background(), false)
+		fatal(t, err)
 
-		if err == nil {
-			t.Fatal("expected an error")
+		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Error {
+			t.Errorf("expected job status to be %s or %s or %s but got %s",
+				jobs.Init, jobs.Accepted, jobs.Error, job.State)
 		}
 
-		if !strings.Contains(err.Error(), "Account initialized with custom script") {
+		for job.State == jobs.Init || job.State == jobs.Accepted {
+			time.Sleep(10 * time.Millisecond)
+		}
+
+		if job.State != jobs.Error {
+			t.Errorf("expected job status to be %s got %s", jobs.Error, job.State)
+		}
+
+		if !strings.Contains(job.Error, "Account initialized with custom script") {
 			t.Fatalf(`expected error to contain "Account initialized with custom script" got: %s`, err)
 		}
 	})

@@ -249,11 +249,11 @@ func runServer(cfg *configs.Config) {
 	// Chain event listener
 	if !cfg.DisableChainEvents {
 		store := chain_events.NewGormStore(db)
-		getTypes := func() []string {
+		getTypes := func() ([]string, error) {
 			// Get all enabled tokens
 			tt, err := templateService.ListTokens(templates.NotSpecified)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 
 			token_count := len(*tt)
@@ -264,7 +264,7 @@ func runServer(cfg *configs.Config) {
 				event_types[i] = templates.DepositEventTypeFromToken(token)
 			}
 
-			return event_types
+			return event_types, nil
 		}
 
 		listener := chain_events.NewListener(
