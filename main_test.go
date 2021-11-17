@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -111,15 +112,6 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 	return rr
 }
 
-var testDbDSNcounter uint = 0
-
-func getTestDbDSN(t *testing.T) string {
-	t.Helper()
-
-	testDbDSNcounter += 1
-	return fmt.Sprintf("testDB%d.db", testDbDSNcounter)
-}
-
 func getTestConfig(t *testing.T) *configs.Config {
 	t.Helper()
 
@@ -128,7 +120,7 @@ func getTestConfig(t *testing.T) *configs.Config {
 	cfg, err := configs.ParseConfig(opts)
 	fatal(t, err)
 
-	cfg.DatabaseDSN = getTestDbDSN(t)
+	cfg.DatabaseDSN = path.Join(t.TempDir(), "test.db")
 	cfg.DatabaseType = testDbType
 	cfg.ChainID = flow.Emulator
 	return cfg

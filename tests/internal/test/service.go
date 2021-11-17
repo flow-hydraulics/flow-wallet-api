@@ -51,7 +51,6 @@ func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
 }
 
 func GetServices(t *testing.T, cfg *configs.Config) Services {
-	t.Helper()
 
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
@@ -112,8 +111,6 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		TokenService:    tokenService,
 	})
 
-	listener.Start()
-
 	ctx := context.Background()
 	err := accountService.InitAdminAccount(ctx)
 	if err != nil {
@@ -129,6 +126,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	if keyCount != cfg.AdminProposalKeyCount {
 		t.Fatal("incorrect number of admin proposal keys")
 	}
+
+	listener.Start()
 
 	return &svcs{
 		accountService:     accountService,
