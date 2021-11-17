@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	cloud.google.com/go/kms v1.1.0
-	github.com/alexbrainman/sspi v0.0.0-20180613141037-e580b900e9f5 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.11.0
 	github.com/aws/aws-sdk-go-v2/config v1.10.1
 	github.com/aws/aws-sdk-go-v2/service/kms v1.10.0
@@ -17,14 +16,12 @@ require (
 	github.com/ethereum/go-ethereum v1.10.12 // indirect
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/go-gormigrate/gormigrate/v2 v2.0.0
-	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/go-test/deep v1.0.8 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.5.6
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/jcmturner/gokrb5/v8 v8.2.0 // indirect
 	github.com/joho/godotenv v1.4.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
@@ -42,11 +39,6 @@ require (
 	google.golang.org/genproto v0.0.0-20211116182654-e63d96a377c4
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
-	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
-	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
-	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
-	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
-	gopkg.in/jcmturner/rpc.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	gorm.io/driver/mysql v1.2.0
 	gorm.io/driver/postgres v1.2.2
