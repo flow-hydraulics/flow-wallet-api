@@ -303,11 +303,12 @@ func TestAccountServices(t *testing.T) {
 		}
 
 		if job.State != jobs.Error {
-			t.Errorf("expected job status to be %s got %s", jobs.Error, job.State)
+			t.Fatalf("expected job status to be %s got %s", jobs.Error, job.State)
 		}
 
-		if !strings.Contains(job.Error, "Account initialized with custom script") {
-			t.Fatalf(`expected error to contain "Account initialized with custom script" got: %s`, err)
+		expected := "Account initialized with custom script"
+		if !strings.Contains(job.Error, expected) {
+			t.Fatalf(`expected error to contain %s got: %s`, expected, job.Error)
 		}
 	})
 }
