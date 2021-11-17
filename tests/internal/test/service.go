@@ -77,11 +77,11 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	store := chain_events.NewGormStore(db)
-	getTypes := func() []string {
+	getTypes := func() ([]string, error) {
 		// Get all enabled tokens
 		tt, err := templateService.ListTokens(templates.NotSpecified)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		token_count := len(*tt)
@@ -92,7 +92,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 			event_types[i] = templates.DepositEventTypeFromToken(token)
 		}
 
-		return event_types
+		return event_types, nil
 	}
 
 	listener := chain_events.NewListener(
