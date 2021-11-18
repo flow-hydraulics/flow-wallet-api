@@ -46,9 +46,11 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 	f.Index = keyIndex
 
 	p := &keys.Private{
-		Index: keyIndex,
-		Type:  keys.AccountKeyTypeGoogleKMS,
-		Value: k.ResourceID(),
+		Index:    keyIndex,
+		Type:     keys.AccountKeyTypeGoogleKMS,
+		Value:    k.ResourceID(),
+		SignAlgo: pub.Algorithm(),
+		HashAlgo: h,
 	}
 
 	return f, p, nil

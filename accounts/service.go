@@ -258,6 +258,7 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+	encryptedAccountKey.PublicKey = accountKey.PublicKey.String()
 
 	// Store account and key
 	account.Keys = []keys.Storable{encryptedAccountKey}

@@ -47,8 +47,9 @@ type Storable struct {
 	Index          int            `json:"index" gorm:"index"`
 	Type           string         `json:"type"`
 	Value          []byte         `json:"-"`
-	SignAlgo       string         `json:"-"`
-	HashAlgo       string         `json:"-"`
+	PublicKey      string         `json:"publicKey"`
+	SignAlgo       string         `json:"signAlgo"`
+	HashAlgo       string         `json:"hashAlgo"`
 	CreatedAt      time.Time      `json:"createdAt"`
 	UpdatedAt      time.Time      `json:"updatedAt"`
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
