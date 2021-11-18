@@ -14,7 +14,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
-	"github.com/flow-hydraulics/flow-wallet-api/debug"
 	"github.com/flow-hydraulics/flow-wallet-api/handlers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
@@ -123,12 +122,6 @@ func runServer(cfg *configs.Config) {
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
-	debugService := debug.Service{
-		RepoUrl:   "https://github.com/flow-hydraulics/flow-wallet-api",
-		Sha1ver:   sha1ver,
-		BuildTime: buildTime,
-	}
-
 	// Register a handler for account added events
 	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{
 		TemplateService: templateService,
@@ -154,7 +147,13 @@ func runServer(cfg *configs.Config) {
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
 
 	// Debug
-	rv.HandleFunc("/debug", debugService.HandleDebug).Methods(http.MethodGet)
+	rv.Handle("/debug", handlers.Debug("https://github.com/flow-hydraulics/flow-wallet-api", sha1ver, buildTime)).Methods(http.MethodGet)
+
+	// Health
+	rv.HandleFunc("/health/ready", handlers.HandleHealthReady).Methods(http.MethodGet)
+	rv.Handle("/health/liveness", handlers.Liveness(func() (interface{}, error) {
+		return wp.Status()
+	})).Methods(http.MethodGet)
 
 	// Jobs
 	rv.Handle("/jobs", jobsHandler.List()).Methods(http.MethodGet)            // list

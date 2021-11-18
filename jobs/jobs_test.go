@@ -24,6 +24,7 @@ func (*dummyStore) IncreaseExecCount(j *Job) error            { return nil }
 func (*dummyStore) SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod time.Duration, o datastore.ListOptions) ([]Job, error) {
 	return nil, nil
 }
+func (*dummyStore) Status() ([]StatusQuery, error) { return nil, nil }
 
 type dummyWriter struct {
 	T      *testing.T
