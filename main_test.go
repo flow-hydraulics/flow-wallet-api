@@ -259,8 +259,15 @@ func TestAccountServices(t *testing.T) {
 			t.Errorf("Account has an invalid address: '%s'", account.Address)
 		}
 
-		if len(account.Keys) != 0 {
-			t.Error("Account should not expose keys")
+		if len(account.Keys) == 0 {
+			t.Error("Account should expose public data on keys")
+		}
+
+		// All Value fields (containing a private key) should be empty
+		for _, k := range account.Keys {
+			if len(k.Value) != 0 {
+				t.Error("Account should not expose private key value")
+			}
 		}
 	})
 
