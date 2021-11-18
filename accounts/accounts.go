@@ -57,17 +57,21 @@ func AddContract(
 		return err
 	}
 
-	flowTx := flow.NewTransaction()
-	flowTx.
+	flowTx := flow.NewTransaction().
 		SetReferenceBlockID(*referenceBlockID).
 		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
 		SetPayer(payer.Address).
 		SetGasLimit(maxGasLimit).
-		SetScript([]byte(template_strings.AddAccountContractWithAdmin))
+		SetScript([]byte(template_strings.AddAccountContractWithAdmin)).
+		AddAuthorizer(payer.Address)
 
-	flowTx.AddArgument(cadence.NewString(contract.Name))        // nolint
-	flowTx.AddArgument(cadence.NewString(contract.SourceHex())) // nolint
-	flowTx.AddAuthorizer(payer.Address)
+	if err := flowTx.AddArgument(cadence.String(contract.Name)); err != nil {
+		return err
+	}
+
+	if err := flowTx.AddArgument(cadence.String(contract.SourceHex())); err != nil {
+		return err
+	}
 
 	// Proposer signs the payload
 	if proposer.Address.Hex() != payer.Address.Hex() {

@@ -94,10 +94,10 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 	return f, pk, nil
 }
 
-// Signer creates a crypto.Signer for the given Flow address and private key
+// Signer creates a crypto.Signer for the given private key
 // (AWS KMS key ARN)
-func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto.Signer, error) {
-	s, err := SignerForKey(ctx, address, key)
+func Signer(ctx context.Context, key keys.Private) (crypto.Signer, error) {
+	s, err := SignerForKey(ctx, key)
 
 	if err != nil {
 		return nil, err
@@ -108,17 +108,15 @@ func Signer(ctx context.Context, address flow.Address, key keys.Private) (crypto
 
 // Signer is a Google Cloud KMS implementation of crypto.Signer.
 type AWSSigner struct {
-	ctx     context.Context
-	client  *kms.Client
-	address flow.Address
-	keyId   string
-	hasher  crypto.Hasher
+	ctx    context.Context
+	client *kms.Client
+	keyId  string
+	hasher crypto.Hasher
 }
 
-// SignerForKey returns a new AWSSigner for the given address & private key
+// SignerForKey returns a new AWSSigner for the given private key
 func SignerForKey(
 	ctx context.Context,
-	address flow.Address,
 	key keys.Private,
 ) (*AWSSigner, error) {
 	if !arn.IsARN(key.Value) {
@@ -155,11 +153,10 @@ func SignerForKey(
 	}
 
 	return &AWSSigner{
-		ctx:     ctx,
-		client:  client,
-		address: address,
-		keyId:   key.Value,
-		hasher:  hasher,
+		ctx:    ctx,
+		client: client,
+		keyId:  key.Value,
+		hasher: hasher,
 	}, nil
 }
 

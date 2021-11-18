@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type GetEventTypes func() []string
+type GetEventTypes func() ([]string, error)
 
 type Listener struct {
 	ticker         *time.Ticker
@@ -57,7 +57,10 @@ func NewListener(
 func (l *Listener) run(ctx context.Context, start, end uint64) error {
 	events := make([]flow.Event, 0)
 
-	eventTypes := l.getTypes()
+	eventTypes, err := l.getTypes()
+	if err != nil {
+		return err
+	}
 
 	for _, t := range eventTypes {
 		r, err := l.fc.GetEventsForHeightRange(ctx, client.EventRangeQuery{
@@ -123,6 +126,11 @@ func (l *Listener) Start() *Listener {
 						start := status.LatestHeight + 1                  // LatestHeight has already been checked, add 1
 						end := min(latestBlock.Height, start+l.maxBlocks) // Limit maximum end
 						if err := l.run(ctx, start, end); err != nil {
+							if strings.Contains(err.Error(), "database is locked") {
+								// Sqlite throws this error from time to time when accessing it from
+								// multiple threads; listener is run in a separate thread.
+								return nil
+							}
 							return err
 						}
 						status.LatestHeight = end
@@ -170,7 +178,11 @@ func (l *Listener) initHeight() error {
 
 func (l *Listener) Stop() {
 	l.logger.Println("stopping...")
-	l.ticker.Stop()
-	l.done <- true
+	if l.ticker != nil {
+		l.ticker.Stop()
+	}
+	if l.done != nil {
+		l.done <- true
+	}
 	l.ticker = nil
 }

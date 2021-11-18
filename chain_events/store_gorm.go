@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type GormStore struct {
@@ -22,7 +21,7 @@ func (s *GormStore) LockedStatus(fn func(status *ListenerStatus) error) error {
 	txErr := s.db.Transaction(func(tx *gorm.DB) error {
 		status := ListenerStatus{}
 
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).FirstOrCreate(&status).Error; err != nil {
+		if err := tx.FirstOrCreate(&status).Error; err != nil {
 			return err // rollback
 		}
 
