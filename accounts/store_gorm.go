@@ -23,7 +23,7 @@ func (s *GormStore) Accounts(o datastore.ListOptions) (aa []Account, err error) 
 }
 
 func (s *GormStore) Account(address string) (a Account, err error) {
-	err = s.db.First(&a, "address = ?", address).Error
+	err = s.db.Preload("Keys").First(&a, "address = ?", address).Error
 	return
 }
 

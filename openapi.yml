@@ -2,7 +2,10 @@ openapi: 3.0.0
 
 info:
   title: Flow Wallet API
+  description: A REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure
   version: 0.8.0
+  contact:
+    url: https://github.com/orgs/flow-hydraulics/teams/wallet
 
 servers:
   - url: http://localhost:3000/v1
@@ -176,6 +179,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/nonFungibleToken"
 
+
 # Transactions
 
   /transactions:
@@ -341,6 +345,7 @@ paths:
 
 
 # Account transactions
+
   /accounts/{address}/sign:
     post:
       summary: Sign a raw transaction
@@ -349,6 +354,8 @@ paths:
       operationId: signRawTransaction
       tags:
         - Account Transactions
+      parameters:
+        - $ref: "#/components/parameters/address"
       requestBody:
         content:
           application/json:
@@ -484,7 +491,6 @@ paths:
                   - $ref: "#/components/schemas/job"
                   - $ref: "#/components/schemas/transaction"
 
-
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals:
     parameters:
       - $ref: "#/components/parameters/address"
@@ -524,7 +530,6 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/job"
                   - $ref: "#/components/schemas/transaction"
-
 
   /accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}:
     parameters:
@@ -790,17 +795,39 @@ components:
         api version called: v1
 
     account:
+      description: Response data for account info, private key NOT included
       type: object
+      x-examples:
+        example-1:
+          address: "0x179b6b1cb6755e31"
+          keys:
+            - index: 0
+              type: "local"
+              publicKey: "0xc885376ff315cc26e9740e5f5418c1e515cf690e590433a4774c2b9f4c522e7dbbb720b5049bed79820c66c8e6555997900579e6885b131180bb844cd87f4c62"
+              signAlgo: "ECDSA_P256"
+              hashAlgo: "SHA3_256"
+              createdAt: "2021-11-18T13:08:04.4236649+02:00"
+              updatedAt: "2021-11-18T13:08:04.4236649+02:00"
+          type: "custodial"
+          createdAt: "2021-11-18T13:08:04.4230401+02:00"
+          updatedAt: "2021-11-18T13:08:04.4230401+02:00"
       properties:
         address:
           type: string
           example: "0xf8d6e0586b0a20c7"
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/key"
         createdAt:
           type: string
+          minLength: 1
           example: "2021-04-27T05:49:53.211+00:00"
+          format: date-time
         updatedAt:
           type: string
-          example: "2021-04-27T05:49:53.211+00:00"
+          example: "2021-04-27T05:49:54.211+00:00"
+          format: date-time
 
     transactionEvent:
       type: object
@@ -1262,7 +1289,58 @@ components:
             type: integer
           example: [1,2,3]
 
+    key:
+      type: object
+      x-examples:
+        example-1:
+          index: 0
+          type: local
+          publicKey: "0xc885376ff315cc26e9740e5f5418c1e515cf690e590433a4774c2b9f4c522e7dbbb720b5049bed79820c66c8e6555997900579e6885b131180bb844cd87f4c62"
+          signAlgo: ECDSA_P256
+          hashAlgo: SHA3_256
+          createdAt: "2021-11-18T13:08:04.4236649+02:00"
+          updatedAt: "2021-11-18T13:08:04.4236649+02:00"
+      properties:
+        index:
+          type: number
+          minimum: 0
+        type:
+          $ref: "#/components/schemas/keyType"
+        publicKey:
+          type: string
+          minLength: 1
+        signAlgo:
+          type: string
+          minLength: 1
+        hashAlgo:
+          type: string
+          minLength: 1
+        createdAt:
+          type: string
+          minLength: 1
+          format: date-time
+          example: "2021-04-27T05:49:53.211+00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2021-04-27T05:49:53.211+00:00"
+      required:
+        - index
+        - type
+        - publicKey
+        - signAlgo
+        - hashAlgo
+        - createdAt
+        - updatedAt
 
+    keyType:
+      type: string
+      enum:
+        - local
+        - aws_kms
+        - google_kms
+      example: local
+      minLength: 1
 
   parameters:
     limit:

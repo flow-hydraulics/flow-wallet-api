@@ -166,7 +166,7 @@ func (s *Service) DeleteNonCustodialAccount(_ context.Context, address string) e
 	return s.store.HardDeleteAccount(&a)
 }
 
-// Details returns a specific account.
+// Details returns a specific account, does not include private keys
 func (s *Service) Details(address string) (Account, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
@@ -174,7 +174,17 @@ func (s *Service) Details(address string) (Account, error) {
 		return Account{}, err
 	}
 
-	return s.store.Account(address)
+	account, err := s.store.Account(address)
+	if err != nil {
+		return Account{}, err
+	}
+
+	// Strip the private keys
+	for i := range account.Keys {
+		account.Keys[i].Value = make([]byte, 0)
+	}
+
+	return account, nil
 }
 
 // createAccount creates a new account on the flow blockchain. It generates a
@@ -258,6 +268,7 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+	encryptedAccountKey.PublicKey = accountKey.PublicKey.String()
 
 	// Store account and key
 	account.Keys = []keys.Storable{encryptedAccountKey}

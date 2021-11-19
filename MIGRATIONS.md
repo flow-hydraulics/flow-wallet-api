@@ -16,7 +16,7 @@ versioning. To address schema versioning,
 ## Structure for DB migrations
 
 Each migration must be created as a separate package under
-`migrations/internal`. The current pattern for package name is `m + <YYYYMMDD`
+`migrations/internal`. The current pattern for package name is `m + <YYYYMMDD>`
 - e.g. `m20210922`.
 
 In order to activate / register the migration, it must be added to migration

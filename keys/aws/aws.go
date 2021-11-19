@@ -58,7 +58,6 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 
 	// Get the public key from AWS KMS
 	pbkOutput, err := client.GetPublicKey(ctx, &kms.GetPublicKeyInput{KeyId: createKeyOutput.KeyMetadata.KeyId})
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -71,27 +70,56 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 		return nil, nil, err
 	}
 
+	// Parse signature & hash algorithm
+	signAlgo := parseSignatureAlgorithm(pbkOutput)
+	hashAlgo := parseHashAlgorithm(pbkOutput)
+
 	// Convert the decoded public key into a PEM in string format so that the
 	// DecodePublicKeyPEM from flow-go-sdk/crypto can be used
 	pemStr := string(pem.EncodeToMemory(&pem.Block{Bytes: pbkOutput.PublicKey})[:])
-	pbk, err := crypto.DecodePublicKeyPEM(crypto.ECDSA_secp256k1, pemStr) // TODO: Other key types
+	pbk, err := crypto.DecodePublicKeyPEM(signAlgo, pemStr)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	f := flow.NewAccountKey().
 		SetPublicKey(pbk).
-		SetHashAlgo(crypto.SHA3_256). // TODO: Read this from the key data
+		SetHashAlgo(hashAlgo).
 		SetWeight(weight)
 	f.Index = keyIndex
 
 	pk := &keys.Private{
-		Index: keyIndex,
-		Type:  keys.AccountKeyTypeAWSKMS,
-		Value: *createKeyOutput.KeyMetadata.Arn,
+		Index:    keyIndex,
+		Type:     keys.AccountKeyTypeAWSKMS,
+		Value:    *createKeyOutput.KeyMetadata.Arn,
+		SignAlgo: signAlgo,
+		HashAlgo: hashAlgo,
 	}
 
 	return f, pk, nil
+}
+
+// Reference: https://docs.aws.amazon.com/kms/latest/developerguide/symm-asymm-choose.html#key-spec-ecc
+func parseSignatureAlgorithm(po *kms.GetPublicKeyOutput) crypto.SignatureAlgorithm {
+	switch po.KeySpec {
+	default:
+		return crypto.UnknownSignatureAlgorithm
+	case types.KeySpecEccSecgP256k1:
+		return crypto.ECDSA_secp256k1
+	case types.KeySpecEccNistP256:
+		return crypto.ECDSA_P256
+	}
+}
+
+func parseHashAlgorithm(po *kms.GetPublicKeyOutput) crypto.HashAlgorithm {
+	switch po.KeySpec {
+	default:
+		return crypto.UnknownHashAlgorithm
+	case types.KeySpecEccSecgP256k1:
+		fallthrough
+	case types.KeySpecEccNistP256:
+		return crypto.SHA3_256
+	}
 }
 
 // Signer creates a crypto.Signer for the given private key
