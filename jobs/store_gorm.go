@@ -63,7 +63,7 @@ func (s *GormStore) SchedulableJobs(acceptedGracePeriod, reSchedulableGracePerio
 
 func (s *GormStore) Status() ([]StatusQuery, error) {
 	var res []StatusQuery
-	err := s.db.Debug().Raw("SELECT state, COUNT(*) as count FROM jobs GROUP BY state").Scan(&res).Error
+	err := s.db.Raw("SELECT state, COUNT(*) as count FROM jobs GROUP BY state").Scan(&res).Error
 	if err != nil {
 		return nil, err
 	}
