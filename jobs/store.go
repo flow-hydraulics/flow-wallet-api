@@ -15,4 +15,10 @@ type Store interface {
 	UpdateJob(*Job) error
 	IncreaseExecCount(j *Job) error
 	SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod time.Duration, o datastore.ListOptions) ([]Job, error)
+	Status() ([]StatusQuery, error)
+}
+
+type StatusQuery struct {
+	State State
+	Count int
 }

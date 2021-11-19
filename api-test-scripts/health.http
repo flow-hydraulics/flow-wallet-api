@@ -1,0 +1,5 @@
+### Get health ready
+GET http://localhost:3000/v1/health/ready HTTP/1.1
+
+### Get health liveness
+GET http://localhost:3000/v1/health/liveness HTTP/1.1

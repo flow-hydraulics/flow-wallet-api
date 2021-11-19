@@ -40,6 +40,15 @@ type Job struct {
 	ShouldSendNotification bool           `gorm:"-"` // Whether or not to notify admin (via webhook for example)
 }
 
+type JobQueueStatus struct {
+	JobsInit        int `json:"jobsInit"`
+	JobsNotAccepted int `json:"jobsNotAccepted"`
+	JobsAccepted    int `json:"jobsAccepted"`
+	JobsErrored     int `json:"jobsErrored"`
+	JobsFailed      int `json:"jobsFailed"`
+	JobsCompleted   int `json:"jobsCompleted"`
+}
+
 // Job HTTP response
 type JSONResponse struct {
 	ID            uuid.UUID `json:"jobId"`

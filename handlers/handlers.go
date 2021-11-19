@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
@@ -50,4 +51,11 @@ func checkNonEmptyBody(r *http.Request) error {
 		return EmptyBodyError
 	}
 	return nil
+}
+
+func servePlainText(w http.ResponseWriter, s string) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Length", strconv.Itoa(len(s)))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(s)) // nolint
 }

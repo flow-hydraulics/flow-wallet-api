@@ -54,6 +54,12 @@ type WorkerPool struct {
 	notificationConfig *NotificationConfig
 }
 
+type WorkerPoolStatus struct {
+	JobQueueStatus
+	Capacity    int `json:"poolCapacity"`
+	WorkerCount int `json:"workerCount"`
+}
+
 func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
 	if logger == nil {
 		// Make sure we always have a logger
@@ -91,6 +97,39 @@ func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint
 	}
 
 	return pool
+}
+
+func (wp *WorkerPool) Status() (WorkerPoolStatus, error) {
+	var status WorkerPoolStatus
+
+	query, err := wp.store.Status()
+	if err != nil {
+		return status, err
+	}
+
+	for _, r := range query {
+		switch r.State {
+		case Init:
+			status.JobsInit = r.Count
+		case NoAvailableWorkers:
+			status.JobsNotAccepted = r.Count
+		case Accepted:
+			status.JobsAccepted = r.Count
+		case Error:
+			status.JobsErrored = r.Count
+		case Failed:
+			status.JobsFailed = r.Count
+		case Complete:
+			status.JobsCompleted = r.Count
+		default:
+			continue
+		}
+	}
+
+	status.Capacity = int(wp.capacity)
+	status.WorkerCount = int(wp.workerCount)
+
+	return status, nil
 }
 
 // CreateJob constructs a new Job for type `jobType` ready for scheduling.
