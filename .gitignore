@@ -139,3 +139,4 @@ tmp/
 main
 
 flow/flowdb
+redis-data/

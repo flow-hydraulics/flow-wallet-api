@@ -8,11 +8,13 @@ content-type: application/json
 ### Create a new account (async)
 POST http://localhost:3000/v1/accounts HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 
 ### Create a new account (sync)
 POST http://localhost:3000/v1/accounts?sync=what-ever-non-empty HTTP/1.1
 content-type: application/json
+idempotency-key: ${{$guid}}
 
 
 ### Get account details

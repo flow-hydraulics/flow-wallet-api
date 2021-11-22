@@ -12,7 +12,7 @@ endif
 
 .PHONY: dev
 dev:
-	@docker-compose up -d db pgadmin emulator
+	@docker-compose up -d db pgadmin emulator redis
 	@docker-compose logs -f
 
 .PHONY: stop

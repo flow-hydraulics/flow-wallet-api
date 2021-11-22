@@ -120,6 +120,16 @@ type Config struct {
 	// For more info: https://pkg.go.dev/time#ParseDuration
 	TransactionTimeout time.Duration `env:"FLOW_WALLET_TRANSACTION_TIMEOUT" envDefault:"0"`
 
+	// Idempotency middleware configuration
+	DisableIdempotencyMiddleware bool `env:"FLOW_WALLET_DISABLE_IDEMPOTENCY_MIDDLEWARE" envDefault:"false"`
+	// Idempotency middleware database type;
+	// - "local", in-memory w/ no multi-instance support
+	// - "shared", sql (gorm) database shared with the app (DatabaseType)
+	// - "redis"
+	IdempotencyMiddlewareDatabaseType string `env:"FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_DATABASE_TYPE" envDefault:"local"`
+	// Redis URL for idempotency key storage, e.g. "redis://walletapi:wallet-api-redis@localhost:6379/"
+	IdempotencyMiddlewareRedisURL string `env:"FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_REDIS_URL" envDefault:""`
+
 	// Set the starting height for event polling. This won't have any effect if the value in
 	// database (chain_event_status[0].latest_height) is greater.
 	// If 0 (default) use latest block height if starting fresh (no previous value in database).

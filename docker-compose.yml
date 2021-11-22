@@ -10,6 +10,17 @@ services:
       - POSTGRES_USER=wallet
       - POSTGRES_PASSWORD=wallet
 
+  redis:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-data:/data
+      - ./redis-config/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-config/users.acl:/usr/local/etc/redis/users.acl
+
   pgadmin:
     image: dpage/pgadmin4
     restart: unless-stopped
@@ -37,6 +48,7 @@ services:
     depends_on:
       - db
       - emulator
+      - redis
 
   emulator:
     image: gcr.io/flow-container-registry/emulator:v0.23.0

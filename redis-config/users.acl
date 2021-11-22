@@ -1,0 +1,1 @@
+user walletapi on ~* +@all >wallet-api-redis

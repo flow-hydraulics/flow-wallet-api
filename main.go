@@ -21,6 +21,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk/client"
 	log "github.com/sirupsen/logrus"
@@ -199,7 +200,7 @@ func runServer(cfg *configs.Config) {
 	rv.Handle("/watchlist/accounts/{address}", accountHandler.DeleteNonCustodialAccount()).Methods(http.MethodDelete) // delete
 
 	// Scripts
-	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost) // create
+	rv.Handle("/scripts", transactionHandler.ExecuteScript()).Methods(http.MethodPost) // execute
 
 	// Fungible tokens
 	if !cfg.DisableFungibleTokens {
@@ -229,11 +230,55 @@ func runServer(cfg *configs.Config) {
 		log.Info("non-fungible tokens disabled")
 	}
 
-	// Define middleware
 	h := http.TimeoutHandler(r, cfg.ServerRequestTimeout, "request timed out")
 	h = handlers.UseCors(h)
 	h = handlers.UseLogging(h)
 	h = handlers.UseCompress(h)
+
+	// Setup idempotency key middleware if it's enabled
+	// redis for idempotency key handling
+	if !cfg.DisableIdempotencyMiddleware {
+		var is handlers.IdempotencyStore
+		switch cfg.IdempotencyMiddlewareDatabaseType {
+		// Shared SQL/Gorm store (same as for main app)
+		case handlers.IdempotencyStoreTypeShared.String():
+			is = handlers.NewIdempotencyStoreGorm(db)
+		// Redis, separate from app db
+		case handlers.IdempotencyStoreTypeRedis.String():
+			if cfg.IdempotencyMiddlewareRedisURL == "" {
+				ls.Fatal("idempotency middleware db set to redis but Redis URL is empty")
+			}
+			pool := &redis.Pool{
+				MaxIdle:   80,
+				MaxActive: 12000,
+				Dial: func() (redis.Conn, error) {
+					c, err := redis.DialURL(cfg.IdempotencyMiddlewareRedisURL)
+					if err != nil {
+						panic(err.Error())
+					}
+					return c, err
+				},
+			}
+
+			client := pool.Get()
+
+			defer func() {
+				ls.Println("Closing Redis client..")
+				if err := client.Close(); err != nil {
+					ls.Fatal(err)
+				}
+			}()
+
+			is = handlers.NewIdempotencyStoreRedis(client)
+		case handlers.IdempotencyStoreTypeLocal.String():
+			is = handlers.NewIdempotencyStoreLocal()
+		}
+
+		h = handlers.UseIdempotency(h, handlers.IdempotencyHandlerOptions{
+			Expiry:      1 * time.Hour,
+			IgnorePaths: []string{"/v1/scripts"}, // Scripts are read-only
+		}, is)
+	}
 
 	// Server boilerplate
 	srv := &http.Server{
