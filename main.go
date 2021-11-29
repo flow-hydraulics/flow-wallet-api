@@ -23,6 +23,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk/client"
+	"go.uber.org/ratelimit"
 	"google.golang.org/grpc"
 )
 
@@ -112,14 +113,16 @@ func runServer(cfg *configs.Config) {
 		wp.Stop()
 	}()
 
+	txRatelimiter := ratelimit.New(cfg.TransactionMaxSendRate, ratelimit.WithoutSlack)
+
 	// Key manager
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
 	// Services
 	templateService := templates.NewService(cfg, templateStore)
 	jobsService := jobs.NewService(jobStore)
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
+	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
+	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, accounts.WithTxRatelimiter(txRatelimiter))
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
 
 	// Register a handler for account added events

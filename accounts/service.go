@@ -17,6 +17,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
+	"go.uber.org/ratelimit"
 )
 
 const (
@@ -27,12 +28,13 @@ const (
 
 // Service defines the API for account management.
 type Service struct {
-	store        Store
-	km           keys.Manager
-	fc           *client.Client
-	wp           *jobs.WorkerPool
-	transactions *transactions.Service
-	cfg          *configs.Config
+	cfg           *configs.Config
+	store         Store
+	km            keys.Manager
+	fc            *client.Client
+	wp            *jobs.WorkerPool
+	transactions  *transactions.Service
+	txRateLimiter ratelimit.Limiter
 }
 
 // NewService initiates a new account service.
@@ -43,9 +45,16 @@ func NewService(
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 	txs *transactions.Service,
+	opts ...ServiceOption,
 ) *Service {
+	var defaultTxRatelimiter = ratelimit.NewUnlimited()
+
 	// TODO(latenssi): safeguard against nil config?
-	svc := &Service{store, km, fc, wp, txs, cfg}
+	svc := &Service{cfg, store, km, fc, wp, txs, defaultTxRatelimiter}
+
+	for _, opt := range opts {
+		opt(svc)
+	}
 
 	// Register asynchronous job executor.
 	wp.RegisterExecutor(AccountCreateJobType, svc.executeAccountCreateJob)
@@ -194,6 +203,10 @@ func (s *Service) Details(address string) (Account, error) {
 // Returns created account and the flow transaction ID of the account creation.
 func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	account := &Account{Type: AccountTypeCustodial}
+
+	// Important to ratelimit all the way up here so the keys and reference blocks
+	// are "fresh" when the transaction is actually sent
+	s.txRateLimiter.Take()
 
 	// Get admin account authorizer
 	adminAuthorizer, err := s.km.AdminAuthorizer(ctx)

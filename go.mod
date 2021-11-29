@@ -31,6 +31,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/zeebo/blake3 v0.2.1 // indirect
 	go.uber.org/goleak v1.1.12
+	go.uber.org/ratelimit v0.2.0
 	golang.org/x/crypto v0.0.0-20211115234514-b4de73f9ece8 // indirect
 	golang.org/x/net v0.0.0-20211116231205-47ca1ff31462 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
