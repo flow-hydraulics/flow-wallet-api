@@ -208,8 +208,12 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	// are "fresh" when the transaction is actually sent
 	s.txRateLimiter.Take()
 
-	// Get admin account authorizer
-	adminAuthorizer, err := s.km.AdminAuthorizer(ctx)
+	payer, err := s.km.AdminAuthorizer(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+
+	proposer, err := s.km.AdminProposalKey(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -229,13 +233,13 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	flowTx := flow_templates.CreateAccount(
 		[]*flow.AccountKey{accountKey},
 		nil,
-		adminAuthorizer.Address,
+		payer.Address,
 	)
 
 	flowTx.
 		SetReferenceBlockID(*referenceBlockID).
-		SetProposalKey(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Key.SequenceNumber).
-		SetPayer(adminAuthorizer.Address).
+		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
+		SetPayer(payer.Address).
 		SetGasLimit(maxGasLimit)
 
 	// Check if we want to use a custom account create script
@@ -248,8 +252,15 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 		flowTx.SetScript(bytes)
 	}
 
+	// Proposer signs the payload (unless proposer == payer).
+	if !proposer.Equals(payer) {
+		if err := flowTx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
+			return nil, "", err
+		}
+	}
+
 	// Payer signs the envelope
-	if err := flowTx.SignEnvelope(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Signer); err != nil {
+	if err := flowTx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
 		return nil, "", err
 	}
 
