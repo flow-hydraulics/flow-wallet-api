@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
+	"github.com/flow-hydraulics/flow-wallet-api/system"
 )
 
 // maxJobErrorCount is the maximum number of times a Job can be tried to
@@ -28,7 +29,7 @@ var (
 	// ACCEPTED. These are jobs where the executor processing has been
 	// unexpectedly disrupted (such as bug, dead node, disconnected
 	// networking etc.).
-	acceptedGracePeriod = 10 * time.Minute
+	acceptedGracePeriod = 3 * time.Minute
 
 	// Grace time period before re-scheduling jobs that are up for immediate
 	// restart (such as NO_AVAILABLE_WORKERS or ERROR).
@@ -52,6 +53,7 @@ type WorkerPool struct {
 	dbJobPollInterval time.Duration
 
 	notificationConfig *NotificationConfig
+	systemService      *system.Service
 }
 
 type WorkerPoolStatus struct {
@@ -153,7 +155,13 @@ func (wp *WorkerPool) RegisterExecutor(jobType string, executorF ExecutorFunc) {
 	wp.executors[jobType] = executorF
 }
 
+// Schedule will try to immediately schedule the run of a job
 func (wp *WorkerPool) Schedule(j *Job) error {
+	if wp.waitMaintenance() {
+		// In maintenance mode; prevent immediate scheduling and let dbScheduler handle this job
+		return nil
+	}
+
 	if !wp.tryEnqueue(j, false) {
 		j.State = NoAvailableWorkers
 		if err := wp.store.UpdateJob(j); err != nil {
@@ -189,6 +197,21 @@ func (wp *WorkerPool) accept(job *Job) bool {
 	return true
 }
 
+func (wp *WorkerPool) waitMaintenance() bool {
+	if wp.systemService == nil {
+		return false
+	}
+
+	if settings, err := wp.systemService.GetSettings(); err != nil || settings.MaintenanceMode {
+		if err != nil {
+			wp.logger.Printf("WARNING: Could not fetch system settings: %s", err)
+		}
+		return true
+	}
+
+	return false
+}
+
 func (wp *WorkerPool) startDBJobScheduler() {
 	go func() {
 		var restTime time.Duration
@@ -199,6 +222,12 @@ func (wp *WorkerPool) startDBJobScheduler() {
 			case <-time.After(restTime):
 			case <-wp.stopChan:
 				break jobPoolLoop
+			}
+
+			if wp.waitMaintenance() {
+				// Don't allow running jobs when in maintenance mode
+				restTime = wp.dbJobPollInterval
+				continue
 			}
 
 			begin := time.Now()
