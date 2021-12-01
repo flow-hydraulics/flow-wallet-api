@@ -109,12 +109,10 @@ paths:
               properties:
                 maintenanceMode:
                   type: boolean
-              required:
-                - maintenanceMode
               x-examples:
                 example-1:
                   maintenanceMode: false
-        description: ''
+        description: 'Post only fields you want to be changed.'
   /health/ready:
     get:
       summary: Healthcheck ready
