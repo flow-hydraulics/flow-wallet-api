@@ -108,6 +108,9 @@ type Config struct {
 	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 	// For more info: https://pkg.go.dev/time#ParseDuration
 	ChainListenerInterval time.Duration `env:"FLOW_WALLET_EVENTS_INTERVAL" envDefault:"10s"`
+
+	// Max transactions per second, rate at which the service can submit transactions to Flow
+	TransactionMaxSendRate int `env:"FLOW_WALLET_MAX_TPS" envDefault:"10"`
 }
 
 type Options struct {

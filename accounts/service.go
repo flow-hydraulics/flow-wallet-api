@@ -17,6 +17,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
+	"go.uber.org/ratelimit"
 )
 
 const (
@@ -27,12 +28,13 @@ const (
 
 // Service defines the API for account management.
 type Service struct {
-	store        Store
-	km           keys.Manager
-	fc           *client.Client
-	wp           *jobs.WorkerPool
-	transactions *transactions.Service
-	cfg          *configs.Config
+	cfg           *configs.Config
+	store         Store
+	km            keys.Manager
+	fc            *client.Client
+	wp            *jobs.WorkerPool
+	transactions  *transactions.Service
+	txRateLimiter ratelimit.Limiter
 }
 
 // NewService initiates a new account service.
@@ -43,9 +45,16 @@ func NewService(
 	fc *client.Client,
 	wp *jobs.WorkerPool,
 	txs *transactions.Service,
+	opts ...ServiceOption,
 ) *Service {
+	var defaultTxRatelimiter = ratelimit.NewUnlimited()
+
 	// TODO(latenssi): safeguard against nil config?
-	svc := &Service{store, km, fc, wp, txs, cfg}
+	svc := &Service{cfg, store, km, fc, wp, txs, defaultTxRatelimiter}
+
+	for _, opt := range opts {
+		opt(svc)
+	}
 
 	// Register asynchronous job executor.
 	wp.RegisterExecutor(AccountCreateJobType, svc.executeAccountCreateJob)
@@ -195,8 +204,16 @@ func (s *Service) Details(address string) (Account, error) {
 func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	account := &Account{Type: AccountTypeCustodial}
 
-	// Get admin account authorizer
-	adminAuthorizer, err := s.km.AdminAuthorizer(ctx)
+	// Important to ratelimit all the way up here so the keys and reference blocks
+	// are "fresh" when the transaction is actually sent
+	s.txRateLimiter.Take()
+
+	payer, err := s.km.AdminAuthorizer(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+
+	proposer, err := s.km.AdminProposalKey(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -216,13 +233,13 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	flowTx := flow_templates.CreateAccount(
 		[]*flow.AccountKey{accountKey},
 		nil,
-		adminAuthorizer.Address,
+		payer.Address,
 	)
 
 	flowTx.
 		SetReferenceBlockID(*referenceBlockID).
-		SetProposalKey(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Key.SequenceNumber).
-		SetPayer(adminAuthorizer.Address).
+		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
+		SetPayer(payer.Address).
 		SetGasLimit(maxGasLimit)
 
 	// Check if we want to use a custom account create script
@@ -235,8 +252,15 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 		flowTx.SetScript(bytes)
 	}
 
+	// Proposer signs the payload (unless proposer == payer).
+	if !proposer.Equals(payer) {
+		if err := flowTx.SignPayload(proposer.Address, proposer.Key.Index, proposer.Signer); err != nil {
+			return nil, "", err
+		}
+	}
+
 	// Payer signs the envelope
-	if err := flowTx.SignEnvelope(adminAuthorizer.Address, adminAuthorizer.Key.Index, adminAuthorizer.Signer); err != nil {
+	if err := flowTx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
 		return nil, "", err
 	}
 

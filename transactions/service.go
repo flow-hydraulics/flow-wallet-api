@@ -14,6 +14,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	"go.uber.org/ratelimit"
 	"google.golang.org/grpc/codes"
 )
 
@@ -21,11 +22,12 @@ const TransactionJobType = "transaction"
 
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
-	store Store
-	km    keys.Manager
-	fc    *client.Client
-	wp    *jobs.WorkerPool
-	cfg   *configs.Config
+	store         Store
+	km            keys.Manager
+	fc            *client.Client
+	wp            *jobs.WorkerPool
+	cfg           *configs.Config
+	txRateLimiter ratelimit.Limiter
 }
 
 // NewService initiates a new transaction service.
@@ -35,9 +37,16 @@ func NewService(
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
+	opts ...ServiceOption,
 ) *Service {
+	var defaultTxRatelimiter = ratelimit.NewUnlimited()
+
 	// TODO(latenssi): safeguard against nil config?
-	svc := &Service{store, km, fc, wp, cfg}
+	svc := &Service{store, km, fc, wp, cfg, defaultTxRatelimiter}
+
+	for _, opt := range opts {
+		opt(svc)
+	}
 
 	// Register asynchronous job executor.
 	wp.RegisterExecutor(TransactionJobType, svc.executeTransactionJob)
@@ -287,6 +296,9 @@ func (s *Service) getProposalAuthorizer(ctx context.Context, proposerAddress str
 }
 
 func (s *Service) sendTransaction(ctx context.Context, tx *Transaction) error {
+	// TODO: we should "recreate" the transaction as proposal key sequence numbering
+	// might have gotten out of sync by now (in async situations)
+
 	flowTx, err := flow.DecodeTransaction(tx.FlowTransaction)
 	if err != nil {
 		return err
@@ -308,6 +320,9 @@ func (s *Service) sendTransaction(ctx context.Context, tx *Transaction) error {
 
 		// The Flow transaction was not found. All good. Continue.
 	}
+
+	// Ratelimit
+	s.txRateLimiter.Take()
 
 	resp, err := flow_helpers.SendAndWait(ctx, s.fc, *flowTx, s.cfg.TransactionTimeout)
 	if err != nil {
