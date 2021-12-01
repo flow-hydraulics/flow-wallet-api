@@ -283,6 +283,7 @@ func runServer(cfg *configs.Config) {
 			cfg.ChainListenerMaxBlocks,
 			cfg.ChainListenerInterval,
 			cfg.ChainListenerStartingHeight,
+			chain_events.WithSystemService(systemService),
 		)
 
 		defer listener.Stop()

@@ -56,6 +56,8 @@ func (s *System) SetSettings() http.Handler {
 			return
 		}
 
+		// TODO: Check if maintenance mode was enabled and log it
+
 		// Assign fields from JSON back to application model
 		settings.FromJSON(settingsJSON)
 

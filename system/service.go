@@ -15,3 +15,9 @@ func (svc *Service) GetSettings() (*Settings, error) {
 func (svc *Service) SaveSettings(settings *Settings) error {
 	return svc.store.SaveSettings(settings)
 }
+
+func (svc *Service) IsMaintenanceMode() bool {
+	settings, err := svc.GetSettings()
+	// TODO: handle error, log
+	return err == nil && settings.MaintenanceMode
+}

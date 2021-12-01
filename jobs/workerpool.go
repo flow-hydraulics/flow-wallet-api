@@ -198,18 +198,7 @@ func (wp *WorkerPool) accept(job *Job) bool {
 }
 
 func (wp *WorkerPool) waitMaintenance() bool {
-	if wp.systemService == nil {
-		return false
-	}
-
-	if settings, err := wp.systemService.GetSettings(); err != nil || settings.MaintenanceMode {
-		if err != nil {
-			wp.logger.Printf("WARNING: Could not fetch system settings: %s", err)
-		}
-		return true
-	}
-
-	return false
+	return wp.systemService != nil && wp.systemService.IsMaintenanceMode()
 }
 
 func (wp *WorkerPool) startDBJobScheduler() {
@@ -224,8 +213,8 @@ func (wp *WorkerPool) startDBJobScheduler() {
 				break jobPoolLoop
 			}
 
+			// Check for maintenance mode
 			if wp.waitMaintenance() {
-				// Don't allow running jobs when in maintenance mode
 				restTime = wp.dbJobPollInterval
 				continue
 			}
