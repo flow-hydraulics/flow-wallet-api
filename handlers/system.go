@@ -68,6 +68,6 @@ func (s *System) SetSettings() http.Handler {
 		}
 
 		// Return updated version
-		handleJsonResponse(rw, http.StatusCreated, settings.ToJSON())
+		handleJsonResponse(rw, http.StatusOK, settings.ToJSON())
 	})
 }
