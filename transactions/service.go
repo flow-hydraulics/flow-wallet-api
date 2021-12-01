@@ -296,7 +296,7 @@ func (s *Service) getProposalAuthorizer(ctx context.Context, proposerAddress str
 }
 
 func (s *Service) sendTransaction(ctx context.Context, tx *Transaction) error {
-	// TODO: we should "recreate" the transaction as proposal key sequnce numbering
+	// TODO: we should "recreate" the transaction as proposal key sequence numbering
 	// might have gotten out of sync by now (in async situations)
 
 	flowTx, err := flow.DecodeTransaction(tx.FlowTransaction)
