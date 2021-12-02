@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/system"
+	log "github.com/sirupsen/logrus"
 )
 
 // System is a HTTP server for system settings management.
@@ -55,7 +56,11 @@ func (s *System) SetSettings() http.Handler {
 			return
 		}
 
-		// TODO: Check if maintenance mode was enabled and logger it
+		if !settings.MaintenanceMode && settingsJSON.MaintenanceMode {
+			log.Info("Maintenance mode enabled")
+		} else if settings.MaintenanceMode && !settingsJSON.MaintenanceMode {
+			log.Info("Maintenance mode disabled")
+		}
 
 		// Assign fields from JSON back to application model
 		settings.FromJSON(settingsJSON)
