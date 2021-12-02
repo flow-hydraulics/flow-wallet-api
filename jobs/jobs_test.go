@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/google/uuid"
@@ -39,6 +41,8 @@ func (writer *dummyWriter) Write(p []byte) (n int, err error) {
 
 func TestScheduleSendNotification(t *testing.T) {
 	writer := &dummyWriter{T: t}
+	logger := log.New()
+	logger.Out = writer
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := WorkerPool{
@@ -46,7 +50,7 @@ func TestScheduleSendNotification(t *testing.T) {
 		cancelContext: cancel,
 		executors:     make(map[string]ExecutorFunc),
 		jobChan:       make(chan *Job, 1),
-		logger:        log.New(writer, "", 0),
+		logger:        log.NewEntry(logger),
 		store:         &dummyStore{},
 	}
 
@@ -104,6 +108,8 @@ func TestExecuteSendNotification(t *testing.T) {
 		defer svr.Close()
 
 		writer := &dummyWriter{T: t}
+		logger := log.New()
+		logger.Out = writer
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -111,7 +117,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.New(writer, "", 0),
+			logger:        log.NewEntry(logger),
 			store:         &dummyStore{},
 		}
 
@@ -155,6 +161,8 @@ func TestExecuteSendNotification(t *testing.T) {
 		defer svr.Close()
 
 		writer := &dummyWriter{T: t}
+		logger := log.New()
+		logger.Out = writer
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -162,7 +170,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.New(writer, "", 0),
+			logger:        log.NewEntry(logger),
 			store:         &dummyStore{},
 		}
 
@@ -198,6 +206,8 @@ func TestExecuteSendNotification(t *testing.T) {
 
 	t.Run("erroring job should not send", func(t *testing.T) {
 		writer := &dummyWriter{T: t}
+		logger := log.New()
+		logger.Out = writer
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -205,7 +215,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.New(writer, "", 0),
+			logger:        log.NewEntry(logger),
 			store:         &dummyStore{},
 		}
 
@@ -237,6 +247,8 @@ func TestExecuteSendNotification(t *testing.T) {
 		defer svr.Close()
 
 		writer := &dummyWriter{T: t}
+		logger := log.New()
+		logger.Out = writer
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -244,7 +256,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.New(writer, "", 0),
+			logger:        log.NewEntry(logger),
 			store:         &dummyStore{},
 		}
 

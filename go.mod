@@ -28,7 +28,7 @@ require (
 	github.com/onflow/cadence v0.20.0
 	github.com/onflow/flow-go-sdk v0.23.0
 	github.com/onflow/flow/protobuf/go/flow v0.2.3 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/sirupsen/logrus v1.8.1
 	github.com/zeebo/blake3 v0.2.1 // indirect
 	go.uber.org/goleak v1.1.12
 	go.uber.org/ratelimit v0.2.0

@@ -2,14 +2,14 @@ package chain_events
 
 import (
 	"context"
-	"log"
-	"os"
+
 	"strings"
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +18,7 @@ type GetEventTypes func() ([]string, error)
 type Listener struct {
 	ticker         *time.Ticker
 	done           chan bool
-	logger         *log.Logger
+	logger         *log.Entry
 	fc             *client.Client
 	db             Store
 	getTypes       GetEventTypes
@@ -39,7 +39,7 @@ func (ListenerStatus) TableName() string {
 }
 
 func NewListener(
-	logger *log.Logger,
+	logger *log.Entry,
 	fc *client.Client,
 	db Store,
 	getTypes GetEventTypes,
@@ -48,9 +48,6 @@ func NewListener(
 	startingHeight uint64,
 	opts ...ListenerOption,
 ) *Listener {
-	if logger == nil {
-		logger = log.New(os.Stdout, "[EVENT-POLLER] ", log.LstdFlags|log.Lshortfile)
-	}
 
 	listener := &Listener{
 		nil, make(chan bool),

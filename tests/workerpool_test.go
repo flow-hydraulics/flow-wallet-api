@@ -10,13 +10,18 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
+	logger := log.WithFields(log.Fields{
+		"version": "test",
+	})
+
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
-	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(logger, jobStore, 10, 10)
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -61,10 +66,14 @@ func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 }
 
 func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
+	logger := log.WithFields(log.Fields{
+		"version": "test",
+	})
+
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
-	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(logger, jobStore, 10, 10)
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -109,10 +118,14 @@ func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
 }
 
 func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
+	logger := log.WithFields(log.Fields{
+		"version": "test",
+	})
+
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
-	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(logger, jobStore, 10, 10)
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -157,6 +170,10 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 }
 
 func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
+	logger := log.WithFields(log.Fields{
+		"version": "test",
+	})
+
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
@@ -186,7 +203,7 @@ func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
 	}
 
 	executedWG.Add(1)
-	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(logger, jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
 	executedWG.Wait()
@@ -212,6 +229,10 @@ func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
 }
 
 func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
+	logger := log.WithFields(log.Fields{
+		"version": "test",
+	})
+
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
@@ -241,7 +262,7 @@ func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
 	}
 
 	executedWG.Add(1)
-	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(logger, jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
 	executedWG.Wait()
@@ -278,6 +299,11 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 	// The last and maybe most difficult and controversial problem is that
 	// there's no way to prove that something that was not expected to happen,
 	// does not happen, even over longer period of time.
+
+	logger := log.WithFields(log.Fields{
+		"version": "test",
+	})
+
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
@@ -305,7 +331,7 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wp := jobs.NewWorkerPool(nil, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(logger, jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
 	// Gotta give DB job poller a bit of time to catch up.

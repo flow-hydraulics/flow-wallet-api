@@ -23,7 +23,7 @@ func (s *Jobs) ListFunc(rw http.ResponseWriter, r *http.Request) {
 	jobsSlice, err := s.service.List(limit, offset)
 
 	if err != nil {
-		handleError(rw, s.log, err)
+		handleError(rw, s.logger, err)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (s *Jobs) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	job, err := s.service.Details(vars["jobId"])
 
 	if err != nil {
-		handleError(rw, s.log, err)
+		handleError(rw, s.logger, err)
 		return
 	}
 

@@ -2,10 +2,10 @@ package test
 
 import (
 	"context"
-	"io/ioutil"
-	"log"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	upstreamgorm "gorm.io/gorm"
 
@@ -58,7 +58,9 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
-	logger := log.New(ioutil.Discard, "", log.LstdFlags|log.Lshortfile)
+	logger := log.WithFields(log.Fields{
+		"version": "test",
+	})
 
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)

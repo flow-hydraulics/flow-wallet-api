@@ -1,19 +1,19 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
+	log "github.com/sirupsen/logrus"
 )
 
 type Transactions struct {
-	log     *log.Logger
+	logger  *log.Entry
 	service *transactions.Service
 }
 
 // NewTransactions initiates a new transactions server.
-func NewTransactions(l *log.Logger, service *transactions.Service) *Transactions {
+func NewTransactions(l *log.Entry, service *transactions.Service) *Transactions {
 	return &Transactions{l, service}
 }
 

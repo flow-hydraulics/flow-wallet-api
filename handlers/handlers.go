@@ -4,10 +4,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 )
@@ -18,7 +19,7 @@ var EmptyBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err
 var InvalidBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
 
 // handleError is a helper function for unified HTTP error handling.
-func handleError(rw http.ResponseWriter, logger *log.Logger, err error) {
+func handleError(rw http.ResponseWriter, logger *log.Entry, err error) {
 	if logger != nil {
 		logger.Printf("Error: %v\n", err)
 	}

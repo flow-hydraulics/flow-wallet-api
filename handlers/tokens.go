@@ -1,19 +1,19 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
+	log "github.com/sirupsen/logrus"
 )
 
 type Tokens struct {
-	log     *log.Logger
+	logger  *log.Entry
 	service *tokens.Service
 }
 
-func NewTokens(l *log.Logger, service *tokens.Service) *Tokens {
+func NewTokens(l *log.Entry, service *tokens.Service) *Tokens {
 	return &Tokens{l, service}
 }
 

@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"os"
+
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
@@ -46,7 +47,7 @@ type WorkerPool struct {
 	cancelContext context.CancelFunc
 	executors     map[string]ExecutorFunc
 
-	logger            *log.Logger
+	logger            *log.Entry
 	store             Store
 	capacity          uint
 	workerCount       uint
@@ -62,12 +63,7 @@ type WorkerPoolStatus struct {
 	WorkerCount int `json:"workerCount"`
 }
 
-func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
-	if logger == nil {
-		// Make sure we always have a logger
-		logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
-	}
-
+func NewWorkerPool(logger *log.Entry, db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	pool := &WorkerPool{

@@ -1,22 +1,22 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
+	log "github.com/sirupsen/logrus"
 )
 
 // Jobs is a HTTP server for jobs.
 // It provides details API.
 // It uses jobs service to interface with data.
 type Jobs struct {
-	log     *log.Logger
+	logger  *log.Entry
 	service *jobs.Service
 }
 
 // NewJobs initiates a new jobs server.
-func NewJobs(l *log.Logger, service *jobs.Service) *Jobs {
+func NewJobs(l *log.Entry, service *jobs.Service) *Jobs {
 	return &Jobs{l, service}
 }
 
