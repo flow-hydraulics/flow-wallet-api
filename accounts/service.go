@@ -17,6 +17,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
+	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 )
 
@@ -63,6 +64,8 @@ func NewService(
 }
 
 func (s *Service) InitAdminAccount(ctx context.Context) error {
+	log.Debug("Initializing admin account")
+
 	a, err := s.store.Account(s.cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
@@ -84,6 +87,11 @@ func (s *Service) InitAdminAccount(ctx context.Context) error {
 		return err
 	}
 
+	log.WithFields(log.Fields{
+		"keyCount":    keyCount,
+		"wantedCount": s.cfg.AdminProposalKeyCount,
+	}).Debug("Checking admin account proposal keys")
+
 	if keyCount < s.cfg.AdminProposalKeyCount {
 		err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount)
 		if err != nil {
@@ -100,6 +108,11 @@ func (s *Service) InitAdminAccount(ctx context.Context) error {
 }
 
 func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16) error {
+
+	log.
+		WithFields(log.Fields{"count": count}).
+		Debug("Adding admin account proposal keys")
+
 	code := template_strings.AddProposalKeyTransaction
 	args := []transactions.Argument{
 		cadence.NewInt(s.cfg.AdminKeyIndex),
@@ -121,6 +134,8 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
 func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error) {
+	log.WithFields(log.Fields{"sync": sync}).Trace("Create account")
+
 	if !sync {
 		job, err := s.wp.CreateJob(AccountCreateJobType, "")
 		if err != nil {
@@ -144,6 +159,8 @@ func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, e
 }
 
 func (s *Service) AddNonCustodialAccount(_ context.Context, address string) (*Account, error) {
+	log.WithFields(log.Fields{"address": address}).Trace("Add non-custodial account")
+
 	a := &Account{
 		Address: flow_helpers.HexString(address),
 		Type:    AccountTypeNonCustodial,
@@ -158,6 +175,8 @@ func (s *Service) AddNonCustodialAccount(_ context.Context, address string) (*Ac
 }
 
 func (s *Service) DeleteNonCustodialAccount(_ context.Context, address string) error {
+	log.WithFields(log.Fields{"address": address}).Trace("Delete non-custodial account")
+
 	a, err := s.store.Account(flow_helpers.HexString(address))
 	if err != nil {
 		if strings.Contains(err.Error(), "record not found") {
@@ -177,6 +196,8 @@ func (s *Service) DeleteNonCustodialAccount(_ context.Context, address string) e
 
 // Details returns a specific account, does not include private keys
 func (s *Service) Details(address string) (Account, error) {
+	log.WithFields(log.Fields{"address": address}).Trace("Account details")
+
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {

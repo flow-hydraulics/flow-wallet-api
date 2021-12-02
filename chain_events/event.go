@@ -17,11 +17,16 @@ var Event event // singleton of type event
 
 // Register adds an event handler for this event
 func (e *event) Register(handler handler) {
+	log.Debug("Registering Flow event handler")
 	e.handlers = append(e.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
 func (e *event) Trigger(payload flow.Event) {
+	log.
+		WithFields(log.Fields{"payload": payload}).
+		Trace("Handling Flow event")
+
 	if len(e.handlers) == 0 {
 		log.Warn("No listeners for chain events")
 	}

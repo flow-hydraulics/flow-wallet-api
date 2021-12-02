@@ -22,6 +22,7 @@ func (svc *Service) SaveSettings(settings *Settings) error {
 	if settings.ID == 0 {
 		return fmt.Errorf("settings object has no ID, get an existing settings first and alter it")
 	}
+	log.WithFields(log.Fields{"settings": settings}).Trace("Save system settings")
 	return svc.store.SaveSettings(settings)
 }
 
