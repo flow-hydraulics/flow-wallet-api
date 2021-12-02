@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -10,6 +11,19 @@ import (
 )
 
 func init() {
+	lvl, ok := os.LookupEnv("FLOW_WALLET_LOG_LEVEL")
+	if !ok {
+		// LOG_LEVEL not set, default to info
+		lvl = "info"
+	}
+
+	ll, err := log.ParseLevel(lvl)
+	if err != nil {
+		ll = log.DebugLevel
+	}
+
+	log.SetLevel(ll)
+
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors: true,
 		FullTimestamp: true,
