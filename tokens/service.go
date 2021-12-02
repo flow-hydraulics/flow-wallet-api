@@ -18,6 +18,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -87,7 +88,9 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 			TokenType:      token.Type,
 		})
 		if err != nil {
-			fmt.Printf("Error while adding account token: %s\n", err)
+			log.
+				WithFields(log.Fields{"error": err}).
+				Warn("Error while adding account token")
 		}
 	}()
 
@@ -201,7 +204,9 @@ func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender str
 			transfer.TransactionId = job.TransactionID
 
 			if err := s.store.InsertTokenTransfer(transfer); err != nil {
-				fmt.Printf("Error while inserting token transfer: %s\n", err)
+				log.
+					WithFields(log.Fields{"error": err}).
+					Warn("Error while inserting token transfer")
 			}
 		}()
 	} else {

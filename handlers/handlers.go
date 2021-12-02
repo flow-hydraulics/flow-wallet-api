@@ -21,7 +21,9 @@ var InvalidBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, E
 // handleError is a helper function for unified HTTP error handling.
 func handleError(rw http.ResponseWriter, logger *log.Entry, err error) {
 	if logger != nil {
-		logger.Printf("Error: %v\n", err)
+		logger.
+			WithFields(log.Fields{"error": err}).
+			Warn("Error while handling request")
 	}
 
 	// Check if the error was an errors.RequestError

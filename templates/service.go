@@ -7,6 +7,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
+	log "github.com/sirupsen/logrus"
 )
 
 type Service struct {
@@ -36,8 +37,9 @@ func NewService(cfg *configs.Config, store Store) *Service {
 	for _, t := range parseEnabledTokens(cfg.EnabledTokens) {
 		if _, err := store.GetByName(t.Name); err == nil {
 			// Token already in database
-			fmt.Printf("Warning: Skipping %s configuration from environment variables as it already exists in database. ", t.Name)
-			fmt.Printf("Consider removing it from database or from environment variables.\n")
+			log.
+				WithFields(log.Fields{"error": err, "tokenName": t.Name}).
+				Warn("Skipping configuration from environment variables as it already exists in database. Consider removing it from database or from environment variables.")
 			continue
 		} else {
 			if !strings.Contains(err.Error(), "record not found") {

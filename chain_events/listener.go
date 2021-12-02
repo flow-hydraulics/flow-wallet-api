@@ -49,9 +49,13 @@ func NewListener(
 	opts ...ListenerOption,
 ) *Listener {
 
+	listener_logger := logger.WithFields(log.Fields{
+		"service": "Flow event listener",
+	})
+
 	listener := &Listener{
 		nil, make(chan bool),
-		logger, fc, db, getTypes,
+		listener_logger, fc, db, getTypes,
 		maxDiff, interval, startingHeight,
 		nil,
 	}
@@ -91,13 +95,6 @@ func (l *Listener) run(ctx context.Context, start, end uint64) error {
 	}
 
 	return nil
-}
-
-func (l *Listener) handleError(err error) {
-	l.logger.Println(err)
-	if strings.Contains(err.Error(), "key not found") {
-		l.logger.Println(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
-	}
 }
 
 func (l *Listener) Start() *Listener {
@@ -154,16 +151,24 @@ func (l *Listener) Start() *Listener {
 				})
 
 				if err != nil {
-					if _, isLockError := err.(*LockError); !isLockError {
-						l.handleError(err)
+					if _, isLockError := err.(*LockError); isLockError {
+						// Skip LockError as it means another listener is already handling this round
+						continue
 					}
-					// Skip on LockError as it means another listener is already handling this round
+
+					l.logger.
+						WithFields(log.Fields{"error": err}).
+						Warn("Error while handling Flow events")
+
+					if strings.Contains(err.Error(), "key not found") {
+						l.logger.Warn(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
+					}
 				}
 			}
 		}
 	}()
 
-	l.logger.Println("started")
+	l.logger.Info("Started")
 
 	return l
 }
@@ -190,7 +195,7 @@ func (l *Listener) initHeight() error {
 }
 
 func (l *Listener) Stop() {
-	l.logger.Println("stopping...")
+	l.logger.Info("Stopping")
 	if l.ticker != nil {
 		l.ticker.Stop()
 	}

@@ -135,7 +135,9 @@ func ParseConfig(opt *Options) (*Config, error) {
 	if opt != nil && opt.EnvFilePath != "" {
 		// Load variables from a file to the environment of the process
 		if err := godotenv.Load(opt.EnvFilePath); err != nil {
-			logger.Warnf("Could not load environment variables from file.\n%s\nIf running inside a docker container this can be ignored.\n\n", err)
+			logger.
+				WithFields(log.Fields{"error": err}).
+				Warn("Could not load environment variables from file. If running inside a docker container this can be ignored.")
 		}
 	}
 

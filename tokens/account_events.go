@@ -1,11 +1,10 @@
 package tokens
 
 import (
-	"fmt"
-
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	log "github.com/sirupsen/logrus"
 )
 
 type AccountAddedHandler struct {
@@ -21,7 +20,9 @@ func (h *AccountAddedHandler) Handle(payload accounts.AccountAddedPayload) {
 func (h *AccountAddedHandler) addFlowToken(address string) {
 	token, err := h.TemplateService.GetTokenByName("FlowToken")
 	if err != nil {
-		fmt.Printf("Error while adding FlowToken to new account: %s\n", err)
+		log.
+			WithFields(log.Fields{"error": err}).
+			Warn("Error while adding FlowToken to new account")
 	}
 
 	// No need to setup FlowToken
@@ -33,6 +34,8 @@ func (h *AccountAddedHandler) addFlowToken(address string) {
 		TokenType:      token.Type,
 	})
 	if err != nil {
-		fmt.Printf("Error while adding FlowToken to new account: %s\n", err)
+		log.
+			WithFields(log.Fields{"error": err}).
+			Warn("Error while adding FlowToken to new account")
 	}
 }

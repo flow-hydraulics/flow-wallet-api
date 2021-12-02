@@ -1,9 +1,8 @@
 package chain_events
 
 import (
-	"fmt"
-
 	"github.com/onflow/flow-go-sdk"
+	log "github.com/sirupsen/logrus"
 )
 
 type handler interface {
@@ -24,8 +23,9 @@ func (e *event) Register(handler handler) {
 // Trigger sends out an event with the payload
 func (e *event) Trigger(payload flow.Event) {
 	if len(e.handlers) == 0 {
-		fmt.Println("Warning: no listeners for chain events")
+		log.Warn("No listeners for chain events")
 	}
+
 	for _, handler := range e.handlers {
 		go handler.Handle(payload)
 	}

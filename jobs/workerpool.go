@@ -186,7 +186,9 @@ func (wp *WorkerPool) QueueSize() uint {
 func (wp *WorkerPool) accept(job *Job) bool {
 	err := wp.store.IncreaseExecCount(job)
 	if err != nil {
-		wp.logger.Printf("WARNING: Failed to increase Job %q exec_count: %s\n", job.ID, err.Error())
+		wp.logger.
+			WithFields(log.Fields{"error": err, "jobID": job.ID}).
+			Warn("Failed to increase job exec_count")
 		return false
 	}
 
@@ -220,7 +222,9 @@ func (wp *WorkerPool) startDBJobScheduler() {
 			o := datastore.ParseListOptions(0, 0)
 			jobs, err := wp.store.SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod, o)
 			if err != nil {
-				wp.logger.Printf("WARNING: Could not fetch schedulable jobs from DB: %s", err)
+				wp.logger.
+					WithFields(log.Fields{"error": err}).
+					Warn("Could not fetch schedulable jobs from DB")
 				continue
 			}
 
@@ -267,16 +271,22 @@ func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 
 func (wp *WorkerPool) process(job *Job) {
 	if !wp.accept(job) {
-		wp.logger.Printf("INFO: Failed to accept Job(id: %q, type: %q)", job.ID, job.Type)
+		wp.logger.
+			WithFields(log.Fields{"jobID": job.ID, "jobType": job.Type}).
+			Info("Failed to accept job")
 		return
 	}
 
 	executor, exists := wp.executors[job.Type]
 	if !exists {
-		wp.logger.Printf("WARNING: Could not process Job %q: no registered executor for type %q", job.ID, job.Type)
+		wp.logger.
+			WithFields(log.Fields{"jobID": job.ID, "jobType": job.Type}).
+			Warn("Could not process job, no registered executor for type")
 		job.State = NoAvailableWorkers
 		if err := wp.store.UpdateJob(job); err != nil {
-			wp.logger.Printf("WARNING: Could not update DB entry for Job %q: %s\n", job.ID, err.Error())
+			wp.logger.
+				WithFields(log.Fields{"error": err, "jobID": job.ID}).
+				Warn("Could not update DB entry for job")
 		}
 		return
 	}
@@ -289,19 +299,25 @@ func (wp *WorkerPool) process(job *Job) {
 			job.State = Error
 		}
 		job.Error = err.Error()
-		wp.logger.Printf("WARNING: Job(id: %q, type: %q) execution resulted with error: %s", job.ID, job.Type, job.Error)
+		wp.logger.
+			WithFields(log.Fields{"error": err, "jobID": job.ID, "jobType": job.Type}).
+			Warn("Job execution resulted with error")
 	} else {
 		job.State = Complete
 		job.Error = ""
 	}
 
 	if err := wp.store.UpdateJob(job); err != nil {
-		wp.logger.Printf("WARNING: Could not update DB entry for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
+		wp.logger.
+			WithFields(log.Fields{"error": err, "jobID": job.ID, "jobType": job.Type}).
+			Warn("Could not update DB entry for job")
 	}
 
 	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
 		if err := ScheduleJobStatusNotification(wp, job); err != nil {
-			wp.logger.Printf("WARNING: Could not schedule a status update notification for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
+			wp.logger.
+				WithFields(log.Fields{"error": err, "jobID": job.ID, "jobType": job.Type}).
+				Warn("Could not schedule a status update notification for job")
 		}
 	}
 }
