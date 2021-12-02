@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/system"
+	log "github.com/sirupsen/logrus"
 )
 
 type WorkerPoolOption func(*WorkerPool)
@@ -32,5 +33,11 @@ func WithJobStatusWebhook(u string, timeout time.Duration) WorkerPoolOption {
 func WithSystemService(svc *system.Service) WorkerPoolOption {
 	return func(wp *WorkerPool) {
 		wp.systemService = svc
+	}
+}
+
+func WithLogger(logger *log.Logger) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.logger = logger
 	}
 }

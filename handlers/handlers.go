@@ -19,14 +19,12 @@ var EmptyBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err
 var InvalidBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
 
 // handleError is a helper function for unified HTTP error handling.
-func handleError(rw http.ResponseWriter, logger *log.Entry, err error) {
-	if logger != nil {
-		logger.
-			WithFields(log.Fields{"error": err}).
-			Warn("Error while handling request")
-	}
+func handleError(rw http.ResponseWriter, r *http.Request, err error) {
+	log.
+		WithFields(log.Fields{"error": err}).
+		Warn("Error while handling request")
 
-	// Check if the error was an errors.RequestError
+		// Check if the error was an errors.RequestError
 	reqErr, isReqErr := err.(*errors.RequestError)
 	if isReqErr {
 		http.Error(rw, reqErr.Error(), reqErr.StatusCode)

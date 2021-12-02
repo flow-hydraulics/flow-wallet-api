@@ -11,8 +11,9 @@ func UseCors(h http.Handler) http.Handler {
 	return gorilla.CORS(gorilla.AllowedOrigins([]string{"*"}))(h)
 }
 
-func UseLogging(logger *log.Entry, h http.Handler) http.Handler {
-	return gorilla.CombinedLoggingHandler(logger.Logger.Out, h)
+func UseLogging(h http.Handler) http.Handler {
+	// TODO: log.New()
+	return gorilla.CombinedLoggingHandler(log.New().Out, h)
 }
 
 func UseCompress(h http.Handler) http.Handler {

@@ -66,7 +66,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 100, 1)
+	wp := jobs.NewWorkerPool(jobStore, 100, 1)
 	wpStop := func() { wp.Stop() }
 	t.Cleanup(wpStop)
 
@@ -96,7 +96,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	}
 
 	listener := chain_events.NewListener(
-		cfg.Logger, fc, store, getTypes,
+		fc, store, getTypes,
 		cfg.ChainListenerMaxBlocks,
 		1*time.Second,
 		cfg.ChainListenerStartingHeight,

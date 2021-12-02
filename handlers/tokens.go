@@ -5,16 +5,14 @@ import (
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
-	log "github.com/sirupsen/logrus"
 )
 
 type Tokens struct {
-	logger  *log.Entry
 	service *tokens.Service
 }
 
-func NewTokens(l *log.Entry, service *tokens.Service) *Tokens {
-	return &Tokens{l, service}
+func NewTokens(service *tokens.Service) *Tokens {
+	return &Tokens{service}
 }
 
 func (s *Tokens) Setup() http.Handler {

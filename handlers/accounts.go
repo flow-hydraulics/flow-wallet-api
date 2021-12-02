@@ -4,20 +4,18 @@ import (
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
-	log "github.com/sirupsen/logrus"
 )
 
 // Accounts is a HTTP server for account management.
 // It provides list, create and details APIs.
 // It uses an account service to interface with data.
 type Accounts struct {
-	logger  *log.Entry
 	service *accounts.Service
 }
 
 // NewAccounts initiates a new accounts server.
-func NewAccounts(l *log.Entry, service *accounts.Service) *Accounts {
-	return &Accounts{l, service}
+func NewAccounts(service *accounts.Service) *Accounts {
+	return &Accounts{service}
 }
 
 func (s *Accounts) List() http.Handler {

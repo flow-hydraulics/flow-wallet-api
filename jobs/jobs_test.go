@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/google/uuid"
@@ -28,21 +28,8 @@ func (*dummyStore) SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod
 }
 func (*dummyStore) Status() ([]StatusQuery, error) { return nil, nil }
 
-type dummyWriter struct {
-	T      *testing.T
-	record []string
-}
-
-func (writer *dummyWriter) Write(p []byte) (n int, err error) {
-	writer.T.Helper()
-	writer.record = append(writer.record, string(p))
-	return 0, nil
-}
-
 func TestScheduleSendNotification(t *testing.T) {
-	writer := &dummyWriter{T: t}
-	logger := log.New()
-	logger.Out = writer
+	logger, hook := test.NewNullLogger()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := WorkerPool{
@@ -50,7 +37,7 @@ func TestScheduleSendNotification(t *testing.T) {
 		cancelContext: cancel,
 		executors:     make(map[string]ExecutorFunc),
 		jobChan:       make(chan *Job, 1),
-		logger:        log.NewEntry(logger),
+		logger:        logger,
 		store:         &dummyStore{},
 	}
 
@@ -92,8 +79,8 @@ func TestScheduleSendNotification(t *testing.T) {
 		t.Fatalf("expected 'sendNotificationCalled' to equal true")
 	}
 
-	if len(writer.record) > 0 {
-		t.Fatalf("did not expect a warning, got %s", writer.record)
+	if len(hook.Entries) > 0 {
+		t.Fatalf("did not expect a warning, got %s", hook.LastEntry().Message)
 	}
 }
 
@@ -107,9 +94,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		}))
 		defer svr.Close()
 
-		writer := &dummyWriter{T: t}
-		logger := log.New()
-		logger.Out = writer
+		logger, hook := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -117,7 +102,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.NewEntry(logger),
+			logger:        logger,
 			store:         &dummyStore{},
 		}
 
@@ -146,8 +131,8 @@ func TestExecuteSendNotification(t *testing.T) {
 			t.Fatalf("expected job to be in state '%s' got '%s'", Complete, webhookJob.State)
 		}
 
-		if len(writer.record) > 0 {
-			t.Fatalf("did not expect a warning, got %s", writer.record)
+		if len(hook.Entries) > 0 {
+			t.Fatalf("did not expect a warning, got %s", hook.LastEntry().Message)
 		}
 	})
 
@@ -160,9 +145,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		}))
 		defer svr.Close()
 
-		writer := &dummyWriter{T: t}
-		logger := log.New()
-		logger.Out = writer
+		logger, hook := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -170,7 +153,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.NewEntry(logger),
+			logger:        logger,
 			store:         &dummyStore{},
 		}
 
@@ -199,15 +182,13 @@ func TestExecuteSendNotification(t *testing.T) {
 			t.Fatalf("expected job to be in state '%s' got '%s'", Failed, webhookJob.State)
 		}
 
-		if len(writer.record) == 0 {
-			t.Fatalf("expected a warning, got %s", writer.record)
+		if len(hook.Entries) == 0 {
+			t.Fatalf("expected a warning")
 		}
 	})
 
 	t.Run("erroring job should not send", func(t *testing.T) {
-		writer := &dummyWriter{T: t}
-		logger := log.New()
-		logger.Out = writer
+		logger, _ := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -215,7 +196,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.NewEntry(logger),
+			logger:        logger,
 			store:         &dummyStore{},
 		}
 
@@ -246,9 +227,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		}))
 		defer svr.Close()
 
-		writer := &dummyWriter{T: t}
-		logger := log.New()
-		logger.Out = writer
+		logger, hook := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
@@ -256,7 +235,7 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        log.NewEntry(logger),
+			logger:        logger,
 			store:         &dummyStore{},
 		}
 
@@ -278,8 +257,8 @@ func TestExecuteSendNotification(t *testing.T) {
 		sendNotificationJob := <-wp.jobChan
 		wp.process(sendNotificationJob)
 
-		if len(writer.record) != 1 {
-			t.Errorf("expected there to be one warning, got %s", writer.record)
+		if len(hook.Entries) != 1 {
+			t.Errorf("expected there to be one warning, got %d", len(hook.Entries))
 		}
 
 		if sendNotificationJob.State != Error {

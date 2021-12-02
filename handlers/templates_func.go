@@ -15,13 +15,13 @@ func (s *Templates) AddTokenFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Check body is not empty
 	if err := checkNonEmptyBody(r); err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
 	// Decode JSON
 	if err := json.NewDecoder(r.Body).Decode(&newToken); err != nil {
-		handleError(rw, s.logger, InvalidBodyError)
+		handleError(rw, r, InvalidBodyError)
 		return
 	}
 
@@ -30,7 +30,7 @@ func (s *Templates) AddTokenFunc(rw http.ResponseWriter, r *http.Request) {
 
 	// Add the token to database
 	if err := s.service.AddToken(&newToken); err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -41,7 +41,7 @@ func (s *Templates) MakeListTokensFunc(tType templates.TokenType) http.HandlerFu
 	return func(rw http.ResponseWriter, r *http.Request) {
 		tokens, err := s.service.ListTokens(tType)
 		if err != nil {
-			handleError(rw, s.logger, err)
+			handleError(rw, r, err)
 			return
 		}
 		handleJsonResponse(rw, http.StatusOK, tokens)
@@ -60,13 +60,13 @@ func (s *Templates) GetTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		token, err = s.service.GetTokenById(id)
 		if err != nil {
-			handleError(rw, s.logger, err)
+			handleError(rw, r, err)
 			return
 		}
 	} else {
 		token, err = s.service.GetTokenByName(idOrName)
 		if err != nil {
-			handleError(rw, s.logger, err)
+			handleError(rw, r, err)
 			return
 		}
 	}
@@ -80,12 +80,12 @@ func (s *Templates) RemoveTokenFunc(rw http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(vars["id"], 10, 64)
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
 	if err := s.service.RemoveToken(id); err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 

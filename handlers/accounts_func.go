@@ -26,7 +26,7 @@ func (s *Accounts) ListFunc(rw http.ResponseWriter, r *http.Request) {
 	res, err := s.service.List(limit, offset)
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -42,7 +42,7 @@ func (s *Accounts) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	job, acc, err := s.service.Create(r.Context(), sync)
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -65,7 +65,7 @@ func (s *Accounts) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	res, err := s.service.Details(vars["address"])
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (s *Accounts) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Accounts) AddNonCustodialAccountFunc(rw http.ResponseWriter, r *http.Request) {
 	err := checkNonEmptyBody(r)
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -88,13 +88,13 @@ func (s *Accounts) AddNonCustodialAccountFunc(rw http.ResponseWriter, r *http.Re
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("invalid body"),
 		}
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
 	a, err := s.service.AddNonCustodialAccount(r.Context(), b.Address)
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 	}
 
 	handleJsonResponse(rw, http.StatusCreated, a)
@@ -105,7 +105,7 @@ func (s *Accounts) DeleteNonCustodialAccountFunc(rw http.ResponseWriter, r *http
 
 	err := s.service.DeleteNonCustodialAccount(r.Context(), vars["address"])
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 

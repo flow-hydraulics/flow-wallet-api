@@ -40,7 +40,7 @@ func (s *Transactions) ListFunc(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("empty body"),
 		}
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("invalid body"),
 		}
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 	job, transaction, err := s.service.Create(r.Context(), sync, vars["address"], txReq.Code, txReq.Arguments, transactions.General)
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (s *Transactions) CreateFunc(rw http.ResponseWriter, r *http.Request) {
 func (s *Transactions) SignFunc(rw http.ResponseWriter, r *http.Request) {
 	err := checkNonEmptyBody(r)
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -116,13 +116,13 @@ func (s *Transactions) SignFunc(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("invalid body: %#v", err),
 		}
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
 	tx, err := s.service.Sign(r.Context(), vars["address"], txReq.Code, txReq.Arguments)
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -132,7 +132,7 @@ func (s *Transactions) SignFunc(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusInternalServerError,
 			Err:        fmt.Errorf("cannot decode signed transaction"),
 		}
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -157,7 +157,7 @@ func (s *Transactions) DetailsFunc(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -174,7 +174,7 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("empty body"),
 		}
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
@@ -187,14 +187,14 @@ func (s *Transactions) ExecuteScriptFunc(rw http.ResponseWriter, r *http.Request
 			StatusCode: http.StatusBadRequest,
 			Err:        fmt.Errorf("invalid body"),
 		}
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 
 	res, err := s.service.ExecuteScript(r.Context(), txReq.Code, txReq.Arguments)
 
 	if err != nil {
-		handleError(rw, s.logger, err)
+		handleError(rw, r, err)
 		return
 	}
 

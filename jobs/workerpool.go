@@ -46,8 +46,8 @@ type WorkerPool struct {
 	context       context.Context
 	cancelContext context.CancelFunc
 	executors     map[string]ExecutorFunc
+	logger        *log.Logger
 
-	logger            *log.Entry
 	store             Store
 	capacity          uint
 	workerCount       uint
@@ -63,7 +63,7 @@ type WorkerPoolStatus struct {
 	WorkerCount int `json:"workerCount"`
 }
 
-func NewWorkerPool(logger *log.Entry, db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
+func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	pool := &WorkerPool{
@@ -73,8 +73,8 @@ func NewWorkerPool(logger *log.Entry, db Store, capacity uint, workerCount uint,
 		context:       ctx,
 		cancelContext: cancel,
 		executors:     make(map[string]ExecutorFunc),
+		logger:        nil,
 
-		logger:            logger,
 		store:             db,
 		capacity:          capacity,
 		workerCount:       workerCount,
@@ -92,6 +92,10 @@ func NewWorkerPool(logger *log.Entry, db Store, capacity uint, workerCount uint,
 	// Go through options
 	for _, opt := range opts {
 		opt(pool)
+	}
+
+	if pool.logger == nil {
+		pool.logger = log.New()
 	}
 
 	return pool

@@ -18,7 +18,6 @@ type GetEventTypes func() ([]string, error)
 type Listener struct {
 	ticker         *time.Ticker
 	done           chan bool
-	logger         *log.Entry
 	fc             *client.Client
 	db             Store
 	getTypes       GetEventTypes
@@ -39,7 +38,6 @@ func (ListenerStatus) TableName() string {
 }
 
 func NewListener(
-	logger *log.Entry,
 	fc *client.Client,
 	db Store,
 	getTypes GetEventTypes,
@@ -49,15 +47,16 @@ func NewListener(
 	opts ...ListenerOption,
 ) *Listener {
 
-	listener_logger := logger.WithFields(log.Fields{
-		"service": "Flow event listener",
-	})
-
 	listener := &Listener{
-		nil, make(chan bool),
-		listener_logger, fc, db, getTypes,
-		maxDiff, interval, startingHeight,
-		nil,
+		ticker:         nil,
+		done:           make(chan bool),
+		fc:             fc,
+		db:             db,
+		getTypes:       getTypes,
+		maxBlocks:      maxDiff,
+		interval:       interval,
+		startingHeight: startingHeight,
+		systemService:  nil,
 	}
 
 	// Go through options
@@ -156,19 +155,19 @@ func (l *Listener) Start() *Listener {
 						continue
 					}
 
-					l.logger.
+					log.
 						WithFields(log.Fields{"error": err}).
 						Warn("Error while handling Flow events")
 
 					if strings.Contains(err.Error(), "key not found") {
-						l.logger.Warn(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
+						log.Warn(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
 					}
 				}
 			}
 		}
 	}()
 
-	l.logger.Info("Started")
+	log.Info("Started")
 
 	return l
 }
@@ -195,7 +194,7 @@ func (l *Listener) initHeight() error {
 }
 
 func (l *Listener) Stop() {
-	l.logger.Info("Stopping")
+	log.Info("Stopping")
 	if l.ticker != nil {
 		l.ticker.Stop()
 	}

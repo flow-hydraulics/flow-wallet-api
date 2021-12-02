@@ -67,25 +67,25 @@ func main() {
 }
 
 func runServer(cfg *configs.Config) {
-	cfg.Logger.Info("Starting server")
+	log.Info("Starting server")
 
 	// Flow client
 	// TODO: WithInsecure()?
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
-		cfg.Logger.Fatal(err)
+		log.Fatal(err)
 	}
 	defer func() {
-		cfg.Logger.Info("Closing Flow Client")
+		log.Info("Closing Flow Client")
 		if err := fc.Close(); err != nil {
-			cfg.Logger.Fatal(err)
+			log.Fatal(err)
 		}
 	}()
 
 	// Database
 	db, err := gorm.New(cfg)
 	if err != nil {
-		cfg.Logger.Fatal(err)
+		log.Fatal(err)
 	}
 	defer gorm.Close(db)
 
@@ -101,7 +101,6 @@ func runServer(cfg *configs.Config) {
 
 	// Create a worker pool
 	wp := jobs.NewWorkerPool(
-		cfg.Logger,
 		jobStore,
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
@@ -109,7 +108,7 @@ func runServer(cfg *configs.Config) {
 		jobs.WithSystemService(systemService),
 	)
 	defer func() {
-		cfg.Logger.Info("Stopping worker pool")
+		log.Info("Stopping worker pool")
 		wp.Stop()
 	}()
 
@@ -133,16 +132,16 @@ func runServer(cfg *configs.Config) {
 
 	err = accountService.InitAdminAccount(context.Background())
 	if err != nil {
-		cfg.Logger.Fatal(err)
+		log.Fatal(err)
 	}
 
 	// HTTP handling
-	systemHandler := handlers.NewSystem(cfg.Logger, systemService)
-	templateHandler := handlers.NewTemplates(cfg.Logger, templateService)
-	jobsHandler := handlers.NewJobs(cfg.Logger, jobsService)
-	accountHandler := handlers.NewAccounts(cfg.Logger, accountService)
-	transactionHandler := handlers.NewTransactions(cfg.Logger, transactionService)
-	tokenHandler := handlers.NewTokens(cfg.Logger, tokenService)
+	systemHandler := handlers.NewSystem(systemService)
+	templateHandler := handlers.NewTemplates(templateService)
+	jobsHandler := handlers.NewJobs(jobsService)
+	accountHandler := handlers.NewAccounts(accountService)
+	transactionHandler := handlers.NewTransactions(transactionService)
+	tokenHandler := handlers.NewTokens(tokenService)
 
 	r := mux.NewRouter()
 
@@ -192,7 +191,7 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.Create()).Methods(http.MethodPost)                 // create
 		rv.Handle("/accounts/{address}/transactions/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
 	} else {
-		cfg.Logger.Info("raw transactions disabled")
+		log.Info("raw transactions disabled")
 	}
 
 	// Non-custodial watchlist accounts
@@ -213,7 +212,7 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
-		cfg.Logger.Info("fungible tokens disabled")
+		log.Info("fungible tokens disabled")
 	}
 
 	// Non-Fungible tokens
@@ -227,13 +226,13 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
-		cfg.Logger.Info("non-fungible tokens disabled")
+		log.Info("non-fungible tokens disabled")
 	}
 
 	// Define middleware
 	h := http.TimeoutHandler(r, cfg.ServerRequestTimeout, "request timed out")
 	h = handlers.UseCors(h)
-	h = handlers.UseLogging(cfg.Logger, h)
+	h = handlers.UseLogging(h)
 	h = handlers.UseCompress(h)
 
 	// Server boilerplate
@@ -246,14 +245,14 @@ func runServer(cfg *configs.Config) {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		cfg.Logger.
+		log.
 			WithFields(log.Fields{
 				"host": cfg.Host,
 				"port": cfg.Port,
 			}).
 			Info("Server listening")
 		if err := srv.ListenAndServe(); err != nil {
-			cfg.Logger.Fatal(err)
+			log.Fatal(err)
 		}
 	}()
 
@@ -279,7 +278,7 @@ func runServer(cfg *configs.Config) {
 		}
 
 		listener := chain_events.NewListener(
-			cfg.Logger, fc, store, getTypes,
+			fc, store, getTypes,
 			cfg.ChainListenerMaxBlocks,
 			cfg.ChainListenerInterval,
 			cfg.ChainListenerStartingHeight,
@@ -308,12 +307,12 @@ func runServer(cfg *configs.Config) {
 	// Block until we receive our signal.
 	sig := <-c
 
-	cfg.Logger.Infof("Got signal: %s. Shutting down..", sig)
+	log.Infof("Got signal: %s. Shutting down..", sig)
 
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		cfg.Logger.Fatalf("Error in server shutdown: %s", err)
+		log.Fatalf("Error in server shutdown: %s", err)
 	}
 }

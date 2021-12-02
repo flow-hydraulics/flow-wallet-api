@@ -16,7 +16,7 @@ func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
-	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -64,7 +64,7 @@ func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
-	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -112,7 +112,7 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
-	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -186,7 +186,7 @@ func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
 	}
 
 	executedWG.Add(1)
-	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
 	executedWG.Wait()
@@ -241,7 +241,7 @@ func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
 	}
 
 	executedWG.Add(1)
-	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
 	executedWG.Wait()
@@ -305,7 +305,7 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 10, 10)
+	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
 	// Gotta give DB job poller a bit of time to catch up.

@@ -26,8 +26,8 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	svcs := test.GetServices(t, cfg)
 
-	accHandler := handlers.NewAccounts(cfg.Logger, svcs.GetAccounts())
-	txHandler := handlers.NewTransactions(cfg.Logger, svcs.GetTransactions())
+	accHandler := handlers.NewAccounts(svcs.GetAccounts())
+	txHandler := handlers.NewTransactions(svcs.GetTransactions())
 
 	router := mux.NewRouter()
 	router.Handle("/", accHandler.Create()).Methods(http.MethodPost)
@@ -96,7 +96,7 @@ func TestWatchlistAccountManagement(t *testing.T) {
 	svcs := test.GetServices(t, cfg)
 	km := svcs.GetKeyManager()
 
-	accHandler := handlers.NewAccounts(cfg.Logger, svcs.GetAccounts())
+	accHandler := handlers.NewAccounts(svcs.GetAccounts())
 
 	router := mux.NewRouter()
 	router.Handle("/", accHandler.AddNonCustodialAccount()).Methods(http.MethodPost)

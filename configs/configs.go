@@ -9,9 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Config struct {
-	Logger *log.Entry
+func init() {
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
+}
 
+type Config struct {
 	// -- Feature flags --
 
 	DisableRawTransactions   bool `env:"FLOW_WALLET_DISABLE_RAWTX"`
@@ -122,28 +127,16 @@ type Options struct {
 
 // ParseConfig parses environment variables and flags to a valid Config.
 func ParseConfig(opt *Options) (*Config, error) {
-	version := "unavailable"
-
-	if opt != nil {
-		version = opt.Version
-	}
-
-	logger := log.WithFields(log.Fields{
-		"version": version,
-	})
-
 	if opt != nil && opt.EnvFilePath != "" {
 		// Load variables from a file to the environment of the process
 		if err := godotenv.Load(opt.EnvFilePath); err != nil {
-			logger.
+			log.
 				WithFields(log.Fields{"error": err}).
 				Warn("Could not load environment variables from file. If running inside a docker container this can be ignored.")
 		}
 	}
 
-	cfg := Config{
-		Logger: logger,
-	}
+	cfg := Config{}
 
 	if err := env.Parse(&cfg); err != nil {
 		return nil, err

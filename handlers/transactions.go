@@ -4,17 +4,15 @@ import (
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
-	log "github.com/sirupsen/logrus"
 )
 
 type Transactions struct {
-	logger  *log.Entry
 	service *transactions.Service
 }
 
 // NewTransactions initiates a new transactions server.
-func NewTransactions(l *log.Entry, service *transactions.Service) *Transactions {
-	return &Transactions{l, service}
+func NewTransactions(service *transactions.Service) *Transactions {
+	return &Transactions{service}
 }
 
 func (s *Transactions) List() http.Handler {
