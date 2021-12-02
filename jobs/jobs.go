@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -90,4 +91,17 @@ func (j *Job) Wait(wait bool) error {
 		}
 	}
 	return nil
+}
+
+func (j *Job) logEntry(entry *log.Entry) *log.Entry {
+	jobFields := log.Fields{
+		"jobID":   j.ID,
+		"jobType": j.Type,
+	}
+
+	if entry != nil {
+		return entry.WithFields(jobFields)
+	}
+
+	return log.WithFields(jobFields)
 }

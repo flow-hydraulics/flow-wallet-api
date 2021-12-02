@@ -157,16 +157,27 @@ func (wp *WorkerPool) RegisterExecutor(jobType string, executorF ExecutorFunc) {
 
 // Schedule will try to immediately schedule the run of a job
 func (wp *WorkerPool) Schedule(j *Job) error {
+	entry := j.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "WorkerPool.Schedule",
+	}))
+
+	entry.Debug("Scheduling job")
+
 	if wp.waitMaintenance() {
+		entry.Debug("In maintenance mode")
 		// In maintenance mode; prevent immediate scheduling and let dbScheduler handle this job
 		return nil
 	}
 
 	if !wp.tryEnqueue(j, false) {
 		j.State = NoAvailableWorkers
+		entry.Debug("No available workers, deferring")
 		if err := wp.store.UpdateJob(j); err != nil {
 			return err
 		}
+	} else {
+		entry.Debug("Successfully scheduled job")
 	}
 
 	return nil
@@ -188,10 +199,14 @@ func (wp *WorkerPool) QueueSize() uint {
 }
 
 func (wp *WorkerPool) accept(job *Job) bool {
-	err := wp.store.IncreaseExecCount(job)
-	if err != nil {
-		wp.logger.
-			WithFields(log.Fields{"error": err, "jobID": job.ID}).
+	entry := job.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "WorkerPool.accept",
+	}))
+
+	if err := wp.store.IncreaseExecCount(job); err != nil {
+		entry.
+			WithFields(log.Fields{"error": err}).
 			Warn("Failed to increase job exec_count")
 		return false
 	}
@@ -274,22 +289,23 @@ func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 }
 
 func (wp *WorkerPool) process(job *Job) {
+	entry := job.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "WorkerPool.process",
+	}))
+
 	if !wp.accept(job) {
-		wp.logger.
-			WithFields(log.Fields{"jobID": job.ID, "jobType": job.Type}).
-			Info("Failed to accept job")
+		entry.Info("Failed to accept job")
 		return
 	}
 
 	executor, exists := wp.executors[job.Type]
 	if !exists {
-		wp.logger.
-			WithFields(log.Fields{"jobID": job.ID, "jobType": job.Type}).
-			Warn("Could not process job, no registered executor for type")
+		entry.Warn("Could not process job, no registered executor for type")
 		job.State = NoAvailableWorkers
 		if err := wp.store.UpdateJob(job); err != nil {
-			wp.logger.
-				WithFields(log.Fields{"error": err, "jobID": job.ID}).
+			entry.
+				WithFields(log.Fields{"error": err}).
 				Warn("Could not update DB entry for job")
 		}
 		return
@@ -303,8 +319,8 @@ func (wp *WorkerPool) process(job *Job) {
 			job.State = Error
 		}
 		job.Error = err.Error()
-		wp.logger.
-			WithFields(log.Fields{"error": err, "jobID": job.ID, "jobType": job.Type}).
+		entry.
+			WithFields(log.Fields{"error": err}).
 			Warn("Job execution resulted with error")
 	} else {
 		job.State = Complete
@@ -312,15 +328,15 @@ func (wp *WorkerPool) process(job *Job) {
 	}
 
 	if err := wp.store.UpdateJob(job); err != nil {
-		wp.logger.
-			WithFields(log.Fields{"error": err, "jobID": job.ID, "jobType": job.Type}).
+		entry.
+			WithFields(log.Fields{"error": err}).
 			Warn("Could not update DB entry for job")
 	}
 
 	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
 		if err := ScheduleJobStatusNotification(wp, job); err != nil {
-			wp.logger.
-				WithFields(log.Fields{"error": err, "jobID": job.ID, "jobType": job.Type}).
+			entry.
+				WithFields(log.Fields{"error": err}).
 				Warn("Could not schedule a status update notification for job")
 		}
 	}
@@ -341,6 +357,13 @@ func PermanentFailure(err error) error {
 }
 
 func ScheduleJobStatusNotification(wp *WorkerPool, parent *Job) error {
+	entry := parent.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "ScheduleJobStatusNotification",
+	}))
+
+	entry.Debug("Scheduling job status notification")
+
 	job, err := wp.CreateJob(SendJobStatusJobType, "")
 	if err != nil {
 		return err
