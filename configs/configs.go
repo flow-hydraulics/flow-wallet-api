@@ -1,15 +1,17 @@
 package configs
 
 import (
-	"log"
 	"time"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
+	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
+	Logger *log.Entry
+
 	// -- Feature flags --
 
 	DisableRawTransactions   bool `env:"FLOW_WALLET_DISABLE_RAWTX"`
@@ -115,18 +117,32 @@ type Config struct {
 
 type Options struct {
 	EnvFilePath string
+	Version     string
 }
 
 // ParseConfig parses environment variables and flags to a valid Config.
 func ParseConfig(opt *Options) (*Config, error) {
+	version := "unavailable"
+
+	if opt != nil {
+		version = opt.Version
+	}
+
+	logger := log.WithFields(log.Fields{
+		"version": version,
+	})
+
 	if opt != nil && opt.EnvFilePath != "" {
 		// Load variables from a file to the environment of the process
 		if err := godotenv.Load(opt.EnvFilePath); err != nil {
-			log.Printf("Could not load environment variables from file.\n%s\nIf running inside a docker container this can be ignored.\n\n", err)
+			logger.Warnf("Could not load environment variables from file.\n%s\nIf running inside a docker container this can be ignored.\n\n", err)
 		}
 	}
 
-	cfg := Config{}
+	cfg := Config{
+		Logger: logger,
+	}
+
 	if err := env.Parse(&cfg); err != nil {
 		return nil, err
 	}

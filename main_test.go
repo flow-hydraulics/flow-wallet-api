@@ -33,7 +33,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
-	log "github.com/sirupsen/logrus"
 	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 )
@@ -55,8 +54,6 @@ type TestApp struct {
 
 	AccountStore accounts.Store
 	JobStore     jobs.Store
-
-	logger *log.Entry
 }
 
 type httpTestStep struct {
@@ -116,7 +113,7 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 func getTestConfig(t *testing.T) *configs.Config {
 	t.Helper()
 
-	opts := &configs.Options{EnvFilePath: ".env.test"}
+	opts := &configs.Options{EnvFilePath: ".env.test", Version: "test"}
 
 	cfg, err := configs.ParseConfig(opts)
 	fatal(t, err)
@@ -129,10 +126,6 @@ func getTestConfig(t *testing.T) *configs.Config {
 
 func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	t.Helper()
-
-	logger := log.WithFields(log.Fields{
-		"version": "test",
-	})
 
 	leakIgnores := []goleak.Option{
 		goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"), // Ignore OpenCensus
@@ -168,7 +161,7 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(logger, jobStore, 5, 1)
+	wp := jobs.NewWorkerPool(cfg.Logger, jobStore, 5, 1)
 	t.Cleanup(func() {
 		wp.Stop()
 	})
@@ -200,8 +193,6 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 
 		AccountStore: accountStore,
 		JobStore:     jobStore,
-
-		logger: logger,
 	}
 }
 
@@ -336,7 +327,7 @@ func TestAccountHandlers(t *testing.T) {
 	cfg := getTestConfig(t)
 	app := getTestApp(t, cfg, false)
 
-	handler := handlers.NewAccounts(app.logger, app.AccountService)
+	handler := handlers.NewAccounts(cfg.Logger, app.AccountService)
 
 	t.Run("admin init", func(t *testing.T) {
 		err := app.AccountService.InitAdminAccount(context.Background())
@@ -453,7 +444,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 	cfg := getTestConfig(t)
 	app := getTestApp(t, cfg, false)
 
-	handler := handlers.NewTransactions(app.logger, app.TransactionService)
+	handler := handlers.NewTransactions(cfg.Logger, app.TransactionService)
 
 	router := mux.NewRouter()
 	router.Handle("/{address}/sign", handler.Sign()).Methods(http.MethodPost)
@@ -700,7 +691,7 @@ func TestTransactionHandlers(t *testing.T) {
 	cfg := getTestConfig(t)
 	app := getTestApp(t, cfg, false)
 
-	handler := handlers.NewTransactions(app.logger, app.TransactionService)
+	handler := handlers.NewTransactions(cfg.Logger, app.TransactionService)
 
 	router := mux.NewRouter()
 	router.Handle("/transactions", handler.List()).Methods(http.MethodGet)
@@ -823,7 +814,7 @@ func TestScriptsHandlers(t *testing.T) {
 	cfg := getTestConfig(t)
 	app := getTestApp(t, cfg, false)
 
-	handler := handlers.NewTransactions(app.logger, app.TransactionService)
+	handler := handlers.NewTransactions(cfg.Logger, app.TransactionService)
 
 	router := mux.NewRouter()
 	router.Handle("/", handler.ExecuteScript()).Methods(http.MethodPost)
@@ -1037,7 +1028,7 @@ func TestTokenHandlers(t *testing.T) {
 	cfg := getTestConfig(t)
 	app := getTestApp(t, cfg, false)
 
-	handler := handlers.NewTokens(app.logger, app.TokenService)
+	handler := handlers.NewTokens(cfg.Logger, app.TokenService)
 
 	router := mux.NewRouter()
 	router.Handle("/{address}/fungible-tokens", handler.AccountTokens(templates.FT)).Methods(http.MethodGet)
@@ -1537,7 +1528,7 @@ func TestTemplateHandlers(t *testing.T) {
 	cfg := getTestConfig(t)
 	app := getTestApp(t, cfg, false)
 
-	handler := handlers.NewTemplates(app.logger, app.TemplateService)
+	handler := handlers.NewTemplates(cfg.Logger, app.TemplateService)
 
 	router := mux.NewRouter()
 	router.Handle("/tokens", handler.AddToken()).Methods(http.MethodPost)

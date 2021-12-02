@@ -21,7 +21,7 @@ var defaultConfig = "default.test.env.cfg"
 func LoadConfig(t *testing.T, cfgFile ...string) *configs.Config {
 	t.Helper()
 
-	opts := &configs.Options{EnvFilePath: defaultConfig}
+	opts := &configs.Options{EnvFilePath: defaultConfig, Version: "test"}
 
 	// Allow optional override of config file
 	if len(cfgFile) == 1 {

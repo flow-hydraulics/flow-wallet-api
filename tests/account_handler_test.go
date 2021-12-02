@@ -20,19 +20,14 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk"
-	log "github.com/sirupsen/logrus"
 )
 
 func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	svcs := test.GetServices(t, cfg)
 
-	logger := log.WithFields(log.Fields{
-		"version": "test",
-	})
-
-	accHandler := handlers.NewAccounts(logger, svcs.GetAccounts())
-	txHandler := handlers.NewTransactions(logger, svcs.GetTransactions())
+	accHandler := handlers.NewAccounts(cfg.Logger, svcs.GetAccounts())
+	txHandler := handlers.NewTransactions(cfg.Logger, svcs.GetTransactions())
 
 	router := mux.NewRouter()
 	router.Handle("/", accHandler.Create()).Methods(http.MethodPost)
@@ -101,11 +96,7 @@ func TestWatchlistAccountManagement(t *testing.T) {
 	svcs := test.GetServices(t, cfg)
 	km := svcs.GetKeyManager()
 
-	logger := log.WithFields(log.Fields{
-		"version": "test",
-	})
-
-	accHandler := handlers.NewAccounts(logger, svcs.GetAccounts())
+	accHandler := handlers.NewAccounts(cfg.Logger, svcs.GetAccounts())
 
 	router := mux.NewRouter()
 	router.Handle("/", accHandler.AddNonCustodialAccount()).Methods(http.MethodPost)
