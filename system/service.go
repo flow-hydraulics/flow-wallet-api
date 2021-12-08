@@ -1,5 +1,7 @@
 package system
 
+import "fmt"
+
 type Service struct {
 	store Store
 }
@@ -13,6 +15,9 @@ func (svc *Service) GetSettings() (*Settings, error) {
 }
 
 func (svc *Service) SaveSettings(settings *Settings) error {
+	if settings.ID == 0 {
+		return fmt.Errorf("settings object has no ID, get an existing settings first and alter it")
+	}
 	return svc.store.SaveSettings(settings)
 }
 
