@@ -80,6 +80,18 @@ docker-compose down
 
 ## Configuration
 
+### Maintenance mode
+
+You can put the service in maintenance mode via the [System API](https://flow-hydraulics.github.io/flow-wallet-api/#tag/System) by sending the following JSON body as a `POST` request to `/system/settings` (example in [api-test-scripts/system.http](api-test-scripts/system.http)):
+
+```json
+{
+  "maintenanceMode": true
+}
+```
+
+In maintenance mode, all on-chain transactions and event processing are halted. Disabling maintenance mode is done via the same API endpoint (`"maintenanceMode": false`).
+
 ### Updates on async requests (webhook)
 
 If you have the possibility to setup a webhook endpoint, you can set `FLOW_WALLET_JOB_STATUS_WEBHOOK` to receive updates on async requests (requests which return a job). The wallet will send a `POST` request to this URL containing the job whenever the status of the job is updated.
