@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"gorm.io/gorm"
@@ -24,6 +25,8 @@ type Listener struct {
 	maxBlocks      uint64
 	interval       time.Duration
 	startingHeight uint64
+
+	systemService *system.Service
 }
 
 type ListenerStatus struct {
@@ -43,15 +46,25 @@ func NewListener(
 	maxDiff uint64,
 	interval time.Duration,
 	startingHeight uint64,
+	opts ...ListenerOption,
 ) *Listener {
 	if logger == nil {
 		logger = log.New(os.Stdout, "[EVENT-POLLER] ", log.LstdFlags|log.Lshortfile)
 	}
-	return &Listener{
+
+	listener := &Listener{
 		nil, make(chan bool),
 		logger, fc, db, getTypes,
 		maxDiff, interval, startingHeight,
+		nil,
 	}
+
+	// Go through options
+	for _, opt := range opts {
+		opt(listener)
+	}
+
+	return listener
 }
 
 func (l *Listener) run(ctx context.Context, start, end uint64) error {
@@ -97,8 +110,7 @@ func (l *Listener) Start() *Listener {
 	}
 
 	if err := l.initHeight(); err != nil {
-		_, ok := err.(*LockError)
-		if !ok {
+		if _, isLockError := err.(*LockError); !isLockError {
 			panic(err)
 		}
 		// Skip LockError as it means another listener is already handling this
@@ -116,7 +128,12 @@ func (l *Listener) Start() *Listener {
 			case <-l.done:
 				return
 			case <-l.ticker.C:
-				lockErr := l.db.LockedStatus(func(status *ListenerStatus) error {
+				// Check for maintenance mode
+				if l.waitMaintenance() {
+					continue
+				}
+
+				err := l.db.LockedStatus(func(status *ListenerStatus) error {
 					latestBlock, err := l.fc.GetLatestBlockHeader(ctx, true)
 					if err != nil {
 						return err
@@ -139,10 +156,9 @@ func (l *Listener) Start() *Listener {
 					return nil
 				})
 
-				if lockErr != nil {
-					_, ok := lockErr.(*LockError)
-					if !ok {
-						l.handleError(lockErr)
+				if err != nil {
+					if _, isLockError := err.(*LockError); !isLockError {
+						l.handleError(err)
 					}
 					// Skip on LockError as it means another listener is already handling this round
 				}
@@ -185,4 +201,8 @@ func (l *Listener) Stop() {
 		l.done <- true
 	}
 	l.ticker = nil
+}
+
+func (l *Listener) waitMaintenance() bool {
+	return l.systemService != nil && l.systemService.IsMaintenanceMode()
 }

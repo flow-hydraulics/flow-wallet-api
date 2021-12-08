@@ -3,6 +3,8 @@ package jobs
 import (
 	"net/url"
 	"time"
+
+	"github.com/flow-hydraulics/flow-wallet-api/system"
 )
 
 type WorkerPoolOption func(*WorkerPool)
@@ -24,5 +26,11 @@ func WithJobStatusWebhook(u string, timeout time.Duration) WorkerPoolOption {
 
 		wp.notificationConfig.jobStatusWebhookUrl = valid
 		wp.notificationConfig.jobStatusWebhookTimeout = timeout
+	}
+}
+
+func WithSystemService(svc *system.Service) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.systemService = svc
 	}
 }

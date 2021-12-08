@@ -18,6 +18,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
+	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
@@ -93,12 +94,15 @@ func runServer(cfg *configs.Config) {
 	}
 	defer gorm.Close(db)
 
+	systemStore := system.NewGormStore(db)
 	templateStore := templates.NewGormStore(db)
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
+
+	systemService := system.NewService(systemStore)
 
 	// Create a worker pool
 	wp := jobs.NewWorkerPool(
@@ -107,6 +111,7 @@ func runServer(cfg *configs.Config) {
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
 		jobs.WithJobStatusWebhook(cfg.JobStatusWebhookUrl, cfg.JobStatusWebhookTimeout),
+		jobs.WithSystemService(systemService),
 	)
 	defer func() {
 		ls.Println("Stopping worker pool..")
@@ -137,7 +142,7 @@ func runServer(cfg *configs.Config) {
 	}
 
 	// HTTP handling
-
+	systemHandler := handlers.NewSystem(ls, systemService)
 	templateHandler := handlers.NewTemplates(ls, templateService)
 	jobsHandler := handlers.NewJobs(ls, jobsService)
 	accountHandler := handlers.NewAccounts(ls, accountService)
@@ -157,6 +162,10 @@ func runServer(cfg *configs.Config) {
 	rv.Handle("/health/liveness", handlers.Liveness(func() (interface{}, error) {
 		return wp.Status()
 	})).Methods(http.MethodGet)
+
+	// System
+	rv.Handle("/system/settings", systemHandler.GetSettings()).Methods(http.MethodGet)
+	rv.Handle("/system/settings", systemHandler.SetSettings()).Methods(http.MethodPost)
 
 	// Jobs
 	rv.Handle("/jobs", jobsHandler.List()).Methods(http.MethodGet)            // list
@@ -274,6 +283,7 @@ func runServer(cfg *configs.Config) {
 			cfg.ChainListenerMaxBlocks,
 			cfg.ChainListenerInterval,
 			cfg.ChainListenerStartingHeight,
+			chain_events.WithSystemService(systemService),
 		)
 
 		defer listener.Stop()

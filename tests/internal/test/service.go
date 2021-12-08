@@ -16,6 +16,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
+	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
@@ -25,6 +26,7 @@ type Services interface {
 	GetAccounts() *accounts.Service
 	GetTokens() *tokens.Service
 	GetTransactions() *transactions.Service
+	GetSystem() *system.Service
 
 	GetKeyManager() keys.Manager
 	GetListener() *chain_events.Listener
@@ -34,6 +36,7 @@ type svcs struct {
 	accountService     *accounts.Service
 	tokenService       *tokens.Service
 	transactionService *transactions.Service
+	systemService      *system.Service
 
 	keyManager keys.Manager
 	listener   *chain_events.Listener
@@ -63,6 +66,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	templateStore := templates.NewGormStore(db)
 	tokenStore := tokens.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
+	systemStore := system.NewGormStore(db)
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
@@ -74,6 +78,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
+	systemService := system.NewService(systemStore)
 
 	store := chain_events.NewGormStore(db)
 	getTypes := func() ([]string, error) {
@@ -133,6 +138,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		accountService:     accountService,
 		tokenService:       tokenService,
 		transactionService: transactionService,
+		systemService:      systemService,
 
 		keyManager: km,
 		listener:   listener,
@@ -157,4 +163,8 @@ func (s *svcs) GetKeyManager() keys.Manager {
 
 func (s *svcs) GetListener() *chain_events.Listener {
 	return s.listener
+}
+
+func (s *svcs) GetSystem() *system.Service {
+	return s.systemService
 }
