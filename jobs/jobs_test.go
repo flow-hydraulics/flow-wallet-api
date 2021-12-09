@@ -37,11 +37,11 @@ func TestScheduleSendNotification(t *testing.T) {
 		cancelContext: cancel,
 		executors:     make(map[string]ExecutorFunc),
 		jobChan:       make(chan *Job, 1),
-		logger:        logger,
 		store:         &dummyStore{},
 	}
 
 	WithJobStatusWebhook("http://localhost", time.Minute)(&wp)
+	WithLogger(logger)(&wp)
 
 	sendNotificationCalled := false
 
@@ -102,11 +102,11 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        logger,
 			store:         &dummyStore{},
 		}
 
 		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
+		WithLogger(logger)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
@@ -153,11 +153,11 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        logger,
 			store:         &dummyStore{},
 		}
 
 		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
+		WithLogger(logger)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
@@ -196,11 +196,11 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        logger,
 			store:         &dummyStore{},
 		}
 
 		WithJobStatusWebhook("http://localhost", time.Minute)(&wp)
+		WithLogger(logger)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
@@ -235,11 +235,11 @@ func TestExecuteSendNotification(t *testing.T) {
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
 			jobChan:       make(chan *Job, 1),
-			logger:        logger,
 			store:         &dummyStore{},
 		}
 
 		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
+		WithLogger(logger)(&wp)
 
 		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
 
