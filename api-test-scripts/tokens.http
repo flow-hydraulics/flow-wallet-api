@@ -12,6 +12,7 @@ content-type: application/json
 ### Enable ExampleNFT
 POST http://localhost:3000/v1/tokens
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "name":"ExampleNFT",
@@ -65,6 +66,7 @@ content-type: application/json
 ### Create a FlowToken withdrawal from admin to custody account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "recipient":"{{emulatorCustodyAccount}}",
@@ -74,6 +76,7 @@ content-type: application/json
 ### Create a FUSD withdrawal from admin to custody account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "recipient":"{{emulatorCustodyAccount}}",
@@ -83,6 +86,7 @@ content-type: application/json
 ### Create an ExampleNFT withdrawal from admin to custody account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT/withdrawals HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "recipient":"{{emulatorCustodyAccount}}",
@@ -112,14 +116,17 @@ content-type: application/json
 ### Setup FlowToken on emulator for admin account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FlowToken HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 ### Setup FUSD on emulator for admin account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 ### Setup ExampleNFT on emulator for admin account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/non-fungible-tokens/ExampleNFT HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 
 
@@ -146,6 +153,7 @@ content-type: application/json
 ### Create a FlowToken withdrawal from custody to admin account
 POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FlowToken/withdrawals HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "recipient":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}",
@@ -155,6 +163,7 @@ content-type: application/json
 ### Create a FUSD withdrawal from custody to admin account
 POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD/withdrawals HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "recipient":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}",
@@ -192,11 +201,14 @@ content-type: application/json
 ### Setup FlowToken on emulator for custody account
 POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/flowtoken HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 ### Setup FUSD on emulator for custody account
 POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/fungible-tokens/FUSD HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 ### Setup ExampleNFT on emulator for custody account
 POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/non-fungible-tokens/ExampleNFT HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}

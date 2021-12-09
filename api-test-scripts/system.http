@@ -4,6 +4,7 @@ GET http://localhost:3000/v1/system/settings HTTP/1.1
 ### Update system settings, leave out fields that should not be changed
 POST http://localhost:3000/v1/system/settings HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "maintenanceMode":false

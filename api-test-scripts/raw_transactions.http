@@ -19,6 +19,7 @@ content-type: application/json
 ### Transfer FLOW on testnet, admin -> custody account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "code":"import FungibleToken from 0x9a0766d93b6608b7\nimport FlowToken from 0x7e60df042a9c0868\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
@@ -29,6 +30,7 @@ content-type: application/json
 ### Transfer FLOW on testnet, custody account -> admin
 POST http://localhost:3000/v1/accounts/{{testnetCustodyAccount}}/transactions HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "code":"import FungibleToken from 0x9a0766d93b6608b7\nimport FlowToken from 0x7e60df042a9c0868\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
@@ -42,6 +44,7 @@ content-type: application/json
 ### Transfer FLOW on emulator, admin -> custody account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
@@ -51,6 +54,7 @@ content-type: application/json
 ### Transfer FLOW on emulator, custody account -> admin
 POST http://localhost:3000/v1/accounts/{{emulatorCustodyAccount}}/transactions HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\ntransaction(amount: UFix64, recipient: Address) {\nlet sentVault: @FungibleToken.Vault\n  prepare(signer: AuthAccount) {\n    let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)\n      ?? panic(\"failed to borrow reference to sender vault\")\n\n    self.sentVault <- vaultRef.withdraw(amount: amount)\n  }\n\n  execute {\n    let receiverRef =  getAccount(recipient)\n      .getCapability(/public/flowTokenReceiver)\n      .borrow<&{FungibleToken.Receiver}>()\n        ?? panic(\"failed to borrow reference to recipient vault\")\n\n    receiverRef.deposit(from: <-self.sentVault)\n  }\n}",
@@ -61,6 +65,7 @@ content-type: application/json
 ### Run "Hello world" transaction on emulator
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "code":"transaction(greeting: String) { prepare(signer: AuthAccount){} execute { log(greeting.concat(\", World!\")) }}",
@@ -70,6 +75,7 @@ content-type: application/json
 ### Mint ExampleNFT for admin account
 POST http://localhost:3000/v1/accounts/{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}/transactions HTTP/1.1
 content-type: application/json
+idempotency-key: {{$guid}}
 
 {
   "code":"import NonFungibleToken from {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}\nimport ExampleNFT from {{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}\ntransaction(recipient: Address) {\n    let minter: &ExampleNFT.NFTMinter\n    prepare(signer: AuthAccount) {\n        self.minter = signer\n            .borrow<&ExampleNFT.NFTMinter>(from: ExampleNFT.MinterStoragePath)\n            ?? panic(\"Could not borrow a reference to the NFT minter\")\n    }\n    execute {\n        let recipient = getAccount(recipient)\n        let receiver = recipient\n            .getCapability(ExampleNFT.CollectionPublicPath)!\n            .borrow<&{NonFungibleToken.CollectionPublic}>()\n            ?? panic(\"Could not get receiver reference to the NFT Collection\")\n        self.minter.mintNFT(recipient: receiver)\n    }\n}\n",
