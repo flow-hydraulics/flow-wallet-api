@@ -246,7 +246,7 @@ func runServer(cfg *configs.Config) {
 		// Redis, separate from app db
 		case handlers.IdempotencyStoreTypeRedis.String():
 			if cfg.IdempotencyMiddlewareRedisURL == "" {
-				ls.Fatal("idempotency middleware db set to redis but Redis URL is empty")
+				log.Fatal("idempotency middleware db set to redis but Redis URL is empty")
 			}
 			pool := &redis.Pool{
 				MaxIdle:   80,
@@ -263,9 +263,9 @@ func runServer(cfg *configs.Config) {
 			client := pool.Get()
 
 			defer func() {
-				ls.Println("Closing Redis client..")
+				log.Info("Closing Redis client..")
 				if err := client.Close(); err != nil {
-					ls.Fatal(err)
+					log.Fatal(err)
 				}
 			}()
 
