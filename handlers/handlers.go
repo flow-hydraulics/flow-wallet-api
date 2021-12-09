@@ -37,6 +37,10 @@ func UseJson(h http.Handler) http.Handler {
 	return gorilla.ContentTypeHandler(h, "application/json")
 }
 
+func UseIdempotency(h http.Handler, opts IdempotencyHandlerOptions, store IdempotencyStore) http.Handler {
+	return IdempotencyHandler(h, opts, store)
+}
+
 // handleError is a helper function for unified HTTP error handling.
 func handleError(rw http.ResponseWriter, r *http.Request, err error) {
 	log.

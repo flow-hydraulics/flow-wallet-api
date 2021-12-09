@@ -70,6 +70,10 @@ paths:
                 x-examples:
                   example-1:
                     maintenanceMode: false
+              examples:
+                example-1:
+                  value:
+                    maintenanceMode: true
       operationId: get-system-settings
       description: Get system wide settings.
     post:
@@ -112,7 +116,13 @@ paths:
               x-examples:
                 example-1:
                   maintenanceMode: false
-        description: 'Post only fields you want to be changed.'
+            examples:
+              example-1:
+                value:
+                  maintenanceMode: true
+        description: Post only fields you want to be changed.
+      parameters:
+        - $ref: '#/components/parameters/idempotencyKey'
   /health/ready:
     get:
       summary: Healthcheck ready
@@ -221,6 +231,8 @@ paths:
       responses:
         '201':
           description: OK
+      parameters:
+        - $ref: '#/components/parameters/idempotencyKey'
   '/tokens/{id_or_name}':
     parameters:
       - name: id_or_name
@@ -422,6 +434,7 @@ paths:
         - Accounts
       parameters:
         - $ref: '#/components/parameters/sync'
+        - $ref: '#/components/parameters/idempotencyKey'
       responses:
         '201':
           description: Created
@@ -456,6 +469,7 @@ paths:
         - Account Transactions
       parameters:
         - $ref: '#/components/parameters/address'
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         content:
           application/json:
@@ -499,6 +513,7 @@ paths:
         - Account Transactions
       parameters:
         - $ref: '#/components/parameters/sync'
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         content:
           application/json:
@@ -574,6 +589,7 @@ paths:
         - Account Fungible Tokens
       parameters:
         - $ref: '#/components/parameters/sync'
+        - $ref: '#/components/parameters/idempotencyKey'
       responses:
         '201':
           description: OK
@@ -613,6 +629,7 @@ paths:
               $ref: '#/components/schemas/fungibleTokenWithdrawalRequest'
       parameters:
         - $ref: '#/components/parameters/sync'
+        - $ref: '#/components/parameters/idempotencyKey'
       responses:
         '201':
           description: OK
@@ -718,6 +735,7 @@ paths:
         - Account Non-Fungible Tokens
       parameters:
         - $ref: '#/components/parameters/sync'
+        - $ref: '#/components/parameters/idempotencyKey'
       responses:
         '201':
           description: OK
@@ -757,6 +775,7 @@ paths:
               $ref: '#/components/schemas/nonFungibleTokenWithdrawalRequest'
       parameters:
         - $ref: '#/components/parameters/sync'
+        - $ref: '#/components/parameters/idempotencyKey'
       responses:
         '201':
           description: OK
@@ -840,6 +859,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/account'
+      parameters:
+        - $ref: '#/components/parameters/idempotencyKey'
   '/watchlist/accounts/{address}':
     parameters:
       - $ref: '#/components/parameters/address'
@@ -1454,3 +1475,10 @@ components:
       schema:
         type: string
         example: something-non-empty
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      schema:
+        type: string
+        example: bec0a613-0d3b-4748-9e98-223a6ddb6a9f
+      description: Unique identifier for a request to guarantee idempotency for POST requests. Required when idempotency middleware is enabled.
