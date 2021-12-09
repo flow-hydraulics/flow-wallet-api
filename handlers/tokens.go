@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
@@ -9,12 +8,11 @@ import (
 )
 
 type Tokens struct {
-	log     *log.Logger
 	service *tokens.Service
 }
 
-func NewTokens(l *log.Logger, service *tokens.Service) *Tokens {
-	return &Tokens{l, service}
+func NewTokens(service *tokens.Service) *Tokens {
+	return &Tokens{service}
 }
 
 func (s *Tokens) Setup() http.Handler {

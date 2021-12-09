@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"os"
+
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
@@ -45,8 +46,8 @@ type WorkerPool struct {
 	context       context.Context
 	cancelContext context.CancelFunc
 	executors     map[string]ExecutorFunc
+	logger        *log.Logger
 
-	logger            *log.Logger
 	store             Store
 	capacity          uint
 	workerCount       uint
@@ -62,12 +63,7 @@ type WorkerPoolStatus struct {
 	WorkerCount int `json:"workerCount"`
 }
 
-func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
-	if logger == nil {
-		// Make sure we always have a logger
-		logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
-	}
-
+func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	pool := &WorkerPool{
@@ -77,8 +73,8 @@ func NewWorkerPool(logger *log.Logger, db Store, capacity uint, workerCount uint
 		context:       ctx,
 		cancelContext: cancel,
 		executors:     make(map[string]ExecutorFunc),
+		logger:        log.StandardLogger(),
 
-		logger:            logger,
 		store:             db,
 		capacity:          capacity,
 		workerCount:       workerCount,
@@ -157,16 +153,27 @@ func (wp *WorkerPool) RegisterExecutor(jobType string, executorF ExecutorFunc) {
 
 // Schedule will try to immediately schedule the run of a job
 func (wp *WorkerPool) Schedule(j *Job) error {
+	entry := j.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "WorkerPool.Schedule",
+	}))
+
+	entry.Debug("Scheduling job")
+
 	if wp.waitMaintenance() {
+		entry.Debug("In maintenance mode")
 		// In maintenance mode; prevent immediate scheduling and let dbScheduler handle this job
 		return nil
 	}
 
 	if !wp.tryEnqueue(j, false) {
 		j.State = NoAvailableWorkers
+		entry.Debug("No available workers, deferring")
 		if err := wp.store.UpdateJob(j); err != nil {
 			return err
 		}
+	} else {
+		entry.Debug("Successfully scheduled job")
 	}
 
 	return nil
@@ -188,9 +195,15 @@ func (wp *WorkerPool) QueueSize() uint {
 }
 
 func (wp *WorkerPool) accept(job *Job) bool {
-	err := wp.store.IncreaseExecCount(job)
-	if err != nil {
-		wp.logger.Printf("WARNING: Failed to increase Job %q exec_count: %s\n", job.ID, err.Error())
+	entry := job.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "WorkerPool.accept",
+	}))
+
+	if err := wp.store.IncreaseExecCount(job); err != nil {
+		entry.
+			WithFields(log.Fields{"error": err}).
+			Warn("Failed to increase job exec_count")
 		return false
 	}
 
@@ -224,7 +237,9 @@ func (wp *WorkerPool) startDBJobScheduler() {
 			o := datastore.ParseListOptions(0, 0)
 			jobs, err := wp.store.SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod, o)
 			if err != nil {
-				wp.logger.Printf("WARNING: Could not fetch schedulable jobs from DB: %s", err)
+				wp.logger.
+					WithFields(log.Fields{"error": err}).
+					Warn("Could not fetch schedulable jobs from DB")
 				continue
 			}
 
@@ -270,17 +285,24 @@ func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 }
 
 func (wp *WorkerPool) process(job *Job) {
+	entry := job.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "WorkerPool.process",
+	}))
+
 	if !wp.accept(job) {
-		wp.logger.Printf("INFO: Failed to accept Job(id: %q, type: %q)", job.ID, job.Type)
+		entry.Info("Failed to accept job")
 		return
 	}
 
 	executor, exists := wp.executors[job.Type]
 	if !exists {
-		wp.logger.Printf("WARNING: Could not process Job %q: no registered executor for type %q", job.ID, job.Type)
+		entry.Warn("Could not process job, no registered executor for type")
 		job.State = NoAvailableWorkers
 		if err := wp.store.UpdateJob(job); err != nil {
-			wp.logger.Printf("WARNING: Could not update DB entry for Job %q: %s\n", job.ID, err.Error())
+			entry.
+				WithFields(log.Fields{"error": err}).
+				Warn("Could not update DB entry for job")
 		}
 		return
 	}
@@ -293,19 +315,25 @@ func (wp *WorkerPool) process(job *Job) {
 			job.State = Error
 		}
 		job.Error = err.Error()
-		wp.logger.Printf("WARNING: Job(id: %q, type: %q) execution resulted with error: %s", job.ID, job.Type, job.Error)
+		entry.
+			WithFields(log.Fields{"error": err}).
+			Warn("Job execution resulted with error")
 	} else {
 		job.State = Complete
 		job.Error = ""
 	}
 
 	if err := wp.store.UpdateJob(job); err != nil {
-		wp.logger.Printf("WARNING: Could not update DB entry for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
+		entry.
+			WithFields(log.Fields{"error": err}).
+			Warn("Could not update DB entry for job")
 	}
 
 	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
 		if err := ScheduleJobStatusNotification(wp, job); err != nil {
-			wp.logger.Printf("WARNING: Could not schedule a status update notification for Job(id: %q, type: %q): %s\n", job.ID, job.Type, err.Error())
+			entry.
+				WithFields(log.Fields{"error": err}).
+				Warn("Could not schedule a status update notification for job")
 		}
 	}
 }
@@ -325,6 +353,13 @@ func PermanentFailure(err error) error {
 }
 
 func ScheduleJobStatusNotification(wp *WorkerPool, parent *Job) error {
+	entry := parent.logEntry(wp.logger.WithFields(log.Fields{
+		"package":  "jobs",
+		"function": "ScheduleJobStatusNotification",
+	}))
+
+	entry.Debug("Scheduling job status notification")
+
 	job, err := wp.CreateJob(SendJobStatusJobType, "")
 	if err != nil {
 		return err

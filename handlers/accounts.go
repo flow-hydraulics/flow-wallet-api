@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
@@ -11,13 +10,12 @@ import (
 // It provides list, create and details APIs.
 // It uses an account service to interface with data.
 type Accounts struct {
-	log     *log.Logger
 	service *accounts.Service
 }
 
 // NewAccounts initiates a new accounts server.
-func NewAccounts(l *log.Logger, service *accounts.Service) *Accounts {
-	return &Accounts{l, service}
+func NewAccounts(service *accounts.Service) *Accounts {
+	return &Accounts{service}
 }
 
 func (s *Accounts) List() http.Handler {

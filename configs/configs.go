@@ -1,13 +1,34 @@
 package configs
 
 import (
-	"log"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	lvl, ok := os.LookupEnv("FLOW_WALLET_LOG_LEVEL")
+	if !ok {
+		// LOG_LEVEL not set, default to info
+		lvl = "info"
+	}
+
+	ll, err := log.ParseLevel(lvl)
+	if err != nil {
+		ll = log.DebugLevel
+	}
+
+	log.SetLevel(ll)
+
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
+}
 
 type Config struct {
 	// -- Feature flags --
@@ -115,6 +136,7 @@ type Config struct {
 
 type Options struct {
 	EnvFilePath string
+	Version     string
 }
 
 // ParseConfig parses environment variables and flags to a valid Config.
@@ -122,11 +144,14 @@ func ParseConfig(opt *Options) (*Config, error) {
 	if opt != nil && opt.EnvFilePath != "" {
 		// Load variables from a file to the environment of the process
 		if err := godotenv.Load(opt.EnvFilePath); err != nil {
-			log.Printf("Could not load environment variables from file.\n%s\nIf running inside a docker container this can be ignored.\n\n", err)
+			log.
+				WithFields(log.Fields{"error": err}).
+				Warn("Could not load environment variables from file. If running inside a docker container this can be ignored.")
 		}
 	}
 
 	cfg := Config{}
+
 	if err := env.Parse(&cfg); err != nil {
 		return nil, err
 	}

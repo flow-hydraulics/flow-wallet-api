@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
@@ -11,13 +10,12 @@ import (
 // It provides details API.
 // It uses jobs service to interface with data.
 type Jobs struct {
-	log     *log.Logger
 	service *jobs.Service
 }
 
 // NewJobs initiates a new jobs server.
-func NewJobs(l *log.Logger, service *jobs.Service) *Jobs {
-	return &Jobs{l, service}
+func NewJobs(service *jobs.Service) *Jobs {
+	return &Jobs{service}
 }
 
 func (s *Jobs) List() http.Handler {

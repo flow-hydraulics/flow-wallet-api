@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,6 +23,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk/client"
+	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 	"google.golang.org/grpc"
 )
@@ -55,7 +55,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	opts := &configs.Options{EnvFilePath: envFilePath}
+	opts := &configs.Options{EnvFilePath: envFilePath, Version: version}
 	cfg, err := configs.ParseConfig(opts)
 	if err != nil {
 		panic(err)
@@ -67,30 +67,25 @@ func main() {
 }
 
 func runServer(cfg *configs.Config) {
-	// Application wide logger
-	ls := log.New(os.Stdout, "[SERVER] ", log.LstdFlags|log.Lshortfile)
-	lj := log.New(os.Stdout, "[JOBS] ", log.LstdFlags|log.Lshortfile)
-	le := log.New(os.Stdout, "[EVENT-POLLER] ", log.LstdFlags|log.Lshortfile)
-
-	ls.Printf("Starting server (v%s)...\n", version)
+	log.Info("Starting server")
 
 	// Flow client
 	// TODO: WithInsecure()?
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
-		ls.Fatal(err)
+		log.Fatal(err)
 	}
 	defer func() {
-		ls.Println("Closing Flow Client..")
+		log.Info("Closing Flow Client")
 		if err := fc.Close(); err != nil {
-			ls.Fatal(err)
+			log.Fatal(err)
 		}
 	}()
 
 	// Database
 	db, err := gorm.New(cfg)
 	if err != nil {
-		ls.Fatal(err)
+		log.Fatal(err)
 	}
 	defer gorm.Close(db)
 
@@ -106,7 +101,6 @@ func runServer(cfg *configs.Config) {
 
 	// Create a worker pool
 	wp := jobs.NewWorkerPool(
-		lj,
 		jobStore,
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
@@ -114,7 +108,7 @@ func runServer(cfg *configs.Config) {
 		jobs.WithSystemService(systemService),
 	)
 	defer func() {
-		ls.Println("Stopping worker pool..")
+		log.Info("Stopping worker pool")
 		wp.Stop()
 	}()
 
@@ -138,16 +132,16 @@ func runServer(cfg *configs.Config) {
 
 	err = accountService.InitAdminAccount(context.Background())
 	if err != nil {
-		ls.Fatal(err)
+		log.Fatal(err)
 	}
 
 	// HTTP handling
-	systemHandler := handlers.NewSystem(ls, systemService)
-	templateHandler := handlers.NewTemplates(ls, templateService)
-	jobsHandler := handlers.NewJobs(ls, jobsService)
-	accountHandler := handlers.NewAccounts(ls, accountService)
-	transactionHandler := handlers.NewTransactions(ls, transactionService)
-	tokenHandler := handlers.NewTokens(ls, tokenService)
+	systemHandler := handlers.NewSystem(systemService)
+	templateHandler := handlers.NewTemplates(templateService)
+	jobsHandler := handlers.NewJobs(jobsService)
+	accountHandler := handlers.NewAccounts(accountService)
+	transactionHandler := handlers.NewTransactions(transactionService)
+	tokenHandler := handlers.NewTokens(tokenService)
 
 	r := mux.NewRouter()
 
@@ -197,7 +191,7 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/transactions", transactionHandler.Create()).Methods(http.MethodPost)                 // create
 		rv.Handle("/accounts/{address}/transactions/{transactionId}", transactionHandler.Details()).Methods(http.MethodGet) // details
 	} else {
-		ls.Println("raw transactions disabled")
+		log.Info("raw transactions disabled")
 	}
 
 	// Non-custodial watchlist accounts
@@ -218,7 +212,7 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
-		ls.Println("fungible tokens disabled")
+		log.Info("fungible tokens disabled")
 	}
 
 	// Non-Fungible tokens
@@ -232,13 +226,13 @@ func runServer(cfg *configs.Config) {
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/deposits", tokenHandler.ListDeposits()).Methods(http.MethodGet)
 		rv.Handle("/accounts/{address}/non-fungible-tokens/{tokenName}/deposits/{transactionId}", tokenHandler.GetDeposit()).Methods(http.MethodGet)
 	} else {
-		ls.Println("non-fungible tokens disabled")
+		log.Info("non-fungible tokens disabled")
 	}
 
 	// Define middleware
 	h := http.TimeoutHandler(r, cfg.ServerRequestTimeout, "request timed out")
 	h = handlers.UseCors(h)
-	h = handlers.UseLogging(os.Stdout, h)
+	h = handlers.UseLogging(h)
 	h = handlers.UseCompress(h)
 
 	// Server boilerplate
@@ -251,9 +245,14 @@ func runServer(cfg *configs.Config) {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		ls.Printf("Server listening on %s:%d\n", cfg.Host, cfg.Port)
+		log.
+			WithFields(log.Fields{
+				"host": cfg.Host,
+				"port": cfg.Port,
+			}).
+			Info("Server listening")
 		if err := srv.ListenAndServe(); err != nil {
-			ls.Println(err)
+			log.Fatal(err)
 		}
 	}()
 
@@ -279,7 +278,7 @@ func runServer(cfg *configs.Config) {
 		}
 
 		listener := chain_events.NewListener(
-			le, fc, store, getTypes,
+			fc, store, getTypes,
 			cfg.ChainListenerMaxBlocks,
 			cfg.ChainListenerInterval,
 			cfg.ChainListenerStartingHeight,
@@ -308,12 +307,12 @@ func runServer(cfg *configs.Config) {
 	// Block until we receive our signal.
 	sig := <-c
 
-	ls.Printf("Got signal: %s. Shutting down..\n", sig)
+	log.Infof("Got signal: %s. Shutting down..", sig)
 
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		ls.Fatal("Error in server shutdown; ", err)
+		log.Fatalf("Error in server shutdown: %s", err)
 	}
 }

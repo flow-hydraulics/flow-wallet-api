@@ -1,7 +1,6 @@
 package tokens
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
@@ -9,6 +8,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
+	log "github.com/sirupsen/logrus"
 )
 
 type ChainEventHandler struct {
@@ -43,7 +43,9 @@ func (h *ChainEventHandler) handleDeposit(event flow.Event) {
 	}
 
 	if err = h.TokenService.RegisterDeposit(token, event.TransactionID, account, amountOrNftID.String()); err != nil {
-		fmt.Printf("Error while registering a deposit: %s\n", err)
+		log.
+			WithFields(log.Fields{"error": err}).
+			Warn("Error while registering a deposit")
 		return
 	}
 }

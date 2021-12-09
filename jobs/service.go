@@ -7,6 +7,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 // Service defines the API for job HTTP handlers.
@@ -21,6 +22,8 @@ func NewService(store Store) *Service {
 
 // List returns all jobs in the datastore.
 func (s *Service) List(limit, offset int) (*[]Job, error) {
+	log.WithFields(log.Fields{"limit": limit, "offset": offset}).Trace("List jobs")
+
 	o := datastore.ParseListOptions(limit, offset)
 
 	jobs, err := s.store.Jobs(o)
@@ -32,8 +35,10 @@ func (s *Service) List(limit, offset int) (*[]Job, error) {
 }
 
 // Details returns a specific job.
-func (s *Service) Details(jobId string) (*Job, error) {
-	id, err := uuid.Parse(jobId)
+func (s *Service) Details(jobID string) (*Job, error) {
+	log.WithFields(log.Fields{"jobID": jobID}).Trace("Job details")
+
+	id, err := uuid.Parse(jobID)
 	if err != nil {
 		// Convert error to a 400 RequestError
 		err = &errors.RequestError{

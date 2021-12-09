@@ -1,10 +1,18 @@
 package system
 
-import "gorm.io/gorm"
+import (
+	"fmt"
+
+	"gorm.io/gorm"
+)
 
 type Settings struct {
 	gorm.Model
 	MaintenanceMode bool `gorm:"column:maintenance_mode;default:false"`
+}
+
+func (s *Settings) String() string {
+	return fmt.Sprintf("MaintenanceMode: %t", s.MaintenanceMode)
 }
 
 func (Settings) TableName() string {

@@ -14,7 +14,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.10.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
 	github.com/ethereum/go-ethereum v1.10.12 // indirect
-	github.com/felixge/httpsnoop v1.0.2 // indirect
+	github.com/felixge/httpsnoop v1.0.2
 	github.com/go-gormigrate/gormigrate/v2 v2.0.0
 	github.com/go-test/deep v1.0.8 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -28,7 +28,7 @@ require (
 	github.com/onflow/cadence v0.20.0
 	github.com/onflow/flow-go-sdk v0.23.0
 	github.com/onflow/flow/protobuf/go/flow v0.2.3 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/sirupsen/logrus v1.8.1
 	github.com/zeebo/blake3 v0.2.1 // indirect
 	go.uber.org/goleak v1.1.12
 	go.uber.org/ratelimit v0.2.0

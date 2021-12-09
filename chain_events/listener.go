@@ -2,14 +2,14 @@ package chain_events
 
 import (
 	"context"
-	"log"
-	"os"
+
 	"strings"
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +18,6 @@ type GetEventTypes func() ([]string, error)
 type Listener struct {
 	ticker         *time.Ticker
 	done           chan bool
-	logger         *log.Logger
 	fc             *client.Client
 	db             Store
 	getTypes       GetEventTypes
@@ -39,7 +38,6 @@ func (ListenerStatus) TableName() string {
 }
 
 func NewListener(
-	logger *log.Logger,
 	fc *client.Client,
 	db Store,
 	getTypes GetEventTypes,
@@ -48,15 +46,17 @@ func NewListener(
 	startingHeight uint64,
 	opts ...ListenerOption,
 ) *Listener {
-	if logger == nil {
-		logger = log.New(os.Stdout, "[EVENT-POLLER] ", log.LstdFlags|log.Lshortfile)
-	}
 
 	listener := &Listener{
-		nil, make(chan bool),
-		logger, fc, db, getTypes,
-		maxDiff, interval, startingHeight,
-		nil,
+		ticker:         nil,
+		done:           make(chan bool),
+		fc:             fc,
+		db:             db,
+		getTypes:       getTypes,
+		maxBlocks:      maxDiff,
+		interval:       interval,
+		startingHeight: startingHeight,
+		systemService:  nil,
 	}
 
 	// Go through options
@@ -94,13 +94,6 @@ func (l *Listener) run(ctx context.Context, start, end uint64) error {
 	}
 
 	return nil
-}
-
-func (l *Listener) handleError(err error) {
-	l.logger.Println(err)
-	if strings.Contains(err.Error(), "key not found") {
-		l.logger.Println(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
-	}
 }
 
 func (l *Listener) Start() *Listener {
@@ -157,16 +150,24 @@ func (l *Listener) Start() *Listener {
 				})
 
 				if err != nil {
-					if _, isLockError := err.(*LockError); !isLockError {
-						l.handleError(err)
+					if _, isLockError := err.(*LockError); isLockError {
+						// Skip LockError as it means another listener is already handling this round
+						continue
 					}
-					// Skip on LockError as it means another listener is already handling this round
+
+					log.
+						WithFields(log.Fields{"error": err}).
+						Warn("Error while handling Flow events")
+
+					if strings.Contains(err.Error(), "key not found") {
+						log.Warn(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
+					}
 				}
 			}
 		}
 	}()
 
-	l.logger.Println("started")
+	log.Info("Started Flow event listener")
 
 	return l
 }
@@ -193,13 +194,16 @@ func (l *Listener) initHeight() error {
 }
 
 func (l *Listener) Stop() {
-	l.logger.Println("stopping...")
+	log.Info("Stopping Flow event listener")
+
 	if l.ticker != nil {
 		l.ticker.Stop()
 	}
+
 	if l.done != nil {
 		l.done <- true
 	}
+
 	l.ticker = nil
 }
 

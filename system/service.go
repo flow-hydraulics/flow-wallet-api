@@ -1,6 +1,10 @@
 package system
 
-import "fmt"
+import (
+	"fmt"
+
+	log "github.com/sirupsen/logrus"
+)
 
 type Service struct {
 	store Store
@@ -18,11 +22,20 @@ func (svc *Service) SaveSettings(settings *Settings) error {
 	if settings.ID == 0 {
 		return fmt.Errorf("settings object has no ID, get an existing settings first and alter it")
 	}
+	log.WithFields(log.Fields{"settings": settings}).Trace("Save system settings")
 	return svc.store.SaveSettings(settings)
 }
 
 func (svc *Service) IsMaintenanceMode() bool {
 	settings, err := svc.GetSettings()
-	// TODO: handle error, log
+	if err != nil {
+		log.
+			WithFields(log.Fields{
+				"error":    err,
+				"package":  "system",
+				"function": "IsMaintenanceMode",
+			}).
+			Warn("Error while getting system settings")
+	}
 	return err == nil && settings.MaintenanceMode
 }

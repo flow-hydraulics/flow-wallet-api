@@ -2,13 +2,13 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/onflow/flow-go-sdk"
+	log "github.com/sirupsen/logrus"
 )
 
 var testCfg *configs.Config
@@ -19,7 +19,9 @@ func TestMain(m *testing.M) {
 	opts := &configs.Options{EnvFilePath: "../../.env.test"}
 	testCfg, err = configs.ParseConfig(opts)
 	if err != nil {
-		fmt.Println("could not parse config;", err)
+		log.
+			WithFields(log.Fields{"error": err}).
+			Warn("Could not parse config")
 		os.Exit(1)
 	}
 

@@ -17,7 +17,7 @@ func TestSettingsE2E(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	svcs := test.GetServices(t, cfg)
 
-	sysHandler := handlers.NewSystem(test.Logger(), svcs.GetSystem())
+	sysHandler := handlers.NewSystem(svcs.GetSystem())
 
 	router := mux.NewRouter()
 	router.Handle("/settings", sysHandler.GetSettings()).Methods(http.MethodGet)

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
@@ -9,12 +8,11 @@ import (
 
 // Templates is a HTTP server for template management.
 type Templates struct {
-	log     *log.Logger
 	service *templates.Service
 }
 
-func NewTemplates(l *log.Logger, service *templates.Service) *Templates {
-	return &Templates{l, service}
+func NewTemplates(service *templates.Service) *Templates {
+	return &Templates{service}
 }
 
 func (s *Templates) AddToken() http.Handler {

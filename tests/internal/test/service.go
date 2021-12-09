@@ -2,8 +2,6 @@ package test
 
 import (
 	"context"
-	"io/ioutil"
-	"log"
 	"testing"
 	"time"
 
@@ -58,8 +56,6 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
-	logger := log.New(ioutil.Discard, "", log.LstdFlags|log.Lshortfile)
-
 	jobStore := jobs.NewGormStore(db)
 	accountStore := accounts.NewGormStore(db)
 	keyStore := keys.NewGormStore(db)
@@ -70,7 +66,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(logger, jobStore, 100, 1)
+	wp := jobs.NewWorkerPool(jobStore, 100, 1)
 	wpStop := func() { wp.Stop() }
 	t.Cleanup(wpStop)
 
@@ -100,7 +96,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	}
 
 	listener := chain_events.NewListener(
-		logger, fc, store, getTypes,
+		fc, store, getTypes,
 		cfg.ChainListenerMaxBlocks,
 		1*time.Second,
 		cfg.ChainListenerStartingHeight,
