@@ -8,15 +8,34 @@ import (
 	"strconv"
 	"strings"
 
+	gorilla "github.com/gorilla/handlers"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
+	"github.com/flow-hydraulics/flow-wallet-api/handlers/middleware"
 )
 
 const SyncQueryParameter = "sync"
 
 var EmptyBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("empty body")}
 var InvalidBodyError = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
+
+func UseCors(h http.Handler) http.Handler {
+	return gorilla.CORS(gorilla.AllowedOrigins([]string{"*"}))(h)
+}
+
+func UseLogging(h http.Handler) http.Handler {
+	return middleware.LoggingHandler(h)
+}
+
+func UseCompress(h http.Handler) http.Handler {
+	return gorilla.CompressHandler(h)
+}
+
+func UseJson(h http.Handler) http.Handler {
+	// Only PUT, POST, and PATCH requests are considered.
+	return gorilla.ContentTypeHandler(h, "application/json")
+}
 
 // handleError is a helper function for unified HTTP error handling.
 func handleError(rw http.ResponseWriter, r *http.Request, err error) {

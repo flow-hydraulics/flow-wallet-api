@@ -94,10 +94,6 @@ func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPool
 		opt(pool)
 	}
 
-	if pool.logger == nil {
-		pool.logger = log.New()
-	}
-
 	return pool
 }
 
@@ -157,7 +153,7 @@ func (wp *WorkerPool) RegisterExecutor(jobType string, executorF ExecutorFunc) {
 
 // Schedule will try to immediately schedule the run of a job
 func (wp *WorkerPool) Schedule(j *Job) error {
-	entry := j.logEntry(wp.logger.WithFields(log.Fields{
+	entry := j.logEntry(log.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "WorkerPool.Schedule",
 	}))
@@ -199,7 +195,7 @@ func (wp *WorkerPool) QueueSize() uint {
 }
 
 func (wp *WorkerPool) accept(job *Job) bool {
-	entry := job.logEntry(wp.logger.WithFields(log.Fields{
+	entry := job.logEntry(log.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "WorkerPool.accept",
 	}))
@@ -241,7 +237,7 @@ func (wp *WorkerPool) startDBJobScheduler() {
 			o := datastore.ParseListOptions(0, 0)
 			jobs, err := wp.store.SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod, o)
 			if err != nil {
-				wp.logger.
+				log.
 					WithFields(log.Fields{"error": err}).
 					Warn("Could not fetch schedulable jobs from DB")
 				continue
@@ -289,7 +285,7 @@ func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 }
 
 func (wp *WorkerPool) process(job *Job) {
-	entry := job.logEntry(wp.logger.WithFields(log.Fields{
+	entry := job.logEntry(log.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "WorkerPool.process",
 	}))
@@ -357,7 +353,7 @@ func PermanentFailure(err error) error {
 }
 
 func ScheduleJobStatusNotification(wp *WorkerPool, parent *Job) error {
-	entry := parent.logEntry(wp.logger.WithFields(log.Fields{
+	entry := parent.logEntry(log.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "ScheduleJobStatusNotification",
 	}))
