@@ -17,7 +17,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ./redis-data:/data
+      - redis_data:/data
       - ./redis-config/redis.conf:/usr/local/etc/redis/redis.conf
       - ./redis-config/users.acl:/usr/local/etc/redis/users.acl
 
@@ -62,3 +62,6 @@ services:
       - FLOW_SERVICEPRIVATEKEY=${FLOW_WALLET_ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
       - FLOW_SERVICEKEYHASHALGO=SHA3_256
+
+volumes:
+  redis_data:
