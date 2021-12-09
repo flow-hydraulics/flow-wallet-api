@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -111,7 +112,6 @@ func (g *IdempotencyStoreGorm) Set(key string, expiry time.Duration) error {
 	}).Create(&IdempotencyStoreGormItem{Key: key, ExpiryDate: time.Now().Add(expiry)}).Error
 
 	if err != nil {
-		fmt.Println("error when creating IdempotecyStoreGormItem:", err)
 		return err
 	}
 
@@ -187,7 +187,11 @@ func IdempotencyHandler(h http.Handler, opts IdempotencyHandlerOptions, store Id
 
 		exists, err := store.Get(key)
 		if err != nil {
-			panic(err)
+			log.
+				WithFields(log.Fields{"error": err, "key": key}).
+				Warn("Error while reading idempotency key from storage")
+			http.Error(rw, "Error while reading idempotency key", http.StatusInternalServerError)
+			return
 		}
 
 		// XXX: same key w/ different payload should return 422,
@@ -198,7 +202,11 @@ func IdempotencyHandler(h http.Handler, opts IdempotencyHandlerOptions, store Id
 		} else {
 			err := store.Set(key, opts.Expiry)
 			if err != nil {
-				panic(err)
+				log.
+					WithFields(log.Fields{"error": err, "key": key}).
+					Warn("Error while saving used idempotency key")
+				http.Error(rw, "Error while saving used idempotency key", http.StatusInternalServerError)
+				return
 			}
 		}
 
