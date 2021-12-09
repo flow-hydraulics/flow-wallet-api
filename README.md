@@ -257,6 +257,20 @@ If you want to use an AWS KMS symmetric encryption key for encrypting the stored
 | EncryptionKeyType | `FLOW_WALLET_ENCRYPTION_KEY_TYPE` | Encryption key type    | `local` | `aws_kms`                                                                       |
 | EncryptionKey     | `FLOW_WALLET_ENCRYPTION_KEY`      | KMS encryption key ARN | -       | `arn:aws:kms:eu-central-1:012345678910:key/00000000-aaaa-bbbb-cccc-12345678910` |
 
+### Log level
+
+The default log level of the service is `info`. You can change the log level by setting the environment variable `FLOW_WALLET_LOG_LEVEL`.
+
+Valid log leves are (case-insensitive):
+
+    panic
+    fatal
+    error
+    warn, warning
+    info
+    debug
+    trace
+
 ### All possible configuration variables
 
 Refer to [configs/configs.go](configs/configs.go) for details and documentation.
