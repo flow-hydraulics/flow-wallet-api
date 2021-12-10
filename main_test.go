@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 
 	"net/http"
 	"net/http/httptest"
@@ -320,6 +321,86 @@ func TestAccountServices(t *testing.T) {
 		if !strings.Contains(job.Error, expected) {
 			t.Fatalf(`expected error to contain "%s" got: "%s"`, expected, job.Error)
 		}
+	})
+
+	t.Run("sync create with multiple keys", func(t *testing.T) {
+		cfg2 := getTestConfig(t)
+		cfg2.DefaultAccountKeyCount = 3
+
+		app2 := getTestApp(t, cfg2, true)
+
+		_, acc, err := app2.AccountService.Create(context.Background(), true)
+		fatal(t, err)
+
+		if len(acc.Keys) != int(cfg2.DefaultAccountKeyCount) {
+			t.Fatalf("incorrect number of keys for new account, expected %d, got %d", len(acc.Keys), cfg2.DefaultAccountKeyCount)
+		}
+
+		// Keys should be clones w/ a running Index
+		indexes := []int{}
+		for _, key := range acc.Keys {
+			indexes = append(indexes, key.Index)
+
+			// Check that all public keys are identical
+			if key.PublicKey != acc.Keys[0].PublicKey {
+				t.Fatalf("expected public keys to be identical")
+			}
+		}
+
+		sort.Ints(indexes)
+
+		expectedIndexes := []int{0, 1, 2}
+		if !reflect.DeepEqual(expectedIndexes, indexes) {
+			t.Fatalf("incorrect key indexes, expected %v, got %v", expectedIndexes, indexes)
+		}
+	})
+
+	t.Run("async create with multiple keys", func(t *testing.T) {
+		cfg2 := getTestConfig(t)
+		cfg2.DefaultAccountKeyCount = 3
+		app2 := getTestApp(t, cfg2, true)
+
+		job, _, err := app2.AccountService.Create(context.Background(), false)
+		fatal(t, err)
+
+		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Complete {
+			t.Errorf("expected job status to be %s or %s or %s but got %s",
+				jobs.Init, jobs.Accepted, jobs.Complete, job.State)
+		}
+
+		for job.State == jobs.Init || job.State == jobs.Accepted {
+			time.Sleep(10 * time.Millisecond)
+		}
+
+		if job.State != jobs.Complete {
+			t.Errorf("expected job status to be %s got %s; job.Error: %s", jobs.Complete, job.State, job.Error)
+		}
+
+		acc, err := app2.AccountService.Details(job.Result)
+		fatal(t, err)
+
+		if len(acc.Keys) != int(cfg2.DefaultAccountKeyCount) {
+			t.Fatalf("incorrect number of keys for new account, expected %d, got %d", len(acc.Keys), cfg2.DefaultAccountKeyCount)
+		}
+
+		// Keys should be clones w/ a running Index
+		indexes := []int{}
+		for _, key := range acc.Keys {
+			indexes = append(indexes, key.Index)
+
+			// Check that all public keys are identical
+			if key.PublicKey != acc.Keys[0].PublicKey {
+				t.Fatalf("expected public keys to be identical")
+			}
+		}
+
+		sort.Ints(indexes)
+
+		expectedIndexes := []int{0, 1, 2}
+		if !reflect.DeepEqual(expectedIndexes, indexes) {
+			t.Fatalf("incorrect key indexes, expected %v, got %v", expectedIndexes, indexes)
+		}
+
 	})
 }
 

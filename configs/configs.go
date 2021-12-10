@@ -71,6 +71,8 @@ type Config struct {
 	EncryptionKey string `env:"FLOW_WALLET_ENCRYPTION_KEY,notEmpty"`
 	// Encryption key type, one of: local, aws_kms, google_kms
 	EncryptionKeyType string `env:"FLOW_WALLET_ENCRYPTION_KEY_TYPE,notEmpty" envDefault:"local"`
+	// DefaultAccountKeyCount specifies how many times the account key will be duplicated upon account creation
+	DefaultAccountKeyCount uint `env:"FLOW_WALLET_DEFAULT_ACCOUNT_KEY_COUNT" envDefault:"1"`
 
 	// -- Database --
 
