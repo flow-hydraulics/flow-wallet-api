@@ -1,7 +1,9 @@
 package system
 
 import (
+	"database/sql"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -26,16 +28,12 @@ func (svc *Service) SaveSettings(settings *Settings) error {
 	return svc.store.SaveSettings(settings)
 }
 
-func (svc *Service) IsMaintenanceMode() bool {
+func (svc *Service) Pause() error {
+	log.Trace("Pause system")
 	settings, err := svc.GetSettings()
 	if err != nil {
-		log.
-			WithFields(log.Fields{
-				"error":    err,
-				"package":  "system",
-				"function": "IsMaintenanceMode",
-			}).
-			Warn("Error while getting system settings")
+		return err
 	}
-	return err == nil && settings.MaintenanceMode
+	settings.PausedSince = sql.NullTime{Time: time.Now(), Valid: true}
+	return svc.SaveSettings(settings)
 }

@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
+	wallet_errors "github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 )
 
@@ -173,9 +174,11 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 
 	entry.Debug("Scheduling job")
 
-	if wp.waitMaintenance() {
-		entry.Debug("In maintenance mode")
-		// In maintenance mode; prevent immediate scheduling and let dbScheduler handle this job
+	if halted, err := wp.systemHalted(); err != nil {
+		return fmt.Errorf("error while getting system settings: %w", err)
+	} else if halted {
+		// System halted; prevent immediate scheduling and let dbScheduler handle this job
+		entry.Debug("System halted")
 		return nil
 	}
 
@@ -227,8 +230,15 @@ func (wp *WorkerPool) accept(job *Job) bool {
 	return true
 }
 
-func (wp *WorkerPool) waitMaintenance() bool {
-	return wp.systemService != nil && wp.systemService.IsMaintenanceMode()
+func (wp *WorkerPool) systemHalted() (bool, error) {
+	if wp.systemService != nil {
+		s, err := wp.systemService.GetSettings()
+		if err != nil {
+			return false, err
+		}
+		return s.IsMaintenanceMode() || s.IsPaused(), nil
+	}
+	return false, nil
 }
 
 func (wp *WorkerPool) startDBJobScheduler() {
@@ -243,8 +253,13 @@ func (wp *WorkerPool) startDBJobScheduler() {
 				break jobPoolLoop
 			}
 
-			// Check for maintenance mode
-			if wp.waitMaintenance() {
+			if halted, err := wp.systemHalted(); err != nil {
+				wp.logger.
+					WithFields(log.Fields{"error": err}).
+					Warn("Could not get system settings from DB")
+				restTime = wp.dbJobPollInterval
+				continue
+			} else if halted {
 				restTime = wp.dbJobPollInterval
 				continue
 			}
@@ -280,7 +295,27 @@ func (wp *WorkerPool) startWorkers() {
 					break
 				}
 
-				wp.process(job)
+				if err := wp.process(job); err != nil {
+					// Handle critical processing errors
+
+					entry := job.logEntry(wp.logger.WithFields(log.Fields{
+						"package":  "jobs",
+						"function": "WorkerPool.startWorkers.goroutine",
+						"error":    err,
+					}))
+
+					if wallet_errors.IsChainConnectionError(err) {
+						if wp.systemService != nil {
+							entry.Warn("Unable to connect to chain, pausing system")
+							// Unable to connect to chain, pause system.
+							wp.systemService.Pause()
+						} else {
+							entry.Warn("Unable to connect to chain")
+						}
+					} else {
+						entry.Warn("Critical error while processing job")
+					}
+				}
 			}
 		}()
 	}
@@ -306,7 +341,7 @@ func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 	}
 }
 
-func (wp *WorkerPool) process(job *Job) {
+func (wp *WorkerPool) process(job *Job) error {
 	entry := job.logEntry(wp.logger.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "WorkerPool.process",
@@ -314,42 +349,49 @@ func (wp *WorkerPool) process(job *Job) {
 
 	if !wp.accept(job) {
 		entry.Info("Failed to accept job")
-		return
+		return nil
 	}
 
 	executor, exists := wp.executors[job.Type]
 	if !exists {
 		entry.Warn("Could not process job, no registered executor for type")
+
 		job.State = NoAvailableWorkers
+
 		if err := wp.store.UpdateJob(job); err != nil {
-			entry.
-				WithFields(log.Fields{"error": err}).
-				Warn("Could not update DB entry for job")
+			return fmt.Errorf("error while updating database entry: %w", err)
 		}
-		return
+
+		return nil
 	}
 
-	err := executor(wp.context, job)
-	if err != nil {
+	if err := executor(wp.context, job); err != nil {
+		// Check for chain connection errors
+		if wallet_errors.IsChainConnectionError(err) {
+			// Stop processing this job any further, returning it to the pool.
+			return err
+		}
+
 		if job.ExecCount > wp.maxJobErrorCount || errors.Is(err, ErrPermanentFailure) {
 			job.State = Failed
 		} else {
 			job.State = Error
 		}
+
 		job.Error = err.Error()
 		job.Errors = append(job.Errors, err.Error())
+
 		entry.
 			WithFields(log.Fields{"error": err}).
 			Warn("Job execution resulted with error")
+
 	} else {
 		job.State = Complete
 		job.Error = "" // Clear the error message for the final & successful execution
 	}
 
 	if err := wp.store.UpdateJob(job); err != nil {
-		entry.
-			WithFields(log.Fields{"error": err}).
-			Warn("Could not update DB entry for job")
+		return fmt.Errorf("error while updating database entry: %w", err)
 	}
 
 	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
@@ -359,6 +401,8 @@ func (wp *WorkerPool) process(job *Job) {
 				Warn("Could not schedule a status update notification for job")
 		}
 	}
+
+	return nil
 }
 
 func (wp *WorkerPool) executeSendJobStatus(ctx context.Context, j *Job) error {

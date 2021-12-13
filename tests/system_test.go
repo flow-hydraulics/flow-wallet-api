@@ -2,11 +2,13 @@ package tests
 
 import (
 	"bytes"
+	"database/sql"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/handlers"
 	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
@@ -72,13 +74,13 @@ func TestIsMaintenanceMode(t *testing.T) {
 
 	sysService := svcs.GetSystem()
 
-	if sysService.IsMaintenanceMode() {
-		t.Error("expected system not to be in maintenance mode")
-	}
-
 	settings, err := sysService.GetSettings()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if settings.IsMaintenanceMode() {
+		t.Error("expected system not to be in maintenance mode")
 	}
 
 	settings.MaintenanceMode = true
@@ -87,7 +89,43 @@ func TestIsMaintenanceMode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !sysService.IsMaintenanceMode() {
+	settings, err = sysService.GetSettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !settings.IsMaintenanceMode() {
 		t.Error("expected system to be in maintenance mode")
+	}
+}
+
+func TestIsPaused(t *testing.T) {
+	cfg := test.LoadConfig(t, testConfigPath)
+	svcs := test.GetServices(t, cfg)
+
+	sysService := svcs.GetSystem()
+
+	settings, err := sysService.GetSettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if settings.IsPaused() {
+		t.Error("expected system not to be paused")
+	}
+
+	settings.PausedSince = sql.NullTime{Time: time.Now(), Valid: true}
+
+	if err := sysService.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
+
+	settings, err = sysService.GetSettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !settings.IsPaused() {
+		t.Error("expected system to be paused")
 	}
 }
