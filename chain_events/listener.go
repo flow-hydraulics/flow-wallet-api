@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	wallet_errors "github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -116,13 +117,24 @@ func (l *Listener) Start() *Listener {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		entry := log.WithFields(log.Fields{
+			"package":  "chain_events",
+			"function": "Listener.Start.goroutine",
+		})
+
 		for {
 			select {
 			case <-l.done:
 				return
 			case <-l.ticker.C:
 				// Check for maintenance mode
-				if l.waitMaintenance() {
+				if halted, err := l.systemHalted(); err != nil {
+					entry.
+						WithFields(log.Fields{"error": err}).
+						Warn("Could not get system settings from DB")
+					continue
+				} else if halted {
+					entry.Debug("System halted")
 					continue
 				}
 
@@ -150,24 +162,38 @@ func (l *Listener) Start() *Listener {
 				})
 
 				if err != nil {
+					if wallet_errors.IsChainConnectionError(err) {
+						// Unable to connect to chain, pause system.
+						if l.systemService != nil {
+							entry.Warn("Unable to connect to chain, pausing system")
+							l.systemService.Pause()
+						} else {
+							entry.Warn("Unable to connect to chain")
+						}
+						continue
+					}
+
 					if _, isLockError := err.(*LockError); isLockError {
 						// Skip LockError as it means another listener is already handling this round
 						continue
 					}
 
-					log.
+					entry.
 						WithFields(log.Fields{"error": err}).
 						Warn("Error while handling Flow events")
 
 					if strings.Contains(err.Error(), "key not found") {
-						log.Warn(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
+						entry.Warn(`"key not found" error indicates data is not available at this height, please manually set correct starting height`)
 					}
 				}
 			}
 		}
 	}()
 
-	log.Info("Started Flow event listener")
+	log.WithFields(log.Fields{
+		"package":  "chain_events",
+		"function": "Listener.Start",
+	}).Info("Started Flow event listener")
 
 	return l
 }
@@ -194,7 +220,11 @@ func (l *Listener) initHeight() error {
 }
 
 func (l *Listener) Stop() {
-	log.Info("Stopping Flow event listener")
+
+	log.WithFields(log.Fields{
+		"package":  "chain_events",
+		"function": "Listener.Stop",
+	}).Info("Stopping Flow event listener")
 
 	if l.ticker != nil {
 		l.ticker.Stop()
@@ -207,6 +237,13 @@ func (l *Listener) Stop() {
 	l.ticker = nil
 }
 
-func (l *Listener) waitMaintenance() bool {
-	return l.systemService != nil && l.systemService.IsMaintenanceMode()
+func (l *Listener) systemHalted() (bool, error) {
+	if l.systemService != nil {
+		s, err := l.systemService.GetSettings()
+		if err != nil {
+			return false, err
+		}
+		return s.IsMaintenanceMode() || s.IsPaused(), nil
+	}
+	return false, nil
 }
