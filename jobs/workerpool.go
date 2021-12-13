@@ -301,7 +301,11 @@ func (wp *WorkerPool) startWorkers() {
 						if wp.systemService != nil {
 							entry.Warn("Unable to connect to chain, pausing system")
 							// Unable to connect to chain, pause system.
-							wp.systemService.Pause()
+							if err := wp.systemService.Pause(); err != nil {
+								entry.
+									WithFields(log.Fields{"error": err}).
+									Warn("Unable to pause system")
+							}
 						} else {
 							entry.Warn("Unable to connect to chain")
 						}
