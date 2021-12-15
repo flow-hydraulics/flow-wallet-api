@@ -2,6 +2,8 @@
 package errors
 
 import (
+	"net"
+
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc/codes"
 )
@@ -16,12 +18,17 @@ func (e *RequestError) Error() string {
 }
 
 var accessAPIConnectionErrors = []codes.Code{
+	codes.DeadlineExceeded,
 	codes.ResourceExhausted,
 	codes.Internal,
 	codes.Unavailable,
 }
 
 func IsChainConnectionError(err error) bool {
+	if _, ok := err.(net.Error); ok {
+		return true
+	}
+
 	if err, ok := err.(client.RPCError); ok {
 		// Check for Flow Access API connection errors
 		for _, code := range accessAPIConnectionErrors {
