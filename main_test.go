@@ -146,6 +146,9 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	fatal(t, err)
+
+	fatal(t, fc.Ping(context.Background()))
+
 	t.Cleanup(func() {
 		fc.Close()
 	})
