@@ -527,7 +527,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: '#/components/schemas/job'
-                  - $ref: '#/components/schemas/transaction'
+                  - $ref: '#/components/schemas/transactionWithEvents'
   '/accounts/{address}/transactions/{transactionId}':
     parameters:
       - $ref: '#/components/parameters/address'
@@ -598,7 +598,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: '#/components/schemas/job'
-                  - $ref: '#/components/schemas/transaction'
+                  - $ref: '#/components/schemas/transactionWithEvents'
   '/accounts/{address}/fungible-tokens/{tokenName}/withdrawals':
     parameters:
       - $ref: '#/components/parameters/address'
@@ -638,7 +638,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: '#/components/schemas/job'
-                  - $ref: '#/components/schemas/transaction'
+                  - $ref: '#/components/schemas/transactionWithEvents'
   '/accounts/{address}/fungible-tokens/{tokenName}/withdrawals/{transactionId}':
     parameters:
       - $ref: '#/components/parameters/address'
@@ -744,7 +744,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: '#/components/schemas/job'
-                  - $ref: '#/components/schemas/transaction'
+                  - $ref: '#/components/schemas/transactionWithEvents'
   '/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals':
     parameters:
       - $ref: '#/components/parameters/address'
@@ -784,7 +784,7 @@ paths:
               schema:
                 oneOf:
                   - $ref: '#/components/schemas/job'
-                  - $ref: '#/components/schemas/transaction'
+                  - $ref: '#/components/schemas/transactionWithEvents'
   '/accounts/{address}/non-fungible-tokens/{tokenName}/withdrawals/{transactionId}':
     parameters:
       - $ref: '#/components/parameters/address'
