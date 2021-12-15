@@ -231,11 +231,7 @@ func (l *Listener) Stop() {
 
 func (l *Listener) systemHalted() (bool, error) {
 	if l.systemService != nil {
-		s, err := l.systemService.GetSettings()
-		if err != nil {
-			return false, err
-		}
-		return s.IsMaintenanceMode() || s.IsPaused(), nil
+		return l.systemService.IsHalted()
 	}
 	return false, nil
 }
