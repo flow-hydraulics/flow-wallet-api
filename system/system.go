@@ -8,8 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const pauseDuration = time.Minute
-
 type Settings struct {
 	gorm.Model
 	MaintenanceMode bool         `gorm:"column:maintenance_mode;default:false"`
@@ -35,7 +33,7 @@ func (s *Settings) IsMaintenanceMode() bool {
 	return s.MaintenanceMode
 }
 
-func (s *Settings) IsPaused() bool {
+func (s *Settings) IsPaused(pauseDuration time.Duration) bool {
 	return s.PausedSince.Valid && s.PausedSince.Time.After(time.Now().Add(-pauseDuration))
 }
 

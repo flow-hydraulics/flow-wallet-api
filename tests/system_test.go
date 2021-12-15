@@ -110,7 +110,7 @@ func TestIsPaused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if settings.IsPaused() {
+	if settings.IsPaused(time.Minute) {
 		t.Error("expected system not to be paused")
 	}
 
@@ -125,7 +125,26 @@ func TestIsPaused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !settings.IsPaused() {
+	if !settings.IsPaused(time.Minute) {
 		t.Error("expected system to be paused")
+	}
+}
+
+func TestPausing(t *testing.T) {
+	cfg := test.LoadConfig(t, testConfigPath)
+	svcs := test.GetServices(t, cfg)
+
+	sysService := svcs.GetSystem()
+
+	if halted, err := sysService.IsHalted(); err != nil || halted {
+		t.Error("expected system not to be halted")
+	}
+
+	if err := sysService.Pause(); err != nil {
+		t.Fatal(err)
+	}
+
+	if halted, err := sysService.IsHalted(); err != nil || !halted {
+		t.Error("expected system to be halted")
 	}
 }

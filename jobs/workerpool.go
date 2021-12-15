@@ -225,11 +225,7 @@ func (wp *WorkerPool) accept(job *Job) bool {
 
 func (wp *WorkerPool) systemHalted() (bool, error) {
 	if wp.systemService != nil {
-		s, err := wp.systemService.GetSettings()
-		if err != nil {
-			return false, err
-		}
-		return s.IsMaintenanceMode() || s.IsPaused(), nil
+		return wp.systemService.IsHalted()
 	}
 	return false, nil
 }
