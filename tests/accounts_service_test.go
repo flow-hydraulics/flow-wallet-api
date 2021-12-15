@@ -2,8 +2,12 @@ package tests
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
 )
 
@@ -109,5 +113,67 @@ func Test_Delete_Non_Custodial_Account_Is_Idempotent(t *testing.T) {
 	err = svc.DeleteNonCustodialAccount(context.Background(), addr)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Test if the service is able to simultaneously create multiple accounts
+func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
+	cfg := test.LoadConfig(t, testConfigPath)
+	svc := test.GetServices(t, cfg).GetAccounts()
+
+	if cfg.AdminProposalKeyCount <= 1 {
+		t.Skip("skipped as \"cfg.AdminProposalKeyCount\" is less than or equal to 1")
+	}
+
+	if acccounts, err := svc.List(0, 0); err != nil {
+		t.Fatal(err)
+	} else if len(acccounts) > 1 {
+		t.Fatal("expected there to be only 1 account")
+	}
+
+	accountsToCreate := 3
+
+	wg := sync.WaitGroup{}
+	errChan := make(chan error, accountsToCreate*3)
+
+	for i := 0; i < accountsToCreate; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			job, _, err := svc.Create(context.Background(), false)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			for job.State == jobs.Init || job.State == jobs.Accepted {
+				time.Sleep(100 * time.Millisecond)
+			}
+
+			if job.State == jobs.Error {
+				errChan <- fmt.Errorf(job.Error)
+				return
+			}
+
+			if _, err := svc.Details(job.Result); err != nil {
+				errChan <- err
+				return
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	select {
+	case err := <-errChan:
+		t.Fatal(err)
+	default:
+	}
+
+	if acccounts, err := svc.List(0, 0); err != nil {
+		t.Fatal(err)
+	} else if len(acccounts) < 1+accountsToCreate {
+		t.Fatalf("expected there to be %d accounts", 1+accountsToCreate)
 	}
 }
