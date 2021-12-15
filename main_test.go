@@ -461,7 +461,7 @@ func TestAccountHandlers(t *testing.T) {
 		{
 			name:     "details unknown address",
 			method:   http.MethodGet,
-			url:      "/0f7025fa05b578e3",
+			url:      "/e34ea67a850e1585",
 			expected: "record not found",
 			status:   http.StatusNotFound,
 		},
