@@ -29,6 +29,10 @@ func NewFlowClient(t *testing.T, cfg *configs.Config) *client.Client {
 		t.Fatal(err)
 	}
 
+	if err := fc.Ping(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
 	close := func() {
 		err := fc.Close()
 		if err != nil {
