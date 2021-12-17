@@ -41,3 +41,27 @@ func WithLogger(logger *log.Logger) WorkerPoolOption {
 		wp.logger = logger
 	}
 }
+
+func WithMaxJobErrorCount(count int) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.maxJobErrorCount = count
+	}
+}
+
+func WithDbJobPollInterval(d time.Duration) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.dbJobPollInterval = d
+	}
+}
+
+func WithAcceptedGracePeriod(d time.Duration) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.acceptedGracePeriod = d
+	}
+}
+
+func WithReSchedulableGracePeriod(d time.Duration) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.reSchedulableGracePeriod = d
+	}
+}
