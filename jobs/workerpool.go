@@ -190,7 +190,7 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 func (wp *WorkerPool) Stop() {
 	close(wp.stopChan)
 	// Give time for the stop channel to signal before closing job channel
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 	close(wp.jobChan)
 	wp.cancelContext()
 	wp.wg.Wait()
@@ -289,6 +289,8 @@ func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 		}
 	} else {
 		select {
+		case <-wp.stopChan:
+			return false
 		case wp.jobChan <- job:
 			return true
 		default:
