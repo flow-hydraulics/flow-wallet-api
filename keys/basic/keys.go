@@ -201,8 +201,8 @@ func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, err
 	}
 
 	log.WithFields(log.Fields{
-		"accountAddress": s.cfg.AdminAddress,
-		"keyIndex":       index,
+		"address":  s.cfg.AdminAddress,
+		"keyIndex": index,
 	}).Debug("Using admin proposal key")
 
 	return keys.Authorizer{

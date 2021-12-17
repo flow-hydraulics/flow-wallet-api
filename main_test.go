@@ -122,6 +122,10 @@ func getTestConfig(t *testing.T) *configs.Config {
 	cfg.DatabaseDSN = path.Join(t.TempDir(), "test.db")
 	cfg.DatabaseType = testDbType
 	cfg.ChainID = flow.Emulator
+
+	cfg.WorkerQueueCapacity = 100
+	cfg.WorkerCount = 1
+
 	return cfg
 }
 
@@ -163,7 +167,9 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(
-		jobStore, 100, 1,
+		jobStore,
+		cfg.WorkerQueueCapacity,
+		cfg.WorkerCount,
 		jobs.WithMaxJobErrorCount(0),
 		jobs.WithDbJobPollInterval(time.Second),
 		jobs.WithAcceptedGracePeriod(0),
@@ -272,31 +278,6 @@ func TestAccountServices(t *testing.T) {
 			if len(k.Value) != 0 {
 				t.Error("Account should not expose private key value")
 			}
-		}
-	})
-
-	t.Run("async create exceeding worker pool capacity", func(t *testing.T) {
-		// Fill the queue, capacity + 1 since first job goes directly to processing
-		for i := 0; i < int(app.WorkerPool.Capacity())+1; i++ {
-			_, _, unexpectedErr := app.AccountService.Create(context.Background(), false)
-			if unexpectedErr != nil {
-				t.Error(unexpectedErr)
-			}
-		}
-
-		if app.WorkerPool.QueueSize() < app.WorkerPool.Capacity() {
-			t.Error("expected workerpool queue to be full")
-		}
-
-		// Exceed the capacity & check that the state is correct
-		j, _, err := app.AccountService.Create(context.Background(), false) // Should not fit, unless jobs got processed
-
-		if err != nil {
-			t.Error(err)
-		}
-
-		if j.State != jobs.NoAvailableWorkers {
-			t.Errorf("expected job state to be %s, found %s", jobs.NoAvailableWorkers, j.State)
 		}
 	})
 
@@ -1822,4 +1803,34 @@ func TestTemplateService(t *testing.T) {
 		}
 	})
 
+}
+
+func TestExceedingWorkerpoolCapacity(t *testing.T) {
+	cfg := getTestConfig(t)
+	app := getTestApp(t, cfg, false)
+
+	cfg.WorkerQueueCapacity = 2
+
+	// Fill the queue, capacity + 1 since first job goes directly to processing
+	for i := 0; i < int(app.WorkerPool.Capacity())+1; i++ {
+		_, _, unexpectedErr := app.AccountService.Create(context.Background(), false)
+		if unexpectedErr != nil {
+			t.Error(unexpectedErr)
+		}
+	}
+
+	if app.WorkerPool.QueueSize() < app.WorkerPool.Capacity() {
+		t.Error("expected workerpool queue to be full")
+	}
+
+	// Exceed the capacity & check that the state is correct
+	j, _, err := app.AccountService.Create(context.Background(), false) // Should not fit, unless jobs got processed
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if j.State != jobs.NoAvailableWorkers {
+		t.Errorf("expected job state to be %s, found %s", jobs.NoAvailableWorkers, j.State)
+	}
 }

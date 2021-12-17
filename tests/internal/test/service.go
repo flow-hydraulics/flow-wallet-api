@@ -67,7 +67,9 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
 	wp := jobs.NewWorkerPool(
-		jobStore, 100, 1,
+		jobStore,
+		cfg.WorkerQueueCapacity,
+		cfg.WorkerCount,
 		jobs.WithMaxJobErrorCount(0),
 		jobs.WithDbJobPollInterval(time.Second),
 		jobs.WithAcceptedGracePeriod(0),
