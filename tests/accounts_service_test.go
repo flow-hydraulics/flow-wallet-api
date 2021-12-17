@@ -182,9 +182,9 @@ func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
 	default:
 	}
 
-	if acccounts, err := svcs[0].List(0, 0); err != nil {
+	if accounts, err := svcs[0].List(0, 0); err != nil {
 		t.Fatal(err)
-	} else if len(acccounts) < 1+accountsToCreate {
+	} else if len(accounts) < 1+accountsToCreate {
 		t.Fatalf("expected there to be %d accounts", 1+accountsToCreate)
 	}
 }
