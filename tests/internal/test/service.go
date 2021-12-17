@@ -66,7 +66,14 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore, 100, 1)
+	wp := jobs.NewWorkerPool(
+		jobStore, 100, 1,
+		jobs.WithMaxJobErrorCount(0),
+		jobs.WithDbJobPollInterval(time.Second),
+		jobs.WithAcceptedGracePeriod(0),
+		jobs.WithReSchedulableGracePeriod(0),
+	)
+
 	wpStop := func() { wp.Stop() }
 	t.Cleanup(wpStop)
 

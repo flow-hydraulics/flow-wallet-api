@@ -162,7 +162,14 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore, 5, 1)
+	wp := jobs.NewWorkerPool(
+		jobStore, 100, 1,
+		jobs.WithMaxJobErrorCount(0),
+		jobs.WithDbJobPollInterval(time.Second),
+		jobs.WithAcceptedGracePeriod(0),
+		jobs.WithReSchedulableGracePeriod(0),
+	)
+
 	t.Cleanup(func() {
 		wp.Stop()
 	})
@@ -304,17 +311,12 @@ func TestAccountServices(t *testing.T) {
 		job, _, err := app2.AccountService.Create(context.Background(), false)
 		fatal(t, err)
 
-		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Error {
-			t.Errorf("expected job status to be %s or %s or %s but got %s",
-				jobs.Init, jobs.Accepted, jobs.Error, job.State)
-		}
-
 		for job.State == jobs.Init || job.State == jobs.Accepted {
 			time.Sleep(10 * time.Millisecond)
 		}
 
-		if job.State != jobs.Error {
-			t.Fatalf("expected job status to be %s got %s", jobs.Error, job.State)
+		if job.State != jobs.Error && job.State != jobs.Failed {
+			t.Fatalf("expected job to have errored got %s", job.State)
 		}
 
 		expected := "Account initialized with custom script"
