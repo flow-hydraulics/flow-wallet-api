@@ -325,6 +325,8 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 		Address: flow.HexToAddress(account.Address),
 	})
 
+	log.WithFields(log.Fields{"address": account.Address}).Debug("Account created")
+
 	return account, flowTx.ID().String(), nil
 }
 

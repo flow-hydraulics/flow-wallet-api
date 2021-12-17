@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
@@ -197,6 +199,11 @@ func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, err
 	if err != nil {
 		return keys.Authorizer{}, err
 	}
+
+	log.WithFields(log.Fields{
+		"accountAddress": s.cfg.AdminAddress,
+		"keyIndex":       index,
+	}).Debug("Using admin proposal key")
 
 	return keys.Authorizer{
 		Address: adminAcc,
