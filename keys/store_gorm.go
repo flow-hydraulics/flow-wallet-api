@@ -18,12 +18,22 @@ func (s *GormStore) AccountKey(address string) (k Storable, err error) {
 	return
 }
 
-func (s *GormStore) ProposalKey() (i int, err error) {
+func (s *GormStore) ProposalKey() (int, error) {
 	p := ProposalKey{}
-	err = s.db.Model(&ProposalKey{}).Order("updated_at asc").First(&p).Error
-	s.db.Save(&p) // Update the UpdatedAt field
-	i = p.KeyIndex
-	return
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&ProposalKey{}).Order("updated_at asc").First(&p).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Save(&p).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return p.KeyIndex, err
 }
 
 func (s *GormStore) InsertProposalKey(p ProposalKey) error {
