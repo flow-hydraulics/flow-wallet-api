@@ -57,9 +57,9 @@ func (s *System) SetSettings() http.Handler {
 		}
 
 		if !settings.MaintenanceMode && settingsJSON.MaintenanceMode {
-			log.Info("Maintenance mode enabled")
+			log.Debug("Maintenance mode enabled")
 		} else if settings.MaintenanceMode && !settingsJSON.MaintenanceMode {
-			log.Info("Maintenance mode disabled")
+			log.Debug("Maintenance mode disabled")
 		}
 
 		// Assign fields from JSON back to application model

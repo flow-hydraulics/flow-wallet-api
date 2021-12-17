@@ -167,7 +167,7 @@ func (l *Listener) Start() *Listener {
 		}
 	}()
 
-	log.Info("Started Flow event listener")
+	log.Debug("Started Flow event listener")
 
 	return l
 }
@@ -194,7 +194,7 @@ func (l *Listener) initHeight() error {
 }
 
 func (l *Listener) Stop() {
-	log.Info("Stopping Flow event listener")
+	log.Debug("Stopping Flow event listener")
 
 	if l.ticker != nil {
 		l.ticker.Stop()
