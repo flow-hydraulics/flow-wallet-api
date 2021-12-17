@@ -875,6 +875,16 @@ paths:
           description: OK
 components:
   schemas:
+    jobState:
+      type: string
+      example: ACCEPTED
+      enum:
+      - INIT
+      - ACCEPTED
+      - NO_AVAILABLE_WORKERS
+      - ERROR
+      - COMPLETE
+      - FAILED
     debugInfo:
       type: string
       example: |
@@ -1045,9 +1055,11 @@ components:
         jobId:
           type: string
           example: 717c25c2-4b54-4588-8f83-72f37ae1a0e8
-        status:
+        state:
+          $ref: '#/components/schemas/jobState'
+        error:
           type: string
-          example: Accepted
+          example: ''
         result:
           type: string
           example: ''
