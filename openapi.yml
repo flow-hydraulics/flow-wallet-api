@@ -1057,6 +1057,9 @@ components:
           example: 717c25c2-4b54-4588-8f83-72f37ae1a0e8
         state:
           $ref: '#/components/schemas/jobState'
+        error:
+          type: string
+          example: ''
         result:
           type: string
           example: ''
