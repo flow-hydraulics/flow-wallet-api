@@ -251,8 +251,19 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 		return nil, "", err
 	}
 
+	// Public keys for creating the account
+	publicKeys := []*flow.AccountKey{}
+
+	// Create copies based on the configured key count, changing just the index
+	for i := 0; i < int(s.cfg.DefaultAccountKeyCount); i++ {
+		clonedAccountKey := *accountKey
+		clonedAccountKey.Index = i
+
+		publicKeys = append(publicKeys, &clonedAccountKey)
+	}
+
 	flowTx := flow_templates.CreateAccount(
-		[]*flow.AccountKey{accountKey},
+		publicKeys,
 		nil,
 		payer.Address,
 	)
@@ -315,8 +326,16 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 	}
 	encryptedAccountKey.PublicKey = accountKey.PublicKey.String()
 
-	// Store account and key
-	account.Keys = []keys.Storable{encryptedAccountKey}
+	// Store account and key(s)
+	// Looping through accountKeys to get the correct Index values
+	storableKeys := []keys.Storable{}
+	for _, pbk := range publicKeys {
+		clonedEncryptedAccountKey := encryptedAccountKey
+		clonedEncryptedAccountKey.Index = pbk.Index
+		storableKeys = append(storableKeys, clonedEncryptedAccountKey)
+	}
+
+	account.Keys = storableKeys
 	if err := s.store.InsertAccount(account); err != nil {
 		return nil, "", err
 	}

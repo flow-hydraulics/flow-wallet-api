@@ -1,3 +1,5 @@
+@emulatorCustodyAccount = 0x0000000000000000
+
 ### Really basic test
 POST http://localhost:3000/v1/scripts HTTP/1.1
 content-type: application/json
@@ -24,6 +26,16 @@ content-type: application/json
 {
   "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
   "arguments":[{"type":"Address","value":"{{$dotenv FLOW_WALLET_ADMIN_ADDRESS}}"}]
+}
+
+
+### Get FlowToken balance of custody account (flow-emulator)
+POST http://localhost:3000/v1/scripts HTTP/1.1
+content-type: application/json
+
+{
+  "code":"import FungibleToken from 0xee82856bf20e2aa6\nimport FlowToken from 0x0ae53cb6e3f42a79\npub fun main(account: Address): UFix64 {\nlet vaultRef = getAccount(account)\n.getCapability(/public/flowTokenBalance)\n.borrow<&FlowToken.Vault{FungibleToken.Balance}>()\n?? panic(\"Could not borrow Balance reference to the Vault\")\nreturn vaultRef.balance\n}",
+  "arguments":[{"type":"Address","value":"{{emulatorCustodyAccount}}"}]
 }
 
 ### Get ExampleNFT balance of admin account (flow-emulator)

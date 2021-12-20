@@ -289,6 +289,12 @@ Valid log leves are (case-insensitive):
     debug
     trace
 
+### Multiple keys for custodial accounts
+
+To enable multiple keys for custodial accounts you'll need to set `FLOW_WALLET_DEFAULT_ACCOUNT_KEY_COUNT` to the number of keys each account should have. When a new account is created the auto-generated account key is cloned so that the total number of keys matches the configured value.
+
+NOTE: Changing `FLOW_WALLET_DEFAULT_ACCOUNT_KEY_COUNT` does not affect _existing_ accounts.
+
 ### All possible configuration variables
 
 Refer to [configs/configs.go](configs/configs.go) for details and documentation.
