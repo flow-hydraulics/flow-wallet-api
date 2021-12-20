@@ -25,6 +25,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.4.0
 	github.com/jpillora/backoff v1.0.0
+	github.com/lib/pq v1.10.2
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/onflow/cadence v0.20.0
 	github.com/onflow/flow-go-sdk v0.23.0
