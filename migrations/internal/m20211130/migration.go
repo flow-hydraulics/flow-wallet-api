@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Note: there is an 'm' here, it is a typo but it should not be removed
 const ID = "m20211130"
 
 type Settings struct {

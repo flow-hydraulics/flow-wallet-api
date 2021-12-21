@@ -65,7 +65,9 @@ func TestScheduleSendNotification(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wp.process(job)
+	if err := wp.process(job); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(wp.jobChan) == 0 {
 		t.Fatal("expected job channel to contain a job")
@@ -77,7 +79,9 @@ func TestScheduleSendNotification(t *testing.T) {
 		t.Fatalf("expected pool to have a send_job_status job")
 	}
 
-	wp.process(sendNotificationJob)
+	if err := wp.process(sendNotificationJob); err != nil {
+		t.Fatal(err)
+	}
 
 	if !sendNotificationCalled {
 		t.Fatalf("expected 'sendNotificationCalled' to equal true")
@@ -124,8 +128,13 @@ func TestExecuteSendNotification(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		wp.process(job)
-		wp.process(<-wp.jobChan)
+		if err := wp.process(job); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := wp.process(<-wp.jobChan); err != nil {
+			t.Fatal(err)
+		}
 
 		if webhookJob.Type != "TestJobType" {
 			t.Fatalf("expected webhook endpoint to have received a notification")
@@ -175,8 +184,12 @@ func TestExecuteSendNotification(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		wp.process(job)
-		wp.process(<-wp.jobChan)
+		if err := wp.process(job); err != nil {
+			t.Fatal(err)
+		}
+		if err := wp.process(<-wp.jobChan); err != nil {
+			t.Fatal(err)
+		}
 
 		if webhookJob.Type != "TestJobType" {
 			t.Fatalf("expected webhook endpoint to have received a notification")
@@ -219,7 +232,9 @@ func TestExecuteSendNotification(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		wp.process(job)
+		if err := wp.process(job); err != nil {
+			t.Fatal(err)
+		}
 
 		if len(wp.jobChan) != 0 {
 			t.Errorf("did not expect a job to be queued")
@@ -259,9 +274,15 @@ func TestExecuteSendNotification(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		wp.process(job)
+		if err := wp.process(job); err != nil {
+			t.Fatal()
+		}
+
 		sendNotificationJob := <-wp.jobChan
-		wp.process(sendNotificationJob)
+
+		if err := wp.process(sendNotificationJob); err != nil {
+			t.Fatal(err)
+		}
 
 		if len(hook.Entries) != 1 {
 			t.Errorf("expected there to be one warning, got %d", len(hook.Entries))
@@ -329,12 +350,16 @@ func TestJobErrorMessages(t *testing.T) {
 
 		// Explicitly retry to trigger n errors and a final successful execution, n = retryCount
 		for n := 0; n < retryCount+1; n++ {
-			wp.process(job)
+			if err := wp.process(job); err != nil {
+				t.Fatal(err)
+			}
 		}
 
 		// Send the notification
 		sendNotificationJob := <-wp.jobChan
-		wp.process(sendNotificationJob)
+		if err := wp.process(sendNotificationJob); err != nil {
+			t.Fatal(err)
+		}
 
 		// Check log entries
 		if len(hook.Entries) != retryCount {

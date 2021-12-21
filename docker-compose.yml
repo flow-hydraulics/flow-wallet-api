@@ -51,17 +51,21 @@ services:
       - redis
 
   emulator:
-    image: gcr.io/flow-container-registry/emulator:v0.23.0
+    image: gcr.io/flow-container-registry/emulator:0.27.2
     restart: unless-stopped
-    command: emulator -v
+    command: emulator -v --persist
     ports:
       - "3569:3569"
+    volumes:
+      - emulator_persist:/flowdb
     env_file:
       - ./.env
     environment:
       - FLOW_SERVICEPRIVATEKEY=${FLOW_WALLET_ADMIN_PRIVATE_KEY}
       - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
       - FLOW_SERVICEKEYHASHALGO=SHA3_256
+      - FLOW_DBPATH=/flowdb
 
 volumes:
   redis_data:
+  emulator_persist:

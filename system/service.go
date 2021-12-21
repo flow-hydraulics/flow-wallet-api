@@ -1,17 +1,32 @@
 package system
 
 import (
+	"database/sql"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type Service struct {
-	store Store
+	store         Store
+	pauseDuration time.Duration
 }
 
-func NewService(store Store) *Service {
-	return &Service{store}
+const defaultPauseDuration = time.Minute
+
+func NewService(store Store, opts ...ServiceOption) *Service {
+	svc := &Service{
+		store:         store,
+		pauseDuration: defaultPauseDuration,
+	}
+
+	// Go through options
+	for _, opt := range opts {
+		opt(svc)
+	}
+
+	return svc
 }
 
 func (svc *Service) GetSettings() (*Settings, error) {
@@ -26,16 +41,20 @@ func (svc *Service) SaveSettings(settings *Settings) error {
 	return svc.store.SaveSettings(settings)
 }
 
-func (svc *Service) IsMaintenanceMode() bool {
+func (svc *Service) Pause() error {
+	log.Trace("Pause system")
 	settings, err := svc.GetSettings()
 	if err != nil {
-		log.
-			WithFields(log.Fields{
-				"error":    err,
-				"package":  "system",
-				"function": "IsMaintenanceMode",
-			}).
-			Warn("Error while getting system settings")
+		return err
 	}
-	return err == nil && settings.MaintenanceMode
+	settings.PausedSince = sql.NullTime{Time: time.Now(), Valid: true}
+	return svc.SaveSettings(settings)
+}
+
+func (svc *Service) IsHalted() (bool, error) {
+	s, err := svc.GetSettings()
+	if err != nil {
+		return false, err
+	}
+	return s.IsMaintenanceMode() || s.IsPaused(svc.pauseDuration), nil
 }
