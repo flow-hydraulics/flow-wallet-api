@@ -879,12 +879,12 @@ components:
       type: string
       example: ACCEPTED
       enum:
-      - INIT
-      - ACCEPTED
-      - NO_AVAILABLE_WORKERS
-      - ERROR
-      - COMPLETE
-      - FAILED
+        - INIT
+        - ACCEPTED
+        - NO_AVAILABLE_WORKERS
+        - ERROR
+        - COMPLETE
+        - FAILED
     debugInfo:
       type: string
       example: |
@@ -924,7 +924,7 @@ components:
             $ref: '#/components/schemas/key'
         type:
           type: string
-          example: 'custodial'
+          example: custodial
         createdAt:
           type: string
           minLength: 1
@@ -1063,6 +1063,13 @@ components:
         error:
           type: string
           example: ''
+          description: 'Final error message, blank if job completed successfully'
+        errors:
+          type: array
+          description: Error messages recorded during all job executions including retries
+          items:
+            type: string
+            example: an error occurred
         result:
           type: string
           example: ''

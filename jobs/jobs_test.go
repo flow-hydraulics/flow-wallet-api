@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"net/http"
 	"net/http/httptest"
@@ -22,7 +23,10 @@ func (*dummyStore) Jobs(datastore.ListOptions) ([]Job, error) { return nil, nil 
 func (*dummyStore) Job(id uuid.UUID) (Job, error)             { return Job{}, nil }
 func (*dummyStore) InsertJob(*Job) error                      { return nil }
 func (*dummyStore) UpdateJob(*Job) error                      { return nil }
-func (*dummyStore) IncreaseExecCount(j *Job) error            { return nil }
+func (*dummyStore) IncreaseExecCount(j *Job) error {
+	j.ExecCount = j.ExecCount + 1
+	return nil
+}
 func (*dummyStore) SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod time.Duration, o datastore.ListOptions) ([]Job, error) {
 	return nil, nil
 }
@@ -192,11 +196,12 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			context:       ctx,
-			cancelContext: cancel,
-			executors:     make(map[string]ExecutorFunc),
-			jobChan:       make(chan *Job, 1),
-			store:         &dummyStore{},
+			context:          ctx,
+			cancelContext:    cancel,
+			executors:        make(map[string]ExecutorFunc),
+			jobChan:          make(chan *Job, 1),
+			store:            &dummyStore{},
+			maxJobErrorCount: 1,
 		}
 
 		WithJobStatusWebhook("http://localhost", time.Minute)(&wp)
@@ -231,11 +236,12 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			context:       ctx,
-			cancelContext: cancel,
-			executors:     make(map[string]ExecutorFunc),
-			jobChan:       make(chan *Job, 1),
-			store:         &dummyStore{},
+			context:          ctx,
+			cancelContext:    cancel,
+			executors:        make(map[string]ExecutorFunc),
+			jobChan:          make(chan *Job, 1),
+			store:            &dummyStore{},
+			maxJobErrorCount: 1,
 		}
 
 		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
@@ -263,6 +269,87 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		if sendNotificationJob.State != Error {
 			t.Errorf("expected send notification job to be in '%s' state, got '%s'", Error, sendNotificationJob.State)
+		}
+	})
+}
+
+func TestJobErrorMessages(t *testing.T) {
+	t.Run("all error messages are stored & published when retries occur", func(t *testing.T) {
+		retryCount := 3
+		logger, hook := test.NewNullLogger()
+		expectedErrorMessages := []string{}
+
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var resp JSONResponse
+			err := json.NewDecoder(r.Body).Decode(&resp)
+			if err != nil {
+				panic(err)
+			}
+
+			if !reflect.DeepEqual(resp.Errors, expectedErrorMessages) {
+				t.Errorf("error messages don't match the expected error messages, expected: %v, got: %v", expectedErrorMessages, resp.Errors)
+			}
+		}))
+		defer svr.Close()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		wp := WorkerPool{
+			context:          ctx,
+			cancelContext:    cancel,
+			executors:        make(map[string]ExecutorFunc),
+			jobChan:          make(chan *Job, 1),
+			store:            &dummyStore{},
+			maxJobErrorCount: retryCount,
+		}
+
+		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
+		WithLogger(logger)(&wp)
+
+		wp.RegisterExecutor(SendJobStatusJobType, wp.executeSendJobStatus)
+
+		wp.RegisterExecutor("TestJobType", func(ctx context.Context, j *Job) error {
+			j.ShouldSendNotification = true
+
+			// Fail the first n times, n = retryCount
+			if j.ExecCount <= retryCount {
+				errorMessage := fmt.Sprintf("error message %d", j.ExecCount)
+				expectedErrorMessages = append(expectedErrorMessages, errorMessage)
+				return fmt.Errorf(errorMessage)
+			}
+
+			j.Result = "done"
+
+			return nil
+		})
+
+		job, err := wp.CreateJob("TestJobType", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Explicitly retry to trigger n errors and a final successful execution, n = retryCount
+		for n := 0; n < retryCount+1; n++ {
+			wp.process(job)
+		}
+
+		// Send the notification
+		sendNotificationJob := <-wp.jobChan
+		wp.process(sendNotificationJob)
+
+		// Check log entries
+		if len(hook.Entries) != retryCount {
+			t.Errorf("expected there to be %d warning(s), got %d", retryCount, len(hook.Entries))
+		}
+
+		// Final value for "Error" should be blank
+		if job.Error != "" {
+			t.Errorf("expected job.Error to be blank, got: %#v", job.Error)
+		}
+
+		// Check stored error messages
+		errorMessages := []string(job.Errors)
+		if !reflect.DeepEqual([]string(job.Errors), expectedErrorMessages) {
+			t.Errorf("error messages don't match the expected error messages, expected: %v, got: %v", expectedErrorMessages, errorMessages)
 		}
 	})
 }

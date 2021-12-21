@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -32,6 +33,7 @@ type Job struct {
 	Type                   string         `gorm:"column:type"`
 	State                  State          `gorm:"column:state;default:INIT"`
 	Error                  string         `gorm:"column:error"`
+	Errors                 pq.StringArray `gorm:"column:errors;type:text[]"`
 	Result                 string         `gorm:"column:result"`
 	TransactionID          string         `gorm:"column:transaction_id"`
 	ExecCount              int            `gorm:"column:exec_count;default:0"`
@@ -61,6 +63,7 @@ type JSONResponse struct {
 	Type          string    `json:"type"`
 	State         State     `json:"state"`
 	Error         string    `json:"error"`
+	Errors        []string  `json:"errors"`
 	Result        string    `json:"result"`
 	TransactionID string    `json:"transactionId"`
 	CreatedAt     time.Time `json:"createdAt"`
@@ -73,6 +76,7 @@ func (j Job) ToJSONResponse() JSONResponse {
 		Type:          j.Type,
 		State:         j.State,
 		Error:         j.Error,
+		Errors:        []string(j.Errors),
 		Result:        j.Result,
 		TransactionID: j.TransactionID,
 		CreatedAt:     j.CreatedAt,

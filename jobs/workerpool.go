@@ -337,12 +337,13 @@ func (wp *WorkerPool) process(job *Job) {
 			job.State = Error
 		}
 		job.Error = err.Error()
+		job.Errors = append(job.Errors, err.Error())
 		entry.
 			WithFields(log.Fields{"error": err}).
 			Warn("Job execution resulted with error")
 	} else {
 		job.State = Complete
-		job.Error = ""
+		job.Error = "" // Clear the error message for the final & successful execution
 	}
 
 	if err := wp.store.UpdateJob(job); err != nil {
