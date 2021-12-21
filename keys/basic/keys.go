@@ -63,6 +63,44 @@ func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *Ke
 	}
 }
 
+func (s *KeyManager) CheckAdminProposalKeyCount(ctx context.Context) error {
+	adminAddress := flow.HexToAddress(s.cfg.AdminAddress)
+
+	adminAccount, err := s.fc.GetAccount(ctx, adminAddress)
+	if err != nil {
+		return fmt.Errorf("error while fetching admin account from chain: %w", err)
+	}
+
+	onChainCount := 0
+	for _, k := range adminAccount.Keys {
+		if !k.Revoked {
+			onChainCount += 1
+		}
+	}
+
+	if onChainCount != int(s.cfg.AdminProposalKeyCount) {
+		return fmt.Errorf(
+			"configured: %d, onchain: %d, %w",
+			s.cfg.AdminProposalKeyCount,
+			onChainCount,
+			keys.ErrAdminProposalKeyCountMismatch,
+		)
+	}
+
+	if inDBCount, err := s.store.ProposalKeyCount(); err != nil {
+		return fmt.Errorf("error while fetching admin proposal key count from database: %w", err)
+	} else if inDBCount != int64(s.cfg.AdminProposalKeyCount) {
+		return fmt.Errorf(
+			"configured: %d, in database: %d, %w",
+			s.cfg.AdminProposalKeyCount,
+			inDBCount,
+			keys.ErrAdminProposalKeyCountMismatch,
+		)
+	}
+
+	return nil
+}
+
 func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *keys.Private, error) {
 	switch s.cfg.DefaultKeyType {
 	default:

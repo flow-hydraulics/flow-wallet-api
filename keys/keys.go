@@ -3,6 +3,7 @@ package keys
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/onflow/flow-go-sdk"
@@ -15,6 +16,8 @@ const (
 	AccountKeyTypeGoogleKMS = "google_kms"
 	AccountKeyTypeAWSKMS    = "aws_kms"
 )
+
+var ErrAdminProposalKeyCountMismatch = errors.New("admin-proposal-key count mismatch")
 
 // Manager provides the functions needed for key management.
 type Manager interface {
@@ -30,6 +33,8 @@ type Manager interface {
 	AdminAuthorizer(context.Context) (Authorizer, error)
 	// UserAuthorizer returns an Authorizer for the given address.
 	UserAuthorizer(ctx context.Context, address flow.Address) (Authorizer, error)
+	// CheckAdminProposalKeyCount checks if admin proposal keys have been correctly initiated (counts match).
+	CheckAdminProposalKeyCount(ctx context.Context) error
 	// InitAdminProposalKeys will init the admin proposal keys in the database
 	// and return current count.
 	InitAdminProposalKeys(ctx context.Context) (uint16, error)

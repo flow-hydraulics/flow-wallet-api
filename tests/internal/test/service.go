@@ -130,15 +130,10 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		t.Fatal(err)
 	}
 
-	// // make sure all requested proposal keys are created
-	// keyCount, err := km.InitAdminProposalKeys(ctx)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-
-	// if keyCount != cfg.AdminProposalKeyCount {
-	// 	t.Fatal("incorrect number of admin proposal keys")
-	// }
+	// make sure all requested proposal keys are created
+	if err := km.CheckAdminProposalKeyCount(ctx); err != nil {
+		t.Fatal(err)
+	}
 
 	listener.Start()
 

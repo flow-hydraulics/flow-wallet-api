@@ -187,11 +187,9 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	err = accountService.InitAdminAccount(context.Background())
 	fatal(t, err)
 
-	keyCount, err := km.InitAdminProposalKeys(context.Background())
-	fatal(t, err)
-
-	if keyCount != cfg.AdminProposalKeyCount {
-		t.Fatal("incorrect number of admin proposal keys")
+	// make sure all requested proposal keys are created
+	if err := km.CheckAdminProposalKeyCount(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 
 	return TestApp{
@@ -226,12 +224,8 @@ func TestAccountServices(t *testing.T) {
 		fatal(t, err)
 
 		// make sure all requested proposal keys are created
-
-		keyCount, err := app.KeyManager.InitAdminProposalKeys(ctx)
-		fatal(t, err)
-
-		if keyCount != cfg.AdminProposalKeyCount {
-			t.Fatal("incorrect number of admin proposal keys")
+		if err := app.KeyManager.CheckAdminProposalKeyCount(context.Background()); err != nil {
+			t.Fatal(err)
 		}
 	})
 

@@ -55,6 +55,11 @@ func (s *GormStore) ProposalKeyIndex() (int, error) {
 	return p.KeyIndex, err
 }
 
+func (s *GormStore) ProposalKeyCount() (int64, error) {
+	var count int64
+	return count, s.db.Table(ProposalKey{}.TableName()).Count(&count).Error
+}
+
 func (s *GormStore) InsertProposalKey(p ProposalKey) error {
 	return s.db.Create(&p).Error
 }

@@ -2,8 +2,10 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"strings"
 
+	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
@@ -30,24 +32,33 @@ func (s *Service) InitAdminAccount(ctx context.Context) error {
 		})
 	}
 
-	keyCount, err := s.km.InitAdminProposalKeys(ctx)
-	if err != nil {
-		return err
-	}
-
 	log.WithFields(log.Fields{
-		"keyCount":    keyCount,
 		"wantedCount": s.cfg.AdminProposalKeyCount,
 	}).Debug("Checking admin account proposal keys")
 
-	if keyCount < s.cfg.AdminProposalKeyCount {
-		err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount)
-		if err != nil {
-			return err
-		}
+	if err := s.km.CheckAdminProposalKeyCount(ctx); err != nil {
+		if errors.Is(err, keys.ErrAdminProposalKeyCountMismatch) {
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Info("Admin proposal key count mismatch")
 
-		_, err = s.km.InitAdminProposalKeys(ctx)
-		if err != nil {
+			keyCount, err := s.km.InitAdminProposalKeys(ctx)
+			if err != nil {
+				return err
+			}
+
+			if keyCount < s.cfg.AdminProposalKeyCount {
+				err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount)
+				if err != nil {
+					return err
+				}
+
+				_, err = s.km.InitAdminProposalKeys(ctx)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
 			return err
 		}
 	}

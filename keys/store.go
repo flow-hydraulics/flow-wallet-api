@@ -4,6 +4,7 @@ package keys
 type Store interface {
 	AccountKey(address string) (Storable, error)
 	ProposalKeyIndex() (int, error)
+	ProposalKeyCount() (int64, error)
 	InsertProposalKey(proposalKey ProposalKey) error
 	DeleteAllProposalKeys() error
 }
