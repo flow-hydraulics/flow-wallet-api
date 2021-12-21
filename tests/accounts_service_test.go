@@ -137,9 +137,9 @@ func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
 		t.Skip("skipped as \"cfg.AdminProposalKeyCount\" is less than or equal to 1")
 	}
 
-	if acccounts, err := svcs[0].GetAccounts().List(0, 0); err != nil {
+	if accounts, err := svcs[0].GetAccounts().List(0, 0); err != nil {
 		t.Fatal(err)
-	} else if len(acccounts) > 1 {
+	} else if len(accounts) > 1 {
 		t.Fatal("expected there to be only 1 account")
 	}
 
