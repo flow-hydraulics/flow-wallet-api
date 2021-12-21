@@ -33,7 +33,6 @@ require (
 	github.com/zeebo/blake3 v0.2.1 // indirect
 	go.uber.org/goleak v1.1.12
 	go.uber.org/ratelimit v0.2.0
-	golang.org/x/crypto v0.0.0-20211115234514-b4de73f9ece8 // indirect
 	golang.org/x/net v0.0.0-20211116231205-47ca1ff31462 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20211116061358-0a5406a5449c // indirect
@@ -42,9 +41,9 @@ require (
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	gorm.io/driver/mysql v1.2.0
-	gorm.io/driver/postgres v1.2.2
-	gorm.io/driver/sqlite v1.2.4
-	gorm.io/driver/sqlserver v1.0.9 // indirect
-	gorm.io/gorm v1.22.3
+	gorm.io/datatypes v1.0.4
+	gorm.io/driver/mysql v1.2.1
+	gorm.io/driver/postgres v1.2.3
+	gorm.io/driver/sqlite v1.2.6
+	gorm.io/gorm v1.22.4
 )

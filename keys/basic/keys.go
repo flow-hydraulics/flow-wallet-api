@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
@@ -59,6 +61,44 @@ func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *Ke
 		adminAccountKey,
 		cfg,
 	}
+}
+
+func (s *KeyManager) CheckAdminProposalKeyCount(ctx context.Context) error {
+	adminAddress := flow.HexToAddress(s.cfg.AdminAddress)
+
+	adminAccount, err := s.fc.GetAccount(ctx, adminAddress)
+	if err != nil {
+		return fmt.Errorf("error while fetching admin account from chain: %w", err)
+	}
+
+	onChainCount := 0
+	for _, k := range adminAccount.Keys {
+		if !k.Revoked {
+			onChainCount += 1
+		}
+	}
+
+	if onChainCount != int(s.cfg.AdminProposalKeyCount) {
+		return fmt.Errorf(
+			"configured: %d, onchain: %d, %w",
+			s.cfg.AdminProposalKeyCount,
+			onChainCount,
+			keys.ErrAdminProposalKeyCountMismatch,
+		)
+	}
+
+	if inDBCount, err := s.store.ProposalKeyCount(); err != nil {
+		return fmt.Errorf("error while fetching admin proposal key count from database: %w", err)
+	} else if inDBCount != int64(s.cfg.AdminProposalKeyCount) {
+		return fmt.Errorf(
+			"configured: %d, in database: %d, %w",
+			s.cfg.AdminProposalKeyCount,
+			inDBCount,
+			keys.ErrAdminProposalKeyCountMismatch,
+		)
+	}
+
+	return nil
 }
 
 func (s *KeyManager) Generate(ctx context.Context, keyIndex, weight int) (*flow.AccountKey, *keys.Private, error) {
@@ -151,39 +191,10 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 	}, nil
 }
 
-func (s *KeyManager) InitAdminProposalKeys(ctx context.Context) (uint16, error) {
-	adminAddress := flow.HexToAddress(s.cfg.AdminAddress)
-
-	adminAccount, err := s.fc.GetAccount(ctx, adminAddress)
-	if err != nil {
-		return 0, err
-	}
-
-	err = s.store.DeleteAllProposalKeys()
-	if err != nil {
-		return 0, err
-	}
-
-	var count uint16
-	for _, k := range adminAccount.Keys {
-		if !k.Revoked {
-			err = s.store.InsertProposalKey(keys.ProposalKey{
-				KeyIndex: k.Index,
-			})
-			if err != nil {
-				return count, err
-			}
-			count += 1
-		}
-	}
-
-	return count, nil
-}
-
 func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, error) {
 	adminAcc := flow.HexToAddress(s.cfg.AdminAddress)
 
-	index, err := s.store.ProposalKey()
+	index, err := s.store.ProposalKeyIndex()
 	if err != nil {
 		return keys.Authorizer{}, fmt.Errorf("unable to get admin proposal key: %w", err)
 	}
@@ -197,6 +208,11 @@ func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, err
 	if err != nil {
 		return keys.Authorizer{}, err
 	}
+
+	log.WithFields(log.Fields{
+		"address":  s.cfg.AdminAddress,
+		"keyIndex": index,
+	}).Debug("Using admin proposal key")
 
 	return keys.Authorizer{
 		Address: adminAcc,

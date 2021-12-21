@@ -11,9 +11,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
-	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -21,11 +19,7 @@ import (
 	"go.uber.org/ratelimit"
 )
 
-const (
-	AccountCreateJobType = "account_create"
-
-	maxGasLimit = 9999
-)
+const maxGasLimit = 9999
 
 // Service defines the API for account management.
 type Service struct {
@@ -57,70 +51,14 @@ func NewService(
 		opt(svc)
 	}
 
+	if wp == nil {
+		panic("workerpool nil")
+	}
+
 	// Register asynchronous job executor.
 	wp.RegisterExecutor(AccountCreateJobType, svc.executeAccountCreateJob)
 
 	return svc
-}
-
-func (s *Service) InitAdminAccount(ctx context.Context) error {
-	log.Debug("Initializing admin account")
-
-	a, err := s.store.Account(s.cfg.AdminAddress)
-	if err != nil {
-		if !strings.Contains(err.Error(), "record not found") {
-			return err
-		}
-		// Admin account not in database
-		a = Account{Address: s.cfg.AdminAddress}
-		err := s.store.InsertAccount(&a)
-		if err != nil {
-			return err
-		}
-		AccountAdded.Trigger(AccountAddedPayload{
-			Address: flow.HexToAddress(s.cfg.AdminAddress),
-		})
-	}
-
-	keyCount, err := s.km.InitAdminProposalKeys(ctx)
-	if err != nil {
-		return err
-	}
-
-	log.WithFields(log.Fields{
-		"keyCount":    keyCount,
-		"wantedCount": s.cfg.AdminProposalKeyCount,
-	}).Debug("Checking admin account proposal keys")
-
-	if keyCount < s.cfg.AdminProposalKeyCount {
-		err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount)
-		if err != nil {
-			return err
-		}
-
-		_, err = s.km.InitAdminProposalKeys(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16) error {
-
-	log.
-		WithFields(log.Fields{"count": count}).
-		Debug("Adding admin account proposal keys")
-
-	code := template_strings.AddProposalKeyTransaction
-	args := []transactions.Argument{
-		cadence.NewInt(s.cfg.AdminKeyIndex),
-		cadence.NewUInt16(count),
-	}
-
-	_, _, err := s.transactions.Create(ctx, true, s.cfg.AdminAddress, code, args, transactions.General)
-	return err
 }
 
 // List returns all accounts in the datastore.
@@ -344,23 +282,7 @@ func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
 		Address: flow.HexToAddress(account.Address),
 	})
 
+	log.WithFields(log.Fields{"address": account.Address}).Debug("Account created")
+
 	return account, flowTx.ID().String(), nil
-}
-
-func (s *Service) executeAccountCreateJob(ctx context.Context, j *jobs.Job) error {
-	if j.Type != AccountCreateJobType {
-		return jobs.ErrInvalidJobType
-	}
-
-	j.ShouldSendNotification = true
-
-	a, txID, err := s.createAccount(ctx)
-	if err != nil {
-		return err
-	}
-
-	j.TransactionID = txID
-	j.Result = a.Address
-
-	return nil
 }

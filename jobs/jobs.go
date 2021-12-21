@@ -1,11 +1,11 @@
 package jobs
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -39,6 +39,11 @@ type Job struct {
 	UpdatedAt              time.Time      `gorm:"column:updated_at"`
 	DeletedAt              gorm.DeletedAt `gorm:"column:deleted_at;index"`
 	ShouldSendNotification bool           `gorm:"-"` // Whether or not to notify admin (via webhook for example)
+	Attributes             datatypes.JSON `gorm:"attributes"`
+}
+
+func (Job) TableName() string {
+	return "jobs"
 }
 
 type JobQueueStatus struct {
@@ -77,19 +82,6 @@ func (j Job) ToJSONResponse() JSONResponse {
 
 func (j *Job) BeforeCreate(tx *gorm.DB) (err error) {
 	j.ID = uuid.New()
-	return nil
-}
-
-func (j *Job) Wait(wait bool) error {
-	if wait {
-		// Wait for the job to have finished
-		for j.State == Accepted {
-			time.Sleep(10 * time.Millisecond)
-		}
-		if j.State == Error {
-			return fmt.Errorf(j.Error)
-		}
-	}
 	return nil
 }
 

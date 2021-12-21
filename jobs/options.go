@@ -6,9 +6,11 @@ import (
 
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/datatypes"
 )
 
 type WorkerPoolOption func(*WorkerPool)
+type JobOption func(*Job)
 
 func WithJobStatusWebhook(u string, timeout time.Duration) WorkerPoolOption {
 	return func(wp *WorkerPool) {
@@ -39,5 +41,35 @@ func WithSystemService(svc *system.Service) WorkerPoolOption {
 func WithLogger(logger *log.Logger) WorkerPoolOption {
 	return func(wp *WorkerPool) {
 		wp.logger = logger
+	}
+}
+
+func WithMaxJobErrorCount(count int) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.maxJobErrorCount = count
+	}
+}
+
+func WithDbJobPollInterval(d time.Duration) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.dbJobPollInterval = d
+	}
+}
+
+func WithAcceptedGracePeriod(d time.Duration) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.acceptedGracePeriod = d
+	}
+}
+
+func WithReSchedulableGracePeriod(d time.Duration) WorkerPoolOption {
+	return func(wp *WorkerPool) {
+		wp.reSchedulableGracePeriod = d
+	}
+}
+
+func WithAttributes(attributes datatypes.JSON) JobOption {
+	return func(job *Job) {
+		job.Attributes = attributes
 	}
 }

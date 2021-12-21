@@ -18,8 +18,6 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-const TransactionJobType = "transaction"
-
 // Service defines the API for transaction HTTP handlers.
 type Service struct {
 	store         Store
@@ -48,6 +46,10 @@ func NewService(
 		opt(svc)
 	}
 
+	if wp == nil {
+		panic("workerpool nil")
+	}
+
 	// Register asynchronous job executor.
 	wp.RegisterExecutor(TransactionJobType, svc.executeTransactionJob)
 
@@ -60,36 +62,31 @@ func (s *Service) Create(ctx context.Context, sync bool, proposerAddress string,
 		return nil, nil, fmt.Errorf("error while getting new transaction: %w", err)
 	}
 
-	if !sync {
-		err := s.store.InsertTransaction(transaction)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error while inserting transaction in db: %w", err)
-		}
+	if err := s.store.InsertTransaction(transaction); err != nil {
+		return nil, nil, fmt.Errorf("error while inserting transaction in db: %w", err)
+	}
 
+	if !sync {
+		// Async
 		job, err := s.wp.CreateJob(TransactionJobType, transaction.TransactionId)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error while creating job: %w", err)
 		}
 
-		err = s.wp.Schedule(job)
-		if err != nil {
+		if err := s.wp.Schedule(job); err != nil {
 			return nil, nil, fmt.Errorf("error while scheduling job: %w", err)
 		}
 
 		return job, transaction, nil
-	}
 
-	err = s.store.InsertTransaction(transaction)
-	if err != nil {
-		return nil, nil, err
-	}
+	} else {
+		// Sync
+		if err := s.sendTransaction(ctx, transaction); err != nil {
+			return nil, nil, err
+		}
 
-	err = s.sendTransaction(ctx, transaction)
-	if err != nil {
-		return nil, nil, err
+		return nil, transaction, nil
 	}
-
-	return nil, transaction, nil
 }
 
 func (s *Service) Sign(ctx context.Context, proposerAddress string, code string, args []Argument) (*SignedTransaction, error) {
@@ -330,26 +327,6 @@ func (s *Service) sendTransaction(ctx context.Context, tx *Transaction) error {
 	}
 
 	tx.Events = resp.Events
-
-	return nil
-}
-
-func (s *Service) executeTransactionJob(ctx context.Context, j *jobs.Job) error {
-	if j.Type != TransactionJobType {
-		return jobs.ErrInvalidJobType
-	}
-
-	j.ShouldSendNotification = true
-
-	tx, err := s.store.Transaction(j.TransactionID)
-	if err != nil {
-		return err
-	}
-
-	err = s.sendTransaction(ctx, &tx)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }

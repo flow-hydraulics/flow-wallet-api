@@ -150,11 +150,6 @@ func (l *Listener) Start() *Listener {
 				})
 
 				if err != nil {
-					if _, isLockError := err.(*LockError); isLockError {
-						// Skip LockError as it means another listener is already handling this round
-						continue
-					}
-
 					log.
 						WithFields(log.Fields{"error": err}).
 						Warn("Error while handling Flow events")
@@ -167,7 +162,7 @@ func (l *Listener) Start() *Listener {
 		}
 	}()
 
-	log.Info("Started Flow event listener")
+	log.Debug("Started Flow event listener")
 
 	return l
 }
@@ -194,7 +189,7 @@ func (l *Listener) initHeight() error {
 }
 
 func (l *Listener) Stop() {
-	log.Info("Stopping Flow event listener")
+	log.Debug("Stopping Flow event listener")
 
 	if l.ticker != nil {
 		l.ticker.Stop()

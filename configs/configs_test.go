@@ -21,8 +21,8 @@ func TestParseConfig(t *testing.T) {
 		t.Errorf(`expected "AdminAddress" to equal "admin-address", got "%s"`, cfg.AdminAddress)
 	}
 
-	if cfg.WorkerCount != 100 {
-		t.Errorf(`expected "WorkerCount" to equal 100, got %d`, cfg.WorkerCount)
+	if cfg.WorkerCount != 1 {
+		t.Errorf(`expected "WorkerCount" to equal 1, got %d`, cfg.WorkerCount)
 	}
 
 	if len(cfg.EnabledTokens) != 2 ||

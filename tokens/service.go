@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,12 +13,10 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
-	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
-	flow_templates "github.com/onflow/flow-go-sdk/templates"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,6 +29,7 @@ type Service struct {
 	store        Store
 	km           keys.Manager
 	fc           *client.Client
+	wp           *jobs.WorkerPool
 	transactions *transactions.Service
 	templates    *templates.Service
 	accounts     *accounts.Service
@@ -41,12 +41,23 @@ func NewService(
 	store Store,
 	km keys.Manager,
 	fc *client.Client,
+	wp *jobs.WorkerPool,
 	txs *transactions.Service,
 	tes *templates.Service,
 	acs *accounts.Service,
 ) *Service {
 	// TODO(latenssi): safeguard against nil config?
-	return &Service{store, km, fc, txs, tes, acs, cfg}
+
+	svc := &Service{store, km, fc, wp, txs, tes, acs, cfg}
+
+	if wp == nil {
+		panic("workerpool nil")
+	}
+
+	// Register asynchronous job executor.
+	wp.RegisterExecutor(WithdrawalCreateJobType, svc.executeCreateWithdrawalJob)
+
+	return svc
 }
 
 func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
@@ -72,27 +83,19 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 
 	job, tx, err := s.transactions.Create(ctx, sync, address, token.Setup, nil, txType)
 
-	// Handle adding token to account in database
-	go func() {
-		if !sync {
-			if err := job.Wait(true); err != nil && !strings.Contains(err.Error(), "vault exists") {
-				return
-			}
-		}
-
-		// Won't return an error on duplicate keys as it uses FirstOrCreate
-		err = s.store.InsertAccountToken(&AccountToken{
+	if err == nil || strings.Contains(err.Error(), "vault exists") {
+		// Handle adding token to account in database
+		if err := s.store.InsertAccountToken(&AccountToken{
 			AccountAddress: address,
 			TokenAddress:   token.Address,
 			TokenName:      token.Name,
 			TokenType:      token.Type,
-		})
-		if err != nil {
+		}); err != nil {
 			log.
 				WithFields(log.Fields{"error": err}).
 				Warn("Error while adding account token")
 		}
-	}()
+	}
 
 	return job, tx, err
 }
@@ -138,85 +141,38 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 	return &Details{TokenName: token.Name, Balance: &Balance{CadenceValue: res}}, nil
 }
 
-func (s *Service) CreateWithdrawal(ctx context.Context, runSync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error) {
-	// Check if the sender is a valid address
-	sender, err := flow_helpers.ValidateAddress(sender, s.cfg.ChainID)
-	if err != nil {
-		return nil, nil, err
-	}
+func (s *Service) CreateWithdrawal(ctx context.Context, sync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error) {
+	log.WithFields(log.Fields{"sync": sync}).Trace("Create withdrawal")
 
-	// Check if the recipient is a valid address
-	recipient, err := flow_helpers.ValidateAddress(request.Recipient, s.cfg.ChainID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	token, err := s.templates.GetTokenByName(request.TokenName)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var txType transactions.Type
-	var arguments []transactions.Argument = make([]transactions.Argument, 2)
-
-	switch token.Type {
-	case templates.FT:
-		txType = transactions.FtTransfer
-		amount, err := cadence.NewUFix64(request.FtAmount)
+	if !sync {
+		// Async
+		attrs := withdrawalCreateJobAttributes{sender, request}
+		attrBytes, err := json.Marshal(attrs)
 		if err != nil {
 			return nil, nil, err
 		}
-		arguments[0] = amount
-		arguments[1] = cadence.NewAddress(flow.HexToAddress(recipient))
-	case templates.NFT:
-		txType = transactions.NftTransfer
-		arguments[0] = cadence.NewAddress(flow.HexToAddress(recipient))
-		arguments[1] = cadence.NewUInt64(request.NftID)
-	default:
-		return nil, nil, fmt.Errorf("unsupported token type: %s", token.Type)
-	}
 
-	// Create the transaction
-	job, tx, err := s.transactions.Create(ctx, runSync, sender, token.Transfer, arguments, txType)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Initialise the transfer object
-	transfer := &TokenTransfer{
-		RecipientAddress: recipient,
-		SenderAddress:    sender,
-		FtAmount:         request.FtAmount,
-		NftID:            request.NftID,
-		TokenName:        token.Name,
-	}
-
-	if !runSync {
-		// Handle database update asynchronously.
-		// XXX: This ain't safe for sudden server restart.
-		go func() {
-			if err := job.Wait(true); err != nil {
-				// There was an error regarding the transaction
-				// Don't store a token transfer
-				return
-			}
-
-			transfer.TransactionId = job.TransactionID
-
-			if err := s.store.InsertTokenTransfer(transfer); err != nil {
-				log.
-					WithFields(log.Fields{"error": err}).
-					Warn("Error while inserting token transfer")
-			}
-		}()
-	} else {
-		transfer.TransactionId = tx.TransactionId
-		if err := s.store.InsertTokenTransfer(transfer); err != nil {
-			return nil, tx, err
+		job, err := s.wp.CreateJob(WithdrawalCreateJobType, "", jobs.WithAttributes(attrBytes))
+		if err != nil {
+			return nil, nil, err
 		}
-	}
 
-	return job, tx, err
+		err = s.wp.Schedule(job)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return job, nil, err
+
+	} else {
+		// Sync
+		transaction, err := s.createWithdrawal(ctx, sender, request)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, transaction, nil
+	}
 }
 
 func (s *Service) ListTransfers(queryType, address, tokenName string) ([]*TokenTransfer, error) {
@@ -409,34 +365,65 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Ide
 	return nil
 }
 
-// DeployTokenContractForAccount is mainly used for testing purposes.
-func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) error {
-	// Check if the input is a valid address
-	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
+// createWithdrawal will synchronously create a withdrawal and store the transfer.
+// Used in job execution and sync API calls.
+func (s *Service) createWithdrawal(ctx context.Context, sender string, request WithdrawalRequest) (*transactions.Transaction, error) {
+	// Check if the sender is a valid address
+	sender, err := flow_helpers.ValidateAddress(sender, s.cfg.ChainID)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("createWithdrawal sender validation error: %w", err)
 	}
 
-	token, err := s.templates.GetTokenByName(tokenName)
+	// Check if the recipient is a valid address
+	recipient, err := flow_helpers.ValidateAddress(request.Recipient, s.cfg.ChainID)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("createWithdrawal recipient validation error: %w", err)
 	}
 
-	n := token.Name
-
-	tmplStr, err := template_strings.GetByName(n)
+	token, err := s.templates.GetTokenByName(request.TokenName)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("createWithdrawal could not find token error: %w", err)
 	}
 
-	src := templates.TokenCode(s.cfg.ChainID, token, tmplStr)
+	var txType transactions.Type
+	var arguments []transactions.Argument = make([]transactions.Argument, 2)
 
-	c := flow_templates.Contract{Name: n, Source: src}
-
-	err = accounts.AddContract(ctx, s.fc, s.km, address, c, s.cfg.TransactionTimeout)
-	if err != nil {
-		return err
+	switch token.Type {
+	case templates.FT:
+		txType = transactions.FtTransfer
+		amount, err := cadence.NewUFix64(request.FtAmount)
+		if err != nil {
+			return nil, err
+		}
+		arguments[0] = amount
+		arguments[1] = cadence.NewAddress(flow.HexToAddress(recipient))
+	case templates.NFT:
+		txType = transactions.NftTransfer
+		arguments[0] = cadence.NewAddress(flow.HexToAddress(recipient))
+		arguments[1] = cadence.NewUInt64(request.NftID)
+	default:
+		return nil, fmt.Errorf("createWithdrawal unsupported token type: %s", token.Type)
 	}
 
-	return nil
+	// Create the transaction, must be sync here
+	_, transaction, err := s.transactions.Create(ctx, true, sender, token.Transfer, arguments, txType)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store Transfer in database
+	transfer := &TokenTransfer{
+		TransactionId:    transaction.TransactionId,
+		RecipientAddress: recipient,
+		SenderAddress:    sender,
+		FtAmount:         request.FtAmount,
+		NftID:            request.NftID,
+		TokenName:        token.Name,
+	}
+
+	if err := s.store.InsertTokenTransfer(transfer); err != nil {
+		return nil, err
+	}
+
+	return transaction, nil
 }

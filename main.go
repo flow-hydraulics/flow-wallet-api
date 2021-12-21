@@ -77,10 +77,10 @@ func runServer(cfg *configs.Config) {
 		log.Fatal(err)
 	}
 	defer func() {
-		log.Info("Closing Flow Client")
 		if err := fc.Close(); err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
+		log.Info("Closed Flow Client")
 	}()
 
 	// Database
@@ -108,9 +108,12 @@ func runServer(cfg *configs.Config) {
 		jobs.WithJobStatusWebhook(cfg.JobStatusWebhookUrl, cfg.JobStatusWebhookTimeout),
 		jobs.WithSystemService(systemService),
 	)
+
+	log.Info("Started workerpool")
+
 	defer func() {
-		log.Info("Stopping worker pool")
-		wp.Stop()
+		wp.Stop(true)
+		log.Info("Stopped workerpool")
 	}()
 
 	txRatelimiter := ratelimit.New(cfg.TransactionMaxSendRate, ratelimit.WithoutSlack)
@@ -123,7 +126,7 @@ func runServer(cfg *configs.Config) {
 	jobsService := jobs.NewService(jobStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, accounts.WithTxRatelimiter(txRatelimiter))
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
+	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
 
 	// Register a handler for account added events
 	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{
@@ -265,7 +268,7 @@ func runServer(cfg *configs.Config) {
 			defer func() {
 				log.Info("Closing Redis client..")
 				if err := client.Close(); err != nil {
-					log.Fatal(err)
+					log.Warn(err)
 				}
 			}()
 
@@ -297,7 +300,7 @@ func runServer(cfg *configs.Config) {
 			}).
 			Info("Server listening")
 		if err := srv.ListenAndServe(); err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 	}()
 
@@ -330,7 +333,10 @@ func runServer(cfg *configs.Config) {
 			chain_events.WithSystemService(systemService),
 		)
 
-		defer listener.Stop()
+		defer func() {
+			listener.Stop()
+			log.Info("Stopped chain events listener")
+		}()
 
 		// Register a handler for chain events
 		chain_events.Event.Register(&tokens.ChainEventHandler{
@@ -341,6 +347,8 @@ func runServer(cfg *configs.Config) {
 		})
 
 		listener.Start()
+
+		log.Info("Started chain events listener")
 	}
 
 	// Trap interupt or sigterm and gracefully shutdown the server
@@ -358,6 +366,6 @@ func runServer(cfg *configs.Config) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Error in server shutdown: %s", err)
+		log.Warnf("Error in server shutdown: %s", err)
 	}
 }

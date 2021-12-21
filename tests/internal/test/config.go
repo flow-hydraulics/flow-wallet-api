@@ -39,5 +39,8 @@ func LoadConfig(t *testing.T, cfgFile ...string) *configs.Config {
 	cfg.DatabaseType = "sqlite"
 	cfg.ChainID = flow.Emulator
 
+	cfg.WorkerQueueCapacity = 100
+	cfg.WorkerCount = 1
+
 	return cfg
 }

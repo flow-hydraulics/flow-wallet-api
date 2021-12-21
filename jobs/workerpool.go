@@ -15,13 +15,13 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 )
 
-// maxJobErrorCount is the maximum number of times a Job can be tried to
-// execute before considering it completely failed.
-const maxJobErrorCount = 10
-
 var (
 	ErrInvalidJobType   = errors.New("invalid job type")
 	ErrPermanentFailure = errors.New("permanent failure")
+
+	// maxJobErrorCount is the maximum number of times a Job can be tried to
+	// execute before considering it completely failed.
+	defaultMaxJobErrorCount = 10
 
 	// Poll DB for new schedulable jobs every 30s.
 	defaultDBJobPollInterval = 30 * time.Second
@@ -30,11 +30,11 @@ var (
 	// ACCEPTED. These are jobs where the executor processing has been
 	// unexpectedly disrupted (such as bug, dead node, disconnected
 	// networking etc.).
-	acceptedGracePeriod = 3 * time.Minute
+	defaultAcceptedGracePeriod = 3 * time.Minute
 
 	// Grace time period before re-scheduling jobs that are up for immediate
 	// restart (such as NO_AVAILABLE_WORKERS or ERROR).
-	reSchedulableGracePeriod = 1 * time.Minute
+	defaultReSchedulableGracePeriod = 1 * time.Minute
 )
 
 type ExecutorFunc func(ctx context.Context, j *Job) error
@@ -48,10 +48,14 @@ type WorkerPool struct {
 	executors     map[string]ExecutorFunc
 	logger        *log.Logger
 
-	store             Store
-	capacity          uint
-	workerCount       uint
-	dbJobPollInterval time.Duration
+	store       Store
+	capacity    uint
+	workerCount uint
+
+	maxJobErrorCount         int
+	dbJobPollInterval        time.Duration
+	acceptedGracePeriod      time.Duration
+	reSchedulableGracePeriod time.Duration
 
 	notificationConfig *NotificationConfig
 	systemService      *system.Service
@@ -75,12 +79,21 @@ func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPool
 		executors:     make(map[string]ExecutorFunc),
 		logger:        log.StandardLogger(),
 
-		store:             db,
-		capacity:          capacity,
-		workerCount:       workerCount,
-		dbJobPollInterval: defaultDBJobPollInterval,
+		store:       db,
+		capacity:    capacity,
+		workerCount: workerCount,
+
+		maxJobErrorCount:         defaultMaxJobErrorCount,
+		dbJobPollInterval:        defaultDBJobPollInterval,
+		acceptedGracePeriod:      defaultAcceptedGracePeriod,
+		reSchedulableGracePeriod: defaultReSchedulableGracePeriod,
 
 		notificationConfig: &NotificationConfig{},
+	}
+
+	// Go through options
+	for _, opt := range opts {
+		opt(pool)
 	}
 
 	pool.startWorkers()
@@ -88,11 +101,6 @@ func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPool
 
 	// Register asynchronous job executor.
 	pool.RegisterExecutor(SendJobStatusJobType, pool.executeSendJobStatus)
-
-	// Go through options
-	for _, opt := range opts {
-		opt(pool)
-	}
 
 	return pool
 }
@@ -131,12 +139,17 @@ func (wp *WorkerPool) Status() (WorkerPoolStatus, error) {
 }
 
 // CreateJob constructs a new Job for type `jobType` ready for scheduling.
-func (wp *WorkerPool) CreateJob(jobType, txID string) (*Job, error) {
+func (wp *WorkerPool) CreateJob(jobType, txID string, opts ...JobOption) (*Job, error) {
 	// Init job
 	job := &Job{
 		State:         Init,
 		Type:          jobType,
 		TransactionID: txID,
+	}
+
+	// Go through options
+	for _, opt := range opts {
+		opt(job)
 	}
 
 	// Insert job into database
@@ -179,11 +192,15 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 	return nil
 }
 
-func (wp *WorkerPool) Stop() {
+func (wp *WorkerPool) Stop(wait bool) {
 	close(wp.stopChan)
+	// Give time for the stop channel to signal before closing job channel
+	time.Sleep(time.Millisecond * 100)
 	close(wp.jobChan)
-	wp.cancelContext()
-	wp.wg.Wait()
+	if wait {
+		wp.cancelContext()
+		wp.wg.Wait()
+	}
 }
 
 func (wp *WorkerPool) Capacity() uint {
@@ -235,7 +252,7 @@ func (wp *WorkerPool) startDBJobScheduler() {
 			begin := time.Now()
 
 			o := datastore.ParseListOptions(0, 0)
-			jobs, err := wp.store.SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod, o)
+			jobs, err := wp.store.SchedulableJobs(wp.acceptedGracePeriod, wp.reSchedulableGracePeriod, o)
 			if err != nil {
 				wp.logger.
 					WithFields(log.Fields{"error": err}).
@@ -271,17 +288,22 @@ func (wp *WorkerPool) startWorkers() {
 
 func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 	if block {
-		wp.jobChan <- job
+		select {
+		case <-wp.stopChan:
+			return false
+		case wp.jobChan <- job:
+			return true
+		}
 	} else {
 		select {
+		case <-wp.stopChan:
+			return false
 		case wp.jobChan <- job:
 			return true
 		default:
 			return false
 		}
 	}
-
-	return true
 }
 
 func (wp *WorkerPool) process(job *Job) {
@@ -309,7 +331,7 @@ func (wp *WorkerPool) process(job *Job) {
 
 	err := executor(wp.context, job)
 	if err != nil {
-		if job.ExecCount > maxJobErrorCount || errors.Is(err, ErrPermanentFailure) {
+		if job.ExecCount > wp.maxJobErrorCount || errors.Is(err, ErrPermanentFailure) {
 			job.State = Failed
 		} else {
 			job.State = Error

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
 	"sort"
 
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -122,6 +122,10 @@ func getTestConfig(t *testing.T) *configs.Config {
 	cfg.DatabaseDSN = path.Join(t.TempDir(), "test.db")
 	cfg.DatabaseType = testDbType
 	cfg.ChainID = flow.Emulator
+
+	cfg.WorkerQueueCapacity = 100
+	cfg.WorkerCount = 1
+
 	return cfg
 }
 
@@ -150,7 +154,6 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	fatal(t, err)
 	t.Cleanup(func() {
 		gorm.Close(db)
-		os.Remove(cfg.DatabaseDSN)
 	})
 
 	accountStore := accounts.NewGormStore(db)
@@ -162,24 +165,31 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
-	wp := jobs.NewWorkerPool(jobStore, 5, 1)
+	wp := jobs.NewWorkerPool(
+		jobStore,
+		cfg.WorkerQueueCapacity,
+		cfg.WorkerCount,
+		jobs.WithMaxJobErrorCount(0),
+		jobs.WithDbJobPollInterval(time.Second),
+		jobs.WithAcceptedGracePeriod(0),
+		jobs.WithReSchedulableGracePeriod(0),
+	)
+
 	t.Cleanup(func() {
-		wp.Stop()
+		wp.Stop(false)
 	})
 
 	templateService := templates.NewService(cfg, templateStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
+	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
 
 	err = accountService.InitAdminAccount(context.Background())
 	fatal(t, err)
 
-	keyCount, err := km.InitAdminProposalKeys(context.Background())
-	fatal(t, err)
-
-	if keyCount != cfg.AdminProposalKeyCount {
-		t.Fatal("incorrect number of admin proposal keys")
+	// make sure all requested proposal keys are created
+	if err := km.CheckAdminProposalKeyCount(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 
 	return TestApp{
@@ -214,12 +224,8 @@ func TestAccountServices(t *testing.T) {
 		fatal(t, err)
 
 		// make sure all requested proposal keys are created
-
-		keyCount, err := app.KeyManager.InitAdminProposalKeys(ctx)
-		fatal(t, err)
-
-		if keyCount != cfg.AdminProposalKeyCount {
-			t.Fatal("incorrect number of admin proposal keys")
+		if err := app.KeyManager.CheckAdminProposalKeyCount(context.Background()); err != nil {
+			t.Fatal(err)
 		}
 	})
 
@@ -268,31 +274,6 @@ func TestAccountServices(t *testing.T) {
 		}
 	})
 
-	t.Run("async create exceeding worker pool capacity", func(t *testing.T) {
-		// Fill the queue, capacity + 1 since first job goes directly to processing
-		for i := 0; i < int(app.WorkerPool.Capacity())+1; i++ {
-			_, _, unexpectedErr := app.AccountService.Create(context.Background(), false)
-			if unexpectedErr != nil {
-				t.Error(unexpectedErr)
-			}
-		}
-
-		if app.WorkerPool.QueueSize() < app.WorkerPool.Capacity() {
-			t.Error("expected workerpool queue to be full")
-		}
-
-		// Exceed the capacity & check that the state is correct
-		j, _, err := app.AccountService.Create(context.Background(), false) // Should not fit, unless jobs got processed
-
-		if err != nil {
-			t.Error(err)
-		}
-
-		if j.State != jobs.NoAvailableWorkers {
-			t.Errorf("expected job state to be %s, found %s", jobs.NoAvailableWorkers, j.State)
-		}
-	})
-
 	t.Run("create with custom init script", func(t *testing.T) {
 		cfg2 := getTestConfig(t)
 		// Set custom script path
@@ -304,17 +285,12 @@ func TestAccountServices(t *testing.T) {
 		job, _, err := app2.AccountService.Create(context.Background(), false)
 		fatal(t, err)
 
-		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Error {
-			t.Errorf("expected job status to be %s or %s or %s but got %s",
-				jobs.Init, jobs.Accepted, jobs.Error, job.State)
-		}
-
 		for job.State == jobs.Init || job.State == jobs.Accepted {
 			time.Sleep(10 * time.Millisecond)
 		}
 
-		if job.State != jobs.Error {
-			t.Fatalf("expected job status to be %s got %s", jobs.Error, job.State)
+		if job.State != jobs.Error && job.State != jobs.Failed {
+			t.Fatalf("expected job to have errored got %s", job.State)
 		}
 
 		expected := "Account initialized with custom script"
@@ -1366,6 +1342,7 @@ func TestTokenHandlers(t *testing.T) {
 		},
 		{
 			name:        "create withdrawal invalid recipient",
+			sync:        true,
 			method:      http.MethodPost,
 			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
 			contentType: "application/json",
@@ -1375,6 +1352,7 @@ func TestTokenHandlers(t *testing.T) {
 		},
 		{
 			name:        "create withdrawal invalid amount",
+			sync:        true,
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, testAccount.Address)),
 			contentType: "application/json",

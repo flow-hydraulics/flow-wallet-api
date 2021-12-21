@@ -18,7 +18,7 @@ type Details struct {
 }
 
 type WithdrawalRequest struct {
-	TokenName string `json:"-"`
+	TokenName string `json:"tokenName,omitempty"`
 	Recipient string `json:"recipient"`
 	FtAmount  string `json:"amount,omitempty"`
 	NftID     uint64 `json:"nftId,omitempty"`
