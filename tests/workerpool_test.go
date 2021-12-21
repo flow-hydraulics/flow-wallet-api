@@ -389,7 +389,8 @@ func Test_ExceedingWorkerpoolCapacity(t *testing.T) {
 		return j
 	}
 
-	for i := 0; i < int(wp.Capacity()); i++ {
+	// Fill the queue, +1 as the first job will start processing immediately
+	for i := 0; i < int(wp.Capacity())+1; i++ {
 		addJob()
 	}
 

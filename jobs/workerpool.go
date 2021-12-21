@@ -11,7 +11,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/flow-hydraulics/flow-wallet-api/common"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 )
@@ -276,10 +275,6 @@ func (wp *WorkerPool) startWorkers() {
 		wp.wg.Add(1)
 		go func() {
 			defer wp.wg.Done()
-			// Delay start of each worker by a random duration to prevent simultaneous
-			// calls to external services (such as database) if there are jobs to
-			// process at start
-			common.SleepRandomMillis(200, 1000)
 			for job := range wp.jobChan {
 				if job == nil {
 					break
