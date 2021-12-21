@@ -1,5 +1,5 @@
-// m20211221 handles adding the `Errors` field to Job
-package m20211221
+// m20211221_1 handles adding the `Errors` field to Job
+package m20211221_1
 
 import (
 	"time"
@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const ID = "20211221"
+const ID = "20211221_1"
 
 // State is a type for Job state.
 type State string
