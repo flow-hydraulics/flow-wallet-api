@@ -78,7 +78,7 @@ func (s *KeyManager) CheckAdminProposalKeyCount(ctx context.Context) error {
 		}
 	}
 
-	if onChainCount != int(s.cfg.AdminProposalKeyCount) {
+	if onChainCount < int(s.cfg.AdminProposalKeyCount) {
 		return fmt.Errorf(
 			"configured: %d, onchain: %d, %w",
 			s.cfg.AdminProposalKeyCount,
@@ -89,7 +89,7 @@ func (s *KeyManager) CheckAdminProposalKeyCount(ctx context.Context) error {
 
 	if inDBCount, err := s.store.ProposalKeyCount(); err != nil {
 		return fmt.Errorf("error while fetching admin proposal key count from database: %w", err)
-	} else if inDBCount != int64(s.cfg.AdminProposalKeyCount) {
+	} else if inDBCount < int64(s.cfg.AdminProposalKeyCount) {
 		return fmt.Errorf(
 			"configured: %d, in database: %d, %w",
 			s.cfg.AdminProposalKeyCount,
