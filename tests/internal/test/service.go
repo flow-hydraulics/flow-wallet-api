@@ -22,6 +22,7 @@ import (
 
 type Services interface {
 	GetAccounts() *accounts.Service
+	GetJobs() *jobs.Service
 	GetTokens() *tokens.Service
 	GetTransactions() *transactions.Service
 	GetSystem() *system.Service
@@ -32,6 +33,7 @@ type Services interface {
 
 type svcs struct {
 	accountService     *accounts.Service
+	jobService         *jobs.Service
 	tokenService       *tokens.Service
 	transactionService *transactions.Service
 	systemService      *system.Service
@@ -82,7 +84,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	templateService := templates.NewService(cfg, templateStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
+	jobService := jobs.NewService(jobStore)
+	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
 	systemService := system.NewService(systemStore)
 
 	store := chain_events.NewGormStore(db)
@@ -127,20 +130,21 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		t.Fatal(err)
 	}
 
-	// make sure all requested proposal keys are created
-	keyCount, err := km.InitAdminProposalKeys(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// // make sure all requested proposal keys are created
+	// keyCount, err := km.InitAdminProposalKeys(ctx)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
 
-	if keyCount != cfg.AdminProposalKeyCount {
-		t.Fatal("incorrect number of admin proposal keys")
-	}
+	// if keyCount != cfg.AdminProposalKeyCount {
+	// 	t.Fatal("incorrect number of admin proposal keys")
+	// }
 
 	listener.Start()
 
 	return &svcs{
 		accountService:     accountService,
+		jobService:         jobService,
 		tokenService:       tokenService,
 		transactionService: transactionService,
 		systemService:      systemService,
@@ -152,6 +156,10 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 func (s *svcs) GetAccounts() *accounts.Service {
 	return s.accountService
+}
+
+func (s *svcs) GetJobs() *jobs.Service {
+	return s.jobService
 }
 
 func (s *svcs) GetTokens() *tokens.Service {

@@ -126,7 +126,7 @@ func runServer(cfg *configs.Config) {
 	jobsService := jobs.NewService(jobStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, accounts.WithTxRatelimiter(txRatelimiter))
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
+	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
 
 	// Register a handler for account added events
 	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{

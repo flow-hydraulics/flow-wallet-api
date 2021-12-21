@@ -1,8 +1,6 @@
 package chain_events
 
 import (
-	"strings"
-
 	"gorm.io/gorm"
 )
 
@@ -15,10 +13,8 @@ func NewGormStore(db *gorm.DB) *GormStore {
 }
 
 // LockedStatus runs a transaction on the database manipulating 'status' of type ListenerStatus.
-// It takes a function 'fn' as argument. In the context of 'fn' 'status' is locked.
-// Uses NOWAIT modifier on the lock so simultaneous requests can be ignored.
 func (s *GormStore) LockedStatus(fn func(status *ListenerStatus) error) error {
-	txErr := s.db.Transaction(func(tx *gorm.DB) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
 		status := ListenerStatus{}
 
 		if err := tx.FirstOrCreate(&status).Error; err != nil {
@@ -35,11 +31,4 @@ func (s *GormStore) LockedStatus(fn func(status *ListenerStatus) error) error {
 
 		return nil // commit
 	})
-
-	// Need to handle implementation specific error message
-	if txErr != nil && strings.Contains(txErr.Error(), "could not obtain lock on row") {
-		return &LockError{Err: txErr}
-	}
-
-	return txErr
 }

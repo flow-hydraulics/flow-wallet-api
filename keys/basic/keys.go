@@ -153,39 +153,10 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 	}, nil
 }
 
-func (s *KeyManager) InitAdminProposalKeys(ctx context.Context) (uint16, error) {
-	adminAddress := flow.HexToAddress(s.cfg.AdminAddress)
-
-	adminAccount, err := s.fc.GetAccount(ctx, adminAddress)
-	if err != nil {
-		return 0, err
-	}
-
-	err = s.store.DeleteAllProposalKeys()
-	if err != nil {
-		return 0, err
-	}
-
-	var count uint16
-	for _, k := range adminAccount.Keys {
-		if !k.Revoked {
-			err = s.store.InsertProposalKey(keys.ProposalKey{
-				KeyIndex: k.Index,
-			})
-			if err != nil {
-				return count, err
-			}
-			count += 1
-		}
-	}
-
-	return count, nil
-}
-
 func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, error) {
 	adminAcc := flow.HexToAddress(s.cfg.AdminAddress)
 
-	index, err := s.store.ProposalKey()
+	index, err := s.store.ProposalKeyIndex()
 	if err != nil {
 		return keys.Authorizer{}, fmt.Errorf("unable to get admin proposal key: %w", err)
 	}

@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/flow-hydraulics/flow-wallet-api/common"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 )
@@ -139,12 +140,17 @@ func (wp *WorkerPool) Status() (WorkerPoolStatus, error) {
 }
 
 // CreateJob constructs a new Job for type `jobType` ready for scheduling.
-func (wp *WorkerPool) CreateJob(jobType, txID string) (*Job, error) {
+func (wp *WorkerPool) CreateJob(jobType, txID string, opts ...JobOption) (*Job, error) {
 	// Init job
 	job := &Job{
 		State:         Init,
 		Type:          jobType,
 		TransactionID: txID,
+	}
+
+	// Go through options
+	for _, opt := range opts {
+		opt(job)
 	}
 
 	// Insert job into database
@@ -268,6 +274,10 @@ func (wp *WorkerPool) startWorkers() {
 		wp.wg.Add(1)
 		go func() {
 			defer wp.wg.Done()
+			// Delay start of each worker by a random duration to prevent simultaneous
+			// calls to external services (such as database) if there are jobs to
+			// process at start
+			common.SleepRandomMillis(200, 1000)
 			for job := range wp.jobChan {
 				if job == nil {
 					break

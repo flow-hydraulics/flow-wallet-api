@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
 	"sort"
 
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -154,7 +154,6 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	fatal(t, err)
 	t.Cleanup(func() {
 		gorm.Close(db)
-		os.Remove(cfg.DatabaseDSN)
 	})
 
 	accountStore := accounts.NewGormStore(db)
@@ -183,7 +182,7 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	templateService := templates.NewService(cfg, templateStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, transactionService, templateService, accountService)
+	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
 
 	err = accountService.InitAdminAccount(context.Background())
 	fatal(t, err)
@@ -1349,6 +1348,7 @@ func TestTokenHandlers(t *testing.T) {
 		},
 		{
 			name:        "create withdrawal invalid recipient",
+			sync:        true,
 			method:      http.MethodPost,
 			body:        strings.NewReader(`{"recipient":"","amount":"1.0"}`),
 			contentType: "application/json",
@@ -1358,6 +1358,7 @@ func TestTokenHandlers(t *testing.T) {
 		},
 		{
 			name:        "create withdrawal invalid amount",
+			sync:        true,
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"recipient":"%s","amount":""}`, testAccount.Address)),
 			contentType: "application/json",

@@ -150,11 +150,6 @@ func (l *Listener) Start() *Listener {
 				})
 
 				if err != nil {
-					if _, isLockError := err.(*LockError); isLockError {
-						// Skip LockError as it means another listener is already handling this round
-						continue
-					}
-
 					log.
 						WithFields(log.Fields{"error": err}).
 						Warn("Error while handling Flow events")
