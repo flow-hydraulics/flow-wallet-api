@@ -350,12 +350,16 @@ func TestJobErrorMessages(t *testing.T) {
 
 		// Explicitly retry to trigger n errors and a final successful execution, n = retryCount
 		for n := 0; n < retryCount+1; n++ {
-			wp.process(job)
+			if err := wp.process(job); err != nil {
+				t.Fatal(err)
+			}
 		}
 
 		// Send the notification
 		sendNotificationJob := <-wp.jobChan
-		wp.process(sendNotificationJob)
+		if err := wp.process(sendNotificationJob); err != nil {
+			t.Fatal(err)
+		}
 
 		// Check log entries
 		if len(hook.Entries) != retryCount {
