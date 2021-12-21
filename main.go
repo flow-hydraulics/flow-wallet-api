@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const version = "0.8.0"
+const version = "0.9.0"
 
 var (
 	sha1ver   string // sha1 revision used to build the program
