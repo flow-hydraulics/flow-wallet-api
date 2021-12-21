@@ -1,4 +1,4 @@
-package m20211213
+package m20211221_2
 
 import (
 	"database/sql"
@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const ID = "m20211213"
+const ID = "20211221_2"
 
 type Settings struct {
 	gorm.Model
