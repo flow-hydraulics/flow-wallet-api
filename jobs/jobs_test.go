@@ -196,11 +196,12 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			context:       ctx,
-			cancelContext: cancel,
-			executors:     make(map[string]ExecutorFunc),
-			jobChan:       make(chan *Job, 1),
-			store:         &dummyStore{},
+			context:          ctx,
+			cancelContext:    cancel,
+			executors:        make(map[string]ExecutorFunc),
+			jobChan:          make(chan *Job, 1),
+			store:            &dummyStore{},
+			maxJobErrorCount: 1,
 		}
 
 		WithJobStatusWebhook("http://localhost", time.Minute)(&wp)
@@ -235,11 +236,12 @@ func TestExecuteSendNotification(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			context:       ctx,
-			cancelContext: cancel,
-			executors:     make(map[string]ExecutorFunc),
-			jobChan:       make(chan *Job, 1),
-			store:         &dummyStore{},
+			context:          ctx,
+			cancelContext:    cancel,
+			executors:        make(map[string]ExecutorFunc),
+			jobChan:          make(chan *Job, 1),
+			store:            &dummyStore{},
+			maxJobErrorCount: 1,
 		}
 
 		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
@@ -292,11 +294,12 @@ func TestJobErrorMessages(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		wp := WorkerPool{
-			context:       ctx,
-			cancelContext: cancel,
-			executors:     make(map[string]ExecutorFunc),
-			jobChan:       make(chan *Job, 1),
-			store:         &dummyStore{},
+			context:          ctx,
+			cancelContext:    cancel,
+			executors:        make(map[string]ExecutorFunc),
+			jobChan:          make(chan *Job, 1),
+			store:            &dummyStore{},
+			maxJobErrorCount: retryCount,
 		}
 
 		WithJobStatusWebhook(svr.URL, time.Minute)(&wp)
