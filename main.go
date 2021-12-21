@@ -112,7 +112,7 @@ func runServer(cfg *configs.Config) {
 	log.Info("Started workerpool")
 
 	defer func() {
-		wp.Stop()
+		wp.Stop(true)
 		log.Info("Stopped workerpool")
 	}()
 

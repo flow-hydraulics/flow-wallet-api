@@ -193,13 +193,15 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 	return nil
 }
 
-func (wp *WorkerPool) Stop() {
+func (wp *WorkerPool) Stop(wait bool) {
 	close(wp.stopChan)
 	// Give time for the stop channel to signal before closing job channel
 	time.Sleep(time.Millisecond * 100)
 	close(wp.jobChan)
-	wp.cancelContext()
-	wp.wg.Wait()
+	if wait {
+		wp.cancelContext()
+		wp.wg.Wait()
+	}
 }
 
 func (wp *WorkerPool) Capacity() uint {

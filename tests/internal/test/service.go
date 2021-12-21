@@ -78,7 +78,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		jobs.WithReSchedulableGracePeriod(0),
 	)
 
-	wpStop := func() { wp.Stop() }
+	wpStop := func() { wp.Stop(false) }
 	t.Cleanup(wpStop)
 
 	templateService := templates.NewService(cfg, templateStore)

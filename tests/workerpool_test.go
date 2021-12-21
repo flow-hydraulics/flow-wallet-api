@@ -18,6 +18,10 @@ func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 
+	t.Cleanup(func() {
+		wp.Stop(false)
+	})
+
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
 	jobFunc := func(ctx context.Context, j *jobs.Job) error {
@@ -66,6 +70,10 @@ func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
 	jobStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 
+	t.Cleanup(func() {
+		wp.Stop(false)
+	})
+
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
 	jobFunc := func(ctx context.Context, j *jobs.Job) error {
@@ -113,6 +121,10 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
+
+	t.Cleanup(func() {
+		wp.Stop(false)
+	})
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -189,6 +201,10 @@ func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
+	t.Cleanup(func() {
+		wp.Stop(false)
+	})
+
 	executedWG.Wait()
 
 	var job jobs.Job
@@ -243,6 +259,10 @@ func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
 	executedWG.Add(1)
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
+
+	t.Cleanup(func() {
+		wp.Stop(false)
+	})
 
 	executedWG.Wait()
 
@@ -308,6 +328,10 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
 	wp.RegisterExecutor(jobType, jobFunc)
 
+	t.Cleanup(func() {
+		wp.Stop(false)
+	})
+
 	// Gotta give DB job poller a bit of time to catch up.
 	time.Sleep(100 * time.Millisecond)
 
@@ -328,5 +352,54 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 
 	if job.State != jobs.Failed {
 		t.Fatalf("expected job.State = %q, got %q", jobs.Failed, job.State)
+	}
+}
+
+func Test_ExceedingWorkerpoolCapacity(t *testing.T) {
+	cfg := test.LoadConfig(t, testConfigPath)
+	db := test.GetDatabase(t, cfg)
+	jobStore := jobs.NewGormStore(db)
+	wp := jobs.NewWorkerPool(
+		jobStore, 2, 1,
+		jobs.WithDbJobPollInterval(time.Minute), // Poll every minute, basically pausing
+	)
+
+	t.Cleanup(func() {
+		wp.Stop(false)
+	})
+
+	jobType := "job"
+	jobFunc := func(ctx context.Context, j *jobs.Job) error {
+		time.Sleep(time.Second * 10) // Make sure the job won't have time to finish
+		return nil
+	}
+
+	wp.RegisterExecutor(jobType, jobFunc)
+
+	addJob := func() *jobs.Job {
+		j, err := wp.CreateJob(jobType, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := wp.Schedule(j); err != nil {
+			t.Fatal(err)
+		}
+
+		return j
+	}
+
+	for i := 0; i < int(wp.Capacity()); i++ {
+		addJob()
+	}
+
+	if wp.QueueSize() < wp.Capacity() {
+		t.Error("expected workerpool queue to be full")
+	}
+
+	j := addJob()
+
+	if j.State != jobs.NoAvailableWorkers {
+		t.Errorf("expected job.State = %q, got %q", jobs.NoAvailableWorkers, j.State)
 	}
 }

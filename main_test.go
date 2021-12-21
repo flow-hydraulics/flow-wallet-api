@@ -176,7 +176,7 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 	)
 
 	t.Cleanup(func() {
-		wp.Stop()
+		wp.Stop(false)
 	})
 
 	templateService := templates.NewService(cfg, templateStore)
@@ -1804,34 +1804,4 @@ func TestTemplateService(t *testing.T) {
 		}
 	})
 
-}
-
-func TestExceedingWorkerpoolCapacity(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
-
-	cfg.WorkerQueueCapacity = 2
-
-	// Fill the queue, capacity + 1 since first job goes directly to processing
-	for i := 0; i < int(app.WorkerPool.Capacity())+1; i++ {
-		_, _, unexpectedErr := app.AccountService.Create(context.Background(), false)
-		if unexpectedErr != nil {
-			t.Error(unexpectedErr)
-		}
-	}
-
-	if app.WorkerPool.QueueSize() < app.WorkerPool.Capacity() {
-		t.Error("expected workerpool queue to be full")
-	}
-
-	// Exceed the capacity & check that the state is correct
-	j, _, err := app.AccountService.Create(context.Background(), false) // Should not fit, unless jobs got processed
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if j.State != jobs.NoAvailableWorkers {
-		t.Errorf("expected job state to be %s, found %s", jobs.NoAvailableWorkers, j.State)
-	}
 }
