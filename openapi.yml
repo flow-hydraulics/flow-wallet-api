@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Flow Wallet API
   description: A REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure
-  version: 0.8.0
+  version: 0.9.0
   contact:
     url: 'https://github.com/orgs/flow-hydraulics/teams/wallet'
 servers:
