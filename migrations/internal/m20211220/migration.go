@@ -27,7 +27,7 @@ type Job struct {
 	UpdatedAt              time.Time      `gorm:"column:updated_at"`
 	DeletedAt              gorm.DeletedAt `gorm:"column:deleted_at;index"`
 	ShouldSendNotification bool           `gorm:"-"` // Whether or not to notify admin (via webhook for example)
-	Attributes             datatypes.JSON `grom:"attributes"`
+	Attributes             datatypes.JSON `gorm:"attributes"`
 }
 
 func (Job) TableName() string {
