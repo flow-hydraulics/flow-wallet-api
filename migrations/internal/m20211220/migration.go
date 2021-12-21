@@ -1,6 +1,4 @@
-// m20211220 handles IdempotencyStoreGormItem migration
-// NOTE: IdempotencyStoreGormItems are used to store idempotency keys
-// when idempotency middleware is enabled & configured to use the shared sql database
+// m20211220 handles Job.Attributes migration
 package m20211220
 
 import (
