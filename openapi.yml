@@ -699,7 +699,7 @@ paths:
     get:
       summary: Get account non-fungible token details
       description: Get details (balance) regarding a non-fungible token for an account.
-      operationId: listAccountNonFungibleTokenDetails
+      operationId: GetAccountNonFungibleTokenDetails
       tags:
         - Account Non-Fungible Tokens
       responses:
@@ -708,9 +708,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/accountNonFungibleTokenDetails'
+                $ref: '#/components/schemas/accountNonFungibleTokenDetails'
     post:
       summary: Enable a non-fungible token for an account
       operationId: enableNonFungibleTokenForAccount
