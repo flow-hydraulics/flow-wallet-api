@@ -82,6 +82,9 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 	}
 
 	job, tx, err := s.transactions.Create(ctx, sync, address, token.Setup, nil, txType)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	if err == nil || strings.Contains(err.Error(), "vault exists") {
 		// Handle adding token to account in database
