@@ -24,9 +24,9 @@ func Test_TokensSetup(t *testing.T) {
 		address   string
 	}
 	type expect struct {
-		job *jobs.Job
-		tx  *transactions.Transaction
-		err bool
+		job   *jobs.Job
+		tx    *transactions.Transaction
+		error bool
 	}
 	testCases := []struct {
 		name   string
@@ -53,7 +53,7 @@ func Test_TokensSetup(t *testing.T) {
 					TransactionType: transactions.FtSetup,
 					ProposerAddress: cfg.AdminAddress,
 				},
-				err: false,
+				error: false,
 			},
 		},
 		{
@@ -64,9 +64,9 @@ func Test_TokensSetup(t *testing.T) {
 				address:   "0x0ae53cb6e3f42a79",
 			},
 			expect: expect{
-				job: nil,
-				tx:  nil,
-				err: true,
+				job:   nil,
+				tx:    nil,
+				error: true,
 			},
 		},
 	}
@@ -88,8 +88,8 @@ func Test_TokensSetup(t *testing.T) {
 			if diff := cmp.Diff(tc.expect.tx, tx, txOpts...); diff != "" {
 				t.Fatalf("\n\n%s\n", diff)
 			}
-			if !tc.expect.err && err != nil {
-				t.Fatal(err)
+			if (err != nil) != tc.expect.error {
+				t.Fatal("error mismatch")
 			}
 		})
 	}
