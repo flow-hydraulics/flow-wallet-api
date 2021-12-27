@@ -18,6 +18,11 @@ func Test_TokensSetup(t *testing.T) {
 	cfg := test.LoadConfig(t, testConfigPath)
 	svc := test.GetServices(t, cfg).GetTokens()
 
+	_, testAccount, err := test.GetServices(t, cfg).GetAccounts().Create(context.Background(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	type input struct {
 		sync      bool
 		tokenName string
@@ -38,7 +43,7 @@ func Test_TokensSetup(t *testing.T) {
 			input: input{
 				sync:      false,
 				tokenName: "flowToken",
-				address:   cfg.AdminAddress,
+				address:   testAccount.Address,
 			},
 			expect: expect{
 				job: &jobs.Job{
@@ -47,11 +52,11 @@ func Test_TokensSetup(t *testing.T) {
 					Error:                  "",
 					Result:                 "",
 					ExecCount:              int(1),
-					ShouldSendNotification: false,
+					ShouldSendNotification: true,
 				},
 				tx: &transactions.Transaction{
 					TransactionType: transactions.FtSetup,
-					ProposerAddress: cfg.AdminAddress,
+					ProposerAddress: testAccount.Address,
 				},
 				error: false,
 			},

@@ -82,7 +82,7 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 	}
 
 	job, tx, err := s.transactions.Create(ctx, sync, address, token.Setup, nil, txType)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "vault exists") {
 		return nil, nil, err
 	}
 
