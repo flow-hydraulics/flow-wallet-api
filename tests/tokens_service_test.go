@@ -29,9 +29,9 @@ func Test_TokensSetup(t *testing.T) {
 		address   string
 	}
 	type expect struct {
-		job   *jobs.Job
-		tx    *transactions.Transaction
-		error bool
+		job          *jobs.Job
+		tx           *transactions.Transaction
+		errorMessage string
 	}
 	testCases := []struct {
 		name   string
@@ -42,13 +42,13 @@ func Test_TokensSetup(t *testing.T) {
 			name: "success",
 			input: input{
 				sync:      false,
-				tokenName: "flowToken",
+				tokenName: "fusd",
 				address:   testAccount.Address,
 			},
 			expect: expect{
 				job: &jobs.Job{
 					Type:                   transactions.TransactionJobType,
-					State:                  jobs.Init,
+					State:                  jobs.Complete,
 					Error:                  "",
 					Result:                 "",
 					ExecCount:              int(1),
@@ -58,20 +58,20 @@ func Test_TokensSetup(t *testing.T) {
 					TransactionType: transactions.FtSetup,
 					ProposerAddress: testAccount.Address,
 				},
-				error: false,
+				errorMessage: "",
 			},
 		},
 		{
 			name: "fail address not found",
 			input: input{
 				sync:      false,
-				tokenName: "flowToken",
+				tokenName: "fusd",
 				address:   "0x0ae53cb6e3f42a79",
 			},
 			expect: expect{
-				job:   nil,
-				tx:    nil,
-				error: true,
+				job:          nil,
+				tx:           nil,
+				errorMessage: "error while getting new transaction: error while building transaction: error while getting user authorizer: WHERE conditions required",
 			},
 		},
 	}
@@ -79,6 +79,10 @@ func Test_TokensSetup(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			job, tx, err := svc.Setup(context.Background(), tc.input.sync, tc.input.tokenName, tc.input.address)
+			// Wait for job to execute
+			for job != nil && job.State != jobs.Complete && job.State != jobs.Failed {
+				time.Sleep(10 * time.Millisecond)
+			}
 			jobOpts := []cmp.Option{
 				cmpopts.IgnoreFields(jobs.Job{}, "TransactionID", "ExecCount"),
 				cmpopts.IgnoreTypes(uuid.UUID{}, time.Time{}),
@@ -93,8 +97,12 @@ func Test_TokensSetup(t *testing.T) {
 			if diff := cmp.Diff(tc.expect.tx, tx, txOpts...); diff != "" {
 				t.Fatalf("\n\n%s\n", diff)
 			}
-			if (err != nil) != tc.expect.error {
-				t.Fatal("error mismatch")
+			var errorMessage string
+			if err != nil {
+				errorMessage = err.Error()
+			}
+			if diff := cmp.Diff(tc.expect.errorMessage, errorMessage); diff != "" {
+				t.Fatalf("\n\n%s\n", diff)
 			}
 		})
 	}
