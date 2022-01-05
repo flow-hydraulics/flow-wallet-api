@@ -67,6 +67,12 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 		return nil, nil, err
 	}
 
+	// Check if the account with given address exists
+	_, err = s.accounts.Details(address)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return nil, nil, err
@@ -82,9 +88,6 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 	}
 
 	job, tx, err := s.transactions.Create(ctx, sync, address, token.Setup, nil, txType)
-	if err != nil && !strings.Contains(err.Error(), "vault exists") {
-		return nil, nil, err
-	}
 
 	if err == nil || strings.Contains(err.Error(), "vault exists") {
 		// Handle adding token to account in database

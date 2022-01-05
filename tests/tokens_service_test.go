@@ -29,9 +29,9 @@ func Test_TokensSetup(t *testing.T) {
 		address   string
 	}
 	type expect struct {
-		job          *jobs.Job
-		tx           *transactions.Transaction
-		errorMessage string
+		job    *jobs.Job
+		tx     *transactions.Transaction
+		errMsg string
 	}
 	testCases := []struct {
 		name   string
@@ -58,7 +58,7 @@ func Test_TokensSetup(t *testing.T) {
 					TransactionType: transactions.FtSetup,
 					ProposerAddress: testAccount.Address,
 				},
-				errorMessage: "",
+				errMsg: "",
 			},
 		},
 		{
@@ -69,9 +69,9 @@ func Test_TokensSetup(t *testing.T) {
 				address:   "0x0ae53cb6e3f42a79",
 			},
 			expect: expect{
-				job:          nil,
-				tx:           nil,
-				errorMessage: "error while getting new transaction: error while building transaction: error while getting user authorizer: WHERE conditions required",
+				job:    nil,
+				tx:     nil,
+				errMsg: "record not found",
 			},
 		},
 	}
@@ -97,11 +97,11 @@ func Test_TokensSetup(t *testing.T) {
 			if diff := cmp.Diff(tc.expect.tx, tx, txOpts...); diff != "" {
 				t.Fatalf("\n\n%s\n", diff)
 			}
-			var errorMessage string
+			var errMsg string
 			if err != nil {
-				errorMessage = err.Error()
+				errMsg = err.Error()
 			}
-			if diff := cmp.Diff(tc.expect.errorMessage, errorMessage); diff != "" {
+			if diff := cmp.Diff(tc.expect.errMsg, errMsg); diff != "" {
 				t.Fatalf("\n\n%s\n", diff)
 			}
 		})
