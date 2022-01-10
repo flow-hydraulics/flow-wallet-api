@@ -67,6 +67,12 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 		return nil, nil, err
 	}
 
+	// Check if the account with given address exists
+	_, err = s.accounts.Details(address)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	token, err := s.templates.GetTokenByName(tokenName)
 	if err != nil {
 		return nil, nil, err
