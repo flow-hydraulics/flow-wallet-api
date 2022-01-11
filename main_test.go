@@ -195,6 +195,8 @@ func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
 		t.Fatal(err)
 	}
 
+	wp.Start()
+
 	return TestApp{
 		FlowClient: fc,
 		KeyManager: km,

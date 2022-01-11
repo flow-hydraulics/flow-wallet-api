@@ -146,6 +146,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		listener.Stop()
 	})
 
+	wp.Start()
 	listener.Start()
 
 	return &svcs{

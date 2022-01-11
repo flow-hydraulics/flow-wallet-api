@@ -109,8 +109,6 @@ func runServer(cfg *configs.Config) {
 		jobs.WithSystemService(systemService),
 	)
 
-	log.Info("Started workerpool")
-
 	defer func() {
 		wp.Stop(true)
 		log.Info("Stopped workerpool")
@@ -138,6 +136,9 @@ func runServer(cfg *configs.Config) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	wp.Start()
+	log.Info("Started workerpool")
 
 	// HTTP handling
 	systemHandler := handlers.NewSystem(systemService)
