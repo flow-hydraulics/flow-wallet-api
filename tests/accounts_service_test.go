@@ -2,12 +2,9 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 )
 
@@ -144,7 +141,7 @@ func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
 	}
 
 	wg := sync.WaitGroup{}
-	errChan := make(chan error, accountsToCreate*4)
+	errChan := make(chan error, accountsToCreate*2)
 
 	for i := 0; i < accountsToCreate; i++ {
 		wg.Add(1)
@@ -160,18 +157,8 @@ func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
 				return
 			}
 
-			for job.State == jobs.Init || job.State == jobs.Accepted || job.State == jobs.Error {
-				time.Sleep(100 * time.Millisecond)
-				if j, err := jobSvc.Details(job.ID.String()); err != nil {
-					continue
-				} else {
-					job = j
-				}
-			}
-
-			if job.State == jobs.Failed {
-				errChan <- fmt.Errorf(job.Error)
-				return
+			if _, err := test.WaitForJob(jobSvc, job.ID.String()); err != nil {
+				errChan <- err
 			}
 		}(i, svcs)
 	}

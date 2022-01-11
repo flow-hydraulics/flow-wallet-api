@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/goleak"
 	upstreamgorm "gorm.io/gorm"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
@@ -23,6 +24,7 @@ import (
 type Services interface {
 	GetAccounts() *accounts.Service
 	GetJobs() *jobs.Service
+	GetTemplates() *templates.Service
 	GetTokens() *tokens.Service
 	GetTransactions() *transactions.Service
 	GetSystem() *system.Service
@@ -34,6 +36,7 @@ type Services interface {
 type svcs struct {
 	accountService     *accounts.Service
 	jobService         *jobs.Service
+	templateService    *templates.Service
 	tokenService       *tokens.Service
 	transactionService *transactions.Service
 	systemService      *system.Service
@@ -66,6 +69,19 @@ func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
 }
 
 func GetServices(t *testing.T, cfg *configs.Config) Services {
+	t.Cleanup(func() {
+		goleak.VerifyNone(t,
+			goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"), // Ignore OpenCensus
+			goleak.IgnoreTopFunction("net/http.(*persistConn).writeLoop"),           // Ignore goroutine leak from AWS KMS
+			goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),              // Ignore goroutine leak from AWS KMS
+			goleak.IgnoreTopFunction("database/sql.(*DB).connectionOpener"),
+			goleak.IgnoreTopFunction("google.golang.org/grpc.(*ccBalancerWrapper).watcher"),
+			goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*controlBuffer).get"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPool).startWorkers.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPool).startDBJobScheduler.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/chain_events.(*Listener).Start.func1"),
+		)
+	})
 
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
@@ -152,6 +168,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	return &svcs{
 		accountService:     accountService,
 		jobService:         jobService,
+		templateService:    templateService,
 		tokenService:       tokenService,
 		transactionService: transactionService,
 		systemService:      systemService,
@@ -167,6 +184,10 @@ func (s *svcs) GetAccounts() *accounts.Service {
 
 func (s *svcs) GetJobs() *jobs.Service {
 	return s.jobService
+}
+
+func (s *svcs) GetTemplates() *templates.Service {
+	return s.templateService
 }
 
 func (s *svcs) GetTokens() *tokens.Service {
