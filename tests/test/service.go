@@ -47,8 +47,20 @@ func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	dbClose := func() { gorm.Close(db) }
+	dbClean := func() {
+		m := db.Migrator()
+		tables, err := m.GetTables()
+		if err != nil {
+			t.Logf("error while cleaning test database: %s", err)
+		}
+		for _, table := range tables {
+			m.DropTable(table)
+		}
+	}
 	t.Cleanup(dbClose)
+	t.Cleanup(dbClean)
 
 	return db
 }
@@ -65,6 +77,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	tokenStore := tokens.NewGormStore(db)
 	transactionStore := transactions.NewGormStore(db)
 	systemStore := system.NewGormStore(db)
+	listenerStore := chain_events.NewGormStore(GetDatabase(t, cfg))
 
 	km := basic.NewKeyManager(cfg, keyStore, fc)
 
@@ -78,9 +91,6 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		jobs.WithReSchedulableGracePeriod(0),
 	)
 
-	wpStop := func() { wp.Stop(false) }
-	t.Cleanup(wpStop)
-
 	templateService := templates.NewService(cfg, templateStore)
 	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
 	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
@@ -88,7 +98,6 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
 	systemService := system.NewService(systemStore)
 
-	store := chain_events.NewGormStore(db)
 	getTypes := func() ([]string, error) {
 		// Get all enabled tokens
 		tt, err := templateService.ListTokens(templates.NotSpecified)
@@ -108,13 +117,11 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	}
 
 	listener := chain_events.NewListener(
-		fc, store, getTypes,
+		fc, listenerStore, getTypes,
 		cfg.ChainListenerMaxBlocks,
 		1*time.Second,
 		cfg.ChainListenerStartingHeight,
 	)
-
-	t.Cleanup(listener.Stop)
 
 	// Register a handler for chain events
 	chain_events.Event.Register(&tokens.ChainEventHandler{
@@ -124,16 +131,20 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		TokenService:    tokenService,
 	})
 
-	ctx := context.Background()
-	err := accountService.InitAdminAccount(ctx)
+	err := accountService.InitAdminAccount(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// make sure all requested proposal keys are created
-	if err := km.CheckAdminProposalKeyCount(ctx); err != nil {
+	if err := km.CheckAdminProposalKeyCount(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
+	t.Cleanup(func() {
+		wp.Stop(false)
+		listener.Stop()
+	})
 
 	listener.Start()
 

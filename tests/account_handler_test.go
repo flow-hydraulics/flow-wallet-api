@@ -16,7 +16,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/handlers"
-	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
+	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/onflow/flow-go-sdk"

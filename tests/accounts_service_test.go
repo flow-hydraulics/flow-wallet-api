@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
-	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
+	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 )
 
 func Test_Add_New_Non_Custodial_Account(t *testing.T) {
