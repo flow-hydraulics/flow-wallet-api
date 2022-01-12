@@ -412,7 +412,7 @@ func (wp *WorkerPoolImpl) process(job *Job) error {
 	}
 
 	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
-		if err := scheduleJobStatusNotification(wp, job); err != nil {
+		if err := wp.scheduleJobStatusNotification(job); err != nil {
 			entry.
 				WithFields(log.Fields{"error": err}).
 				Warn("Could not schedule a status update notification for job")
@@ -436,7 +436,7 @@ func PermanentFailure(err error) error {
 	return fmt.Errorf("%w: %s", ErrPermanentFailure, err.Error())
 }
 
-func scheduleJobStatusNotification(wp *WorkerPoolImpl, parent *Job) error {
+func (wp *WorkerPoolImpl) scheduleJobStatusNotification(parent *Job) error {
 	entry := parent.logEntry(wp.logger.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "ScheduleJobStatusNotification",
