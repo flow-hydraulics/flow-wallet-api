@@ -90,8 +90,13 @@ func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16) error 
 		SetGasLimit(maxGasLimit).
 		SetScript([]byte(code))
 
-	flowTx.AddArgument(cadence.NewInt(s.cfg.AdminKeyIndex))
-	flowTx.AddArgument(cadence.NewUInt16(count))
+	if err := flowTx.AddArgument(cadence.NewInt(s.cfg.AdminKeyIndex)); err != nil {
+		return err
+	}
+
+	if err := flowTx.AddArgument(cadence.NewUInt16(count)); err != nil {
+		return err
+	}
 
 	flowTx.AddAuthorizer(payer.Address)
 

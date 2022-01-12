@@ -59,7 +59,9 @@ func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
 			t.Logf("error while cleaning test database: %s", err)
 		}
 		for _, table := range tables {
-			m.DropTable(table)
+			if err := m.DropTable(table); err != nil {
+				t.Logf("error while cleaning test database: %s", err)
+			}
 		}
 	}
 	t.Cleanup(dbClose)
