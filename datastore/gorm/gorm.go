@@ -40,7 +40,7 @@ func New(cfg *configs.Config) (*gorm.DB, error) {
 
 	db, err := gorm.Open(dialector, options)
 	if err != nil {
-		return &gorm.DB{}, err
+		return nil, err
 	}
 
 	m := gormigrate.New(db, gormigrate.DefaultOptions, migrations.List())
@@ -49,13 +49,13 @@ func New(cfg *configs.Config) (*gorm.DB, error) {
 	} else {
 		err = m.MigrateTo(cfg.DatabaseVersion)
 		if err != nil {
-			return &gorm.DB{}, err
+			return nil, err
 		}
 
 		err = m.RollbackTo(cfg.DatabaseVersion)
 	}
 	if err != nil {
-		return &gorm.DB{}, err
+		return nil, err
 	}
 
 	return db, nil

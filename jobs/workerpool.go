@@ -41,6 +41,7 @@ var (
 type ExecutorFunc func(ctx context.Context, j *Job) error
 
 type WorkerPool struct {
+	started       bool
 	wg            *sync.WaitGroup
 	jobChan       chan *Job
 	stopChan      chan struct{}
@@ -96,9 +97,6 @@ func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPool
 	for _, opt := range opts {
 		opt(pool)
 	}
-
-	pool.startWorkers()
-	pool.startDBJobScheduler()
 
 	// Register asynchronous job executor.
 	pool.RegisterExecutor(SendJobStatusJobType, pool.executeSendJobStatus)
@@ -193,6 +191,14 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 	}
 
 	return nil
+}
+
+func (wp *WorkerPool) Start() {
+	if !wp.started {
+		wp.started = true
+		wp.startWorkers()
+		wp.startDBJobScheduler()
+	}
 }
 
 func (wp *WorkerPool) Stop(wait bool) {

@@ -11,7 +11,6 @@ import (
 
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -20,42 +19,21 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
-	"github.com/flow-hydraulics/flow-wallet-api/configs"
-	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/handlers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
-	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gorilla/mux"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
-	"go.uber.org/goleak"
-	"google.golang.org/grpc"
 )
 
-const (
-	testDbType            = "sqlite"
-	testCadenceTxBasePath = "./flow/cadence/transactions"
-)
+const testCadenceTxBasePath = "./flow/cadence/transactions"
 
-type TestApp struct {
-	FlowClient *client.Client
-	KeyManager keys.Manager
-	WorkerPool *jobs.WorkerPool
-
-	AccountService     *accounts.Service
-	TemplateService    *templates.Service
-	TokenService       *tokens.Service
-	TransactionService *transactions.Service
-
-	AccountStore accounts.Store
-	JobStore     jobs.Store
-}
+var testConfigPath = path.Join(".", ".env.test")
 
 type httpTestStep struct {
 	name        string
@@ -111,129 +89,27 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 	return rr
 }
 
-func getTestConfig(t *testing.T) *configs.Config {
-	t.Helper()
-
-	opts := &configs.Options{EnvFilePath: ".env.test", Version: "test"}
-
-	cfg, err := configs.ParseConfig(opts)
-	fatal(t, err)
-
-	cfg.DatabaseDSN = path.Join(t.TempDir(), "test.db")
-	cfg.DatabaseType = testDbType
-	cfg.ChainID = flow.Emulator
-
-	cfg.WorkerQueueCapacity = 100
-	cfg.WorkerCount = 1
-
-	return cfg
-}
-
-func getTestApp(t *testing.T, cfg *configs.Config, ignoreLeaks bool) TestApp {
-	t.Helper()
-
-	leakIgnores := []goleak.Option{
-		goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"), // Ignore OpenCensus
-		goleak.IgnoreTopFunction("net/http.(*persistConn).writeLoop"),           // Ignore goroutine leak from AWS KMS
-		goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),              // Ignore goroutine leak from AWS KMS
-	}
-
-	t.Cleanup(func() {
-		if !ignoreLeaks {
-			goleak.VerifyNone(t, leakIgnores...)
-		}
-	})
-
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
-	fatal(t, err)
-
-	fatal(t, fc.Ping(context.Background()))
-
-	t.Cleanup(func() {
-		fc.Close()
-	})
-
-	db, err := gorm.New(cfg)
-	fatal(t, err)
-	t.Cleanup(func() {
-		gorm.Close(db)
-	})
-
-	accountStore := accounts.NewGormStore(db)
-	jobStore := jobs.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	templateStore := templates.NewGormStore(db)
-	tokenStore := tokens.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
-	wp := jobs.NewWorkerPool(
-		jobStore,
-		cfg.WorkerQueueCapacity,
-		cfg.WorkerCount,
-		jobs.WithMaxJobErrorCount(0),
-		jobs.WithDbJobPollInterval(time.Second),
-		jobs.WithAcceptedGracePeriod(0),
-		jobs.WithReSchedulableGracePeriod(0),
-	)
-
-	t.Cleanup(func() {
-		wp.Stop(false)
-	})
-
-	templateService := templates.NewService(cfg, templateStore)
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
-
-	err = accountService.InitAdminAccount(context.Background())
-	fatal(t, err)
-
-	// make sure all requested proposal keys are created
-	if err := km.CheckAdminProposalKeyCount(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-
-	return TestApp{
-		FlowClient: fc,
-		KeyManager: km,
-		WorkerPool: wp,
-
-		AccountService:     accountService,
-		TemplateService:    templateService,
-		TokenService:       tokenService,
-		TransactionService: transactionService,
-
-		AccountStore: accountStore,
-		JobStore:     jobStore,
-	}
-}
-
-func TestMain(m *testing.M) {
-	exitcode := m.Run()
-
-	os.Exit(exitcode)
-}
-
 func TestAccountServices(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
+
+	svc := app.GetAccounts()
+	km := app.GetKeyManager()
 
 	t.Run("admin init", func(t *testing.T) {
 		ctx := context.Background()
 
-		err := app.AccountService.InitAdminAccount(ctx)
+		err := svc.InitAdminAccount(ctx)
 		fatal(t, err)
 
 		// make sure all requested proposal keys are created
-		if err := app.KeyManager.CheckAdminProposalKeyCount(context.Background()); err != nil {
+		if err := km.CheckAdminProposalKeyCount(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("sync create", func(t *testing.T) {
-		_, account, err := app.AccountService.Create(context.Background(), true)
+		_, account, err := svc.Create(context.Background(), true)
 		fatal(t, err)
 
 		if _, err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
@@ -242,23 +118,13 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("async create", func(t *testing.T) {
-		job, _, err := app.AccountService.Create(context.Background(), false)
+		job, _, err := svc.Create(context.Background(), false)
 		fatal(t, err)
 
-		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Complete {
-			t.Errorf("expected job status to be %s or %s or %s but got %s",
-				jobs.Init, jobs.Accepted, jobs.Complete, job.State)
-		}
+		job, err = test.WaitForJob(app.GetJobs(), job.ID.String())
+		fatal(t, err)
 
-		for job.State == jobs.Init || job.State == jobs.Accepted {
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		if job.State != jobs.Complete {
-			t.Errorf("expected job status to be %s got %s; job.Error: %s", jobs.Complete, job.State, job.Error)
-		}
-
-		account, err := app.AccountService.Details(job.Result)
+		account, err := svc.Details(job.Result)
 		fatal(t, err)
 
 		if _, err := flow_helpers.ValidateAddress(account.Address, flow.Emulator); err != nil {
@@ -278,37 +144,37 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("create with custom init script", func(t *testing.T) {
-		cfg2 := getTestConfig(t)
+		cfg2 := test.LoadConfig(t, testConfigPath)
+
 		// Set custom script path
 		cfg2.ScriptPathCreateAccount = "./flow/cadence/transactions/custom_create_account.cdc"
 
-		app2 := getTestApp(t, cfg2, true)
-
-		// Use the new service to create an account
-		job, _, err := app2.AccountService.Create(context.Background(), false)
-		fatal(t, err)
-
-		for job.State == jobs.Init || job.State == jobs.Accepted {
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		if job.State != jobs.Error && job.State != jobs.Failed {
-			t.Fatalf("expected job to have errored got %s", job.State)
-		}
+		app2 := test.GetServices(t, cfg2)
+		svc2 := app2.GetAccounts()
 
 		expected := "Account initialized with custom script"
-		if !strings.Contains(job.Error, expected) {
-			t.Fatalf(`expected error to contain "%s" got: "%s"`, expected, job.Error)
+
+		// Use the new service to create an account
+		job, _, err := svc2.Create(context.Background(), false)
+		fatal(t, err)
+
+		if job, err := test.WaitForJob(app2.GetJobs(), job.ID.String()); err != nil {
+			if !strings.Contains(err.Error(), expected) {
+				t.Fatalf(`expected error to contain "%s" got: "%s"`, expected, err)
+			}
+		} else {
+			t.Fatalf("expected job to have errored got %s", job.State)
 		}
 	})
 
 	t.Run("sync create with multiple keys", func(t *testing.T) {
-		cfg2 := getTestConfig(t)
+		cfg2 := test.LoadConfig(t, testConfigPath)
 		cfg2.DefaultAccountKeyCount = 3
 
-		app2 := getTestApp(t, cfg2, true)
+		app2 := test.GetServices(t, cfg2)
+		svc2 := app2.GetAccounts()
 
-		_, acc, err := app2.AccountService.Create(context.Background(), true)
+		_, acc, err := svc2.Create(context.Background(), true)
 		fatal(t, err)
 
 		if len(acc.Keys) != int(cfg2.DefaultAccountKeyCount) {
@@ -335,27 +201,19 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("async create with multiple keys", func(t *testing.T) {
-		cfg2 := getTestConfig(t)
+		cfg2 := test.LoadConfig(t, testConfigPath)
 		cfg2.DefaultAccountKeyCount = 3
-		app2 := getTestApp(t, cfg2, true)
 
-		job, _, err := app2.AccountService.Create(context.Background(), false)
+		app2 := test.GetServices(t, cfg2)
+		svc2 := app2.GetAccounts()
+
+		job, _, err := svc2.Create(context.Background(), false)
 		fatal(t, err)
 
-		if job.State != jobs.Init && job.State != jobs.Accepted && job.State != jobs.Complete {
-			t.Errorf("expected job status to be %s or %s or %s but got %s",
-				jobs.Init, jobs.Accepted, jobs.Complete, job.State)
-		}
+		job, err = test.WaitForJob(app2.GetJobs(), job.ID.String())
+		fatal(t, err)
 
-		for job.State == jobs.Init || job.State == jobs.Accepted {
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		if job.State != jobs.Complete {
-			t.Errorf("expected job status to be %s got %s; job.Error: %s", jobs.Complete, job.State, job.Error)
-		}
-
-		acc, err := app2.AccountService.Details(job.Result)
+		acc, err := svc2.Details(job.Result)
 		fatal(t, err)
 
 		if len(acc.Keys) != int(cfg2.DefaultAccountKeyCount) {
@@ -384,13 +242,16 @@ func TestAccountServices(t *testing.T) {
 }
 
 func TestAccountHandlers(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
 
-	handler := handlers.NewAccounts(app.AccountService)
+	svc := app.GetAccounts()
+	jobSvc := app.GetJobs()
+
+	handler := handlers.NewAccounts(svc)
 
 	t.Run("admin init", func(t *testing.T) {
-		err := app.AccountService.InitAdminAccount(context.Background())
+		err := svc.InitAdminAccount(context.Background())
 		fatal(t, err)
 	})
 
@@ -402,13 +263,7 @@ func TestAccountHandlers(t *testing.T) {
 	var tempAccAddress string
 
 	// NOTE: The order of the test "steps" matters
-	steps := []struct {
-		name     string
-		method   string
-		url      string
-		expected string
-		status   int
-	}{
+	steps := []httpTestStep{
 		{
 			name:     "list db empty",
 			method:   http.MethodGet,
@@ -479,13 +334,12 @@ func TestAccountHandlers(t *testing.T) {
 			// wait for the account to become available
 			// and store the new account in "tempAcc".
 			if step.status == http.StatusCreated {
-				jobService := jobs.NewService(app.JobStore)
 				var rJob jobs.JSONResponse
 				json.Unmarshal(rr.Body.Bytes(), &rJob) // nolint
 				id := rJob.ID.String()
-				job, _ := jobService.Details(id)
-				for job.State != jobs.Complete && job.State != jobs.Failed {
-					job, _ = jobService.Details(id)
+				job, err := test.WaitForJob(jobSvc, id)
+				if err != nil {
+					t.Fatal(err)
 				}
 				tempAccAddress = job.Result
 			}
@@ -501,10 +355,13 @@ func TestAccountHandlers(t *testing.T) {
 }
 
 func TestAccountTransactionHandlers(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
 
-	handler := handlers.NewTransactions(app.TransactionService)
+	svc := app.GetTransactions()
+	templateSvc := app.GetTemplates()
+
+	handler := handlers.NewTransactions(svc)
 
 	router := mux.NewRouter()
 	router.Handle("/{address}/sign", handler.Sign()).Methods(http.MethodPost)
@@ -512,7 +369,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 	router.Handle("/{address}/transactions", handler.Create()).Methods(http.MethodPost)
 	router.Handle("/{address}/transactions/{transactionId}", handler.Details()).Methods(http.MethodGet)
 
-	token, err := app.TemplateService.GetTokenByName("FlowToken")
+	token, err := templateSvc.GetTokenByName("FlowToken")
 	fatal(t, err)
 
 	tFlow := templates.FungibleTransferCode(cfg.ChainID, token)
@@ -537,16 +394,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 	var tempTxId string
 
 	// NOTE: The order of the test "steps" matters
-	steps := []struct {
-		name        string
-		method      string
-		body        io.Reader
-		contentType string
-		url         string
-		expected    string
-		status      int
-		sync        bool
-	}{
+	steps := []httpTestStep{
 		{
 			name:     "list db empty",
 			method:   http.MethodGet,
@@ -748,21 +596,24 @@ func TestAccountTransactionHandlers(t *testing.T) {
 }
 
 func TestTransactionHandlers(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
 
-	handler := handlers.NewTransactions(app.TransactionService)
+	svc := app.GetTransactions()
+	templateSvc := app.GetTemplates()
+
+	handler := handlers.NewTransactions(svc)
 
 	router := mux.NewRouter()
-	router.Handle("/transactions", handler.List()).Methods(http.MethodGet)
-	router.Handle("/transactions/{transactionId}", handler.Details()).Methods(http.MethodGet)
+	router.Handle("/", handler.List()).Methods(http.MethodGet)
+	router.Handle("/{transactionId}", handler.Details()).Methods(http.MethodGet)
 
-	token, err := app.TemplateService.GetTokenByName("FlowToken")
+	token, err := templateSvc.GetTokenByName("FlowToken")
 	fatal(t, err)
 
 	transferFlow := templates.FungibleTransferCode(cfg.ChainID, token)
 
-	_, transaction1, err := app.TransactionService.Create(
+	_, transaction1, err := svc.Create(
 		context.Background(),
 		true,
 		cfg.AdminAddress,
@@ -772,7 +623,7 @@ func TestTransactionHandlers(t *testing.T) {
 	)
 	fatal(t, err)
 
-	_, transaction2, err := app.TransactionService.Create(
+	_, transaction2, err := svc.Create(
 		context.Background(),
 		true,
 		cfg.AdminAddress,
@@ -786,48 +637,40 @@ func TestTransactionHandlers(t *testing.T) {
 	fatal(t, err)
 
 	// NOTE: The order of the test "steps" matters
-	steps := []struct {
-		name        string
-		method      string
-		body        io.Reader
-		contentType string
-		url         string
-		expected    string
-		status      int
-		sync        bool
-	}{
+
+	steps := []httpTestStep{
 		{
 			name:     "list db not empty",
 			method:   http.MethodGet,
-			url:      "/transactions",
+			url:      "/",
 			expected: `(?m)^\[{\"transactionId\":.*\]$`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "details invalid id",
 			method:   http.MethodGet,
-			url:      "/transactions/invalid-id",
+			url:      "/invalid-id",
 			expected: "not a valid transaction id",
 			status:   http.StatusBadRequest,
 		},
 		{
 			name:     "details unknown id",
 			method:   http.MethodGet,
-			url:      "/transactions/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921",
+			url:      "/0e4f500d6965c7fc0ff1239525e09eb9dd27c00a511976e353d9f6a44ca22921",
 			expected: "transaction not found",
 			status:   http.StatusNotFound,
 		},
 		{
 			name:     "details",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/transactions/%s", transaction1.TransactionId),
+			url:      fmt.Sprintf("/%s", transaction1.TransactionId),
 			expected: `(?m)^{"transactionId":"\w+".*}$`,
 			status:   http.StatusOK,
 		},
 		{
 			name:     "details with events",
 			method:   http.MethodGet,
-			url:      fmt.Sprintf("/transactions/%s", transaction2.TransactionId),
+			url:      fmt.Sprintf("/%s", transaction2.TransactionId),
 			expected: `(?m)^{"transactionId":"\w+".*"events":.*}$`,
 			status:   http.StatusOK,
 		},
@@ -871,22 +714,17 @@ func TestTransactionHandlers(t *testing.T) {
 }
 
 func TestScriptsHandlers(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
 
-	handler := handlers.NewTransactions(app.TransactionService)
+	svc := app.GetTransactions()
+
+	handler := handlers.NewTransactions(svc)
 
 	router := mux.NewRouter()
 	router.Handle("/", handler.ExecuteScript()).Methods(http.MethodPost)
 
-	steps := []struct {
-		name        string
-		method      string
-		body        io.Reader
-		contentType string
-		expected    string
-		status      int
-	}{
+	steps := []httpTestStep{
 		{
 			name:   "int 1",
 			method: http.MethodPost,
@@ -954,16 +792,19 @@ func TestScriptsHandlers(t *testing.T) {
 }
 
 func TestTokenServices(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
+
+	svc := app.GetTokens()
+	accountSvc := app.GetAccounts()
 
 	t.Run("account can make a transaction", func(t *testing.T) {
 		// Create an account
-		_, account, err := app.AccountService.Create(context.Background(), true)
+		_, account, err := accountSvc.Create(context.Background(), true)
 		fatal(t, err)
 
 		// Fund the account from service account
-		_, _, err = app.TokenService.CreateWithdrawal(
+		_, _, err = svc.CreateWithdrawal(
 			context.Background(),
 			true,
 			cfg.AdminAddress,
@@ -976,7 +817,7 @@ func TestTokenServices(t *testing.T) {
 
 		fatal(t, err)
 
-		_, transfer, err := app.TokenService.CreateWithdrawal(
+		_, transfer, err := svc.CreateWithdrawal(
 			context.Background(),
 			true,
 			account.Address,
@@ -996,10 +837,10 @@ func TestTokenServices(t *testing.T) {
 
 	t.Run("account can not make a transaction without funds", func(t *testing.T) {
 		// Create an account
-		_, account, err := app.AccountService.Create(context.Background(), true)
+		_, account, err := accountSvc.Create(context.Background(), true)
 		fatal(t, err)
 
-		_, _, err = app.TokenService.CreateWithdrawal(
+		_, _, err = svc.CreateWithdrawal(
 			context.Background(),
 			true,
 			account.Address,
@@ -1021,7 +862,7 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Make sure FUSD is deployed
-		err := app.TokenService.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
+		err := svc.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 				t.Fatal(err)
@@ -1029,7 +870,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Setup the admin account to be able to handle FUSD
-		_, _, err = app.TokenService.Setup(ctx, true, tokenName, cfg.AdminAddress)
+		_, _, err = svc.Setup(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
 			if !strings.Contains(err.Error(), "vault exists") {
 				t.Fatal(err)
@@ -1037,11 +878,11 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Create an account
-		_, account, err := app.AccountService.Create(ctx, true)
+		_, account, err := accountSvc.Create(ctx, true)
 		fatal(t, err)
 
 		// Setup the new account to be able to handle FUSD
-		_, setupTx, err := app.TokenService.Setup(ctx, true, tokenName, account.Address)
+		_, setupTx, err := svc.Setup(ctx, true, tokenName, account.Address)
 		fatal(t, err)
 
 		if setupTx.TransactionType != transactions.FtSetup {
@@ -1049,7 +890,7 @@ func TestTokenServices(t *testing.T) {
 		}
 
 		// Create a withdrawal, should error as we can not mint FUSD right now
-		_, _, err = app.TokenService.CreateWithdrawal(
+		_, _, err = svc.CreateWithdrawal(
 			ctx,
 			true,
 			cfg.AdminAddress,
@@ -1073,11 +914,11 @@ func TestTokenServices(t *testing.T) {
 		ctx := context.Background()
 
 		// Create an account
-		_, account, err := app.AccountService.Create(ctx, true)
+		_, account, err := accountSvc.Create(ctx, true)
 		fatal(t, err)
 
 		// Setup the new account to be able to handle the non-existent token
-		_, _, err = app.TokenService.Setup(ctx, true, tokenName, account.Address)
+		_, _, err = svc.Setup(ctx, true, tokenName, account.Address)
 		if err == nil {
 			t.Fatal("expected an error")
 		}
@@ -1085,10 +926,15 @@ func TestTokenServices(t *testing.T) {
 }
 
 func TestTokenHandlers(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
 
-	handler := handlers.NewTokens(app.TokenService)
+	svc := app.GetTokens()
+	accountSvc := app.GetAccounts()
+	templateSvc := app.GetTemplates()
+	transactionSvc := app.GetTransactions()
+
+	handler := handlers.NewTokens(svc)
 
 	router := mux.NewRouter()
 	router.Handle("/{address}/fungible-tokens", handler.AccountTokens(templates.FT)).Methods(http.MethodGet)
@@ -1112,15 +958,15 @@ func TestTokenHandlers(t *testing.T) {
 	// Setup
 
 	// FlowToken
-	flowToken, err := app.TemplateService.GetTokenByName("FlowToken")
+	flowToken, err := templateSvc.GetTokenByName("FlowToken")
 	fatal(t, err)
 
 	// FUSD
-	fusd, err := app.TemplateService.GetTokenByName("FUSD")
+	fusd, err := templateSvc.GetTokenByName("FUSD")
 	fatal(t, err)
 
 	// Make sure FUSD is deployed
-	err = app.TokenService.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
+	err = svc.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			fatal(t, err)
@@ -1151,11 +997,11 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Make sure ExampleNFT is enabled
-	err = app.TemplateService.AddToken(&exampleNft)
+	err = templateSvc.AddToken(&exampleNft)
 	fatal(t, err)
 
 	// Make sure ExampleNFT is deployed
-	err = app.TokenService.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
+	err = svc.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			fatal(t, err)
@@ -1165,16 +1011,16 @@ func TestTokenHandlers(t *testing.T) {
 	// Create a few accounts
 	testAccounts := make([]*accounts.Account, 2)
 	for i := 0; i < 2; i++ {
-		_, a, err := app.AccountService.Create(context.Background(), true)
+		_, a, err := accountSvc.Create(context.Background(), true)
 		fatal(t, err)
 
 		testAccounts[i] = a
 	}
 
-	_, testAccount, err := app.AccountService.Create(context.Background(), true)
+	_, testAccount, err := accountSvc.Create(context.Background(), true)
 	fatal(t, err)
 
-	_, testTransferFT, err := app.TokenService.CreateWithdrawal(
+	_, testTransferFT, err := svc.CreateWithdrawal(
 		context.Background(),
 		true,
 		cfg.AdminAddress,
@@ -1251,18 +1097,18 @@ func TestTokenHandlers(t *testing.T) {
 	// Mint ExampleNFTs for account 0
 	mintCode := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
 	for i := 0; i < 3; i++ {
-		_, _, err := app.TransactionService.Create(context.Background(), true, cfg.AdminAddress, mintCode,
+		_, _, err := transactionSvc.Create(context.Background(), true, cfg.AdminAddress, mintCode,
 			[]transactions.Argument{cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address))},
 			transactions.General)
 		fatal(t, err)
 	}
 
-	aa0NftDetails, err := app.TokenService.Details(context.Background(), exampleNft.Name, testAccounts[0].Address)
+	aa0NftDetails, err := svc.Details(context.Background(), exampleNft.Name, testAccounts[0].Address)
 	fatal(t, err)
 
 	nftIDs := aa0NftDetails.Balance.CadenceValue.(cadence.Array).Values
 
-	_, testTransferNFT, err := app.TokenService.CreateWithdrawal(
+	_, testTransferNFT, err := svc.CreateWithdrawal(
 		context.Background(),
 		true,
 		testAccounts[0].Address,
@@ -1575,10 +1421,12 @@ func TestTokenHandlers(t *testing.T) {
 func TestNFTDeployment(t *testing.T) {
 	t.Skip("currently not supported")
 
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
 
-	err := app.TokenService.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
+	svc := app.GetTokens()
+
+	err := svc.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
 		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 			t.Fatal(err)
@@ -1587,23 +1435,25 @@ func TestNFTDeployment(t *testing.T) {
 }
 
 func TestTemplateHandlers(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
 
-	handler := handlers.NewTemplates(app.TemplateService)
+	svc := app.GetTemplates()
+
+	handler := handlers.NewTemplates(svc)
 
 	router := mux.NewRouter()
-	router.Handle("/tokens", handler.AddToken()).Methods(http.MethodPost)
-	router.Handle("/tokens", handler.ListTokens(templates.NotSpecified)).Methods(http.MethodGet)
-	router.Handle("/tokens/{id_or_name}", handler.GetToken()).Methods(http.MethodGet)
-	router.Handle("/tokens/{id}", handler.RemoveToken()).Methods(http.MethodDelete)
+	router.Handle("/", handler.AddToken()).Methods(http.MethodPost)
+	router.Handle("/", handler.ListTokens(templates.NotSpecified)).Methods(http.MethodGet)
+	router.Handle("/{id_or_name}", handler.GetToken()).Methods(http.MethodGet)
+	router.Handle("/{id}", handler.RemoveToken()).Methods(http.MethodDelete)
 
 	addStepts := []httpTestStep{
 		{
 			name:        "Add with empty body",
 			method:      http.MethodPost,
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    `empty body`,
 			status:      http.StatusBadRequest,
 		},
@@ -1612,7 +1462,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(`invalid`),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    `invalid body`,
 			status:      http.StatusBadRequest,
 		},
@@ -1621,7 +1471,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    `not a valid name: ""`,
 			status:      http.StatusBadRequest,
 		},
@@ -1630,7 +1480,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(`{"name":"TestToken","address":"0x1"}`),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    `not a valid address: "0x1"`,
 			status:      http.StatusBadRequest,
 		},
@@ -1639,7 +1489,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
@@ -1648,7 +1498,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    `UNIQUE constraint failed: tokens.name`,
 			status:      http.StatusBadRequest,
 		},
@@ -1656,7 +1506,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "List not empty",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    fmt.Sprintf(`\[{"id":\d+,"name":"TestToken","address":"%s","type":"NotSpecified"}.*\]`, cfg.AdminAddress),
 			status:      http.StatusOK,
 		},
@@ -1667,7 +1517,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Get invalid id",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         "/tokens/invalid-id",
+			url:         "/invalid-id",
 			expected:    `record not found`,
 			status:      http.StatusNotFound,
 		},
@@ -1675,7 +1525,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Get not found",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         "/tokens/100",
+			url:         "/100",
 			expected:    `record not found`,
 			status:      http.StatusNotFound,
 		},
@@ -1683,7 +1533,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Get valid id",
 			method:      http.MethodGet,
 			contentType: "application/json",
-			url:         "/tokens/1",
+			url:         "/1",
 			expected:    `{"id":1,.*"type":"NotSpecified"}`,
 			status:      http.StatusOK,
 		},
@@ -1694,7 +1544,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Remove invalid id",
 			method:      http.MethodDelete,
 			contentType: "application/json",
-			url:         "/tokens/invalid-id",
+			url:         "/invalid-id",
 			expected:    `parsing "invalid-id": invalid syntax`,
 			status:      http.StatusBadRequest,
 		},
@@ -1703,7 +1553,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Remove not found",
 			method:      http.MethodDelete,
 			contentType: "application/json",
-			url:         "/tokens/100",
+			url:         "/100",
 			expected:    `100`,
 			status:      http.StatusOK,
 		},
@@ -1711,7 +1561,7 @@ func TestTemplateHandlers(t *testing.T) {
 			name:        "Remove valid id",
 			method:      http.MethodDelete,
 			contentType: "application/json",
-			url:         "/tokens/1",
+			url:         "/1",
 			expected:    "1",
 			status:      http.StatusOK,
 		},
@@ -1723,7 +1573,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken2","address":"%s","type":"not-a-valid-type"}`, cfg.AdminAddress)),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken2","address":"%s","type":"NotSpecified"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
@@ -1732,7 +1582,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress)),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken3","address":"%s","type":"FT"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
@@ -1741,7 +1591,7 @@ func TestTemplateHandlers(t *testing.T) {
 			method:      http.MethodPost,
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress)),
 			contentType: "application/json",
-			url:         "/tokens",
+			url:         "/",
 			expected:    fmt.Sprintf(`{"id":\d+,"name":"TestToken4","address":"%s","type":"NFT"}`, cfg.AdminAddress),
 			status:      http.StatusCreated,
 		},
@@ -1773,25 +1623,27 @@ func TestTemplateHandlers(t *testing.T) {
 }
 
 func TestTemplateService(t *testing.T) {
-	cfg := getTestConfig(t)
-	app := getTestApp(t, cfg, false)
+	cfg := test.LoadConfig(t, testConfigPath)
+	app := test.GetServices(t, cfg)
+
+	svc := app.GetTemplates()
 
 	// Add a token for testing
 	token := templates.Token{Name: "RandomTokenName", Address: cfg.AdminAddress}
-	err := app.TemplateService.AddToken(&token)
+	err := svc.AddToken(&token)
 	fatal(t, err)
 
 	t.Run("Get token by name", func(t *testing.T) {
-		t1, err := app.TemplateService.GetTokenByName("RandomTokenName")
+		t1, err := svc.GetTokenByName("RandomTokenName")
 		fatal(t, err)
 
-		t2, err := app.TemplateService.GetTokenByName("randomtokenname")
+		t2, err := svc.GetTokenByName("randomtokenname")
 		fatal(t, err)
 
-		t3, err := app.TemplateService.GetTokenByName("randomTokenName")
+		t3, err := svc.GetTokenByName("randomTokenName")
 		fatal(t, err)
 
-		_, err = app.TemplateService.GetTokenByName("othername")
+		_, err = svc.GetTokenByName("othername")
 		if err == nil {
 			t.Error("expected an error")
 		}

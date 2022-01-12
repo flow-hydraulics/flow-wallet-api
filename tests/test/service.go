@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/goleak"
 	upstreamgorm "gorm.io/gorm"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
@@ -23,6 +24,7 @@ import (
 type Services interface {
 	GetAccounts() *accounts.Service
 	GetJobs() *jobs.Service
+	GetTemplates() *templates.Service
 	GetTokens() *tokens.Service
 	GetTransactions() *transactions.Service
 	GetSystem() *system.Service
@@ -34,6 +36,7 @@ type Services interface {
 type svcs struct {
 	accountService     *accounts.Service
 	jobService         *jobs.Service
+	templateService    *templates.Service
 	tokenService       *tokens.Service
 	transactionService *transactions.Service
 	systemService      *system.Service
@@ -47,29 +50,46 @@ func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	dbClose := func() { gorm.Close(db) }
+	dbClean := func() {
+		m := db.Migrator()
+		tables, err := m.GetTables()
+		if err != nil {
+			t.Logf("error while cleaning test database: %s", err)
+		}
+		for _, table := range tables {
+			if err := m.DropTable(table); err != nil {
+				t.Logf("error while cleaning test database: %s", err)
+			}
+		}
+	}
 	t.Cleanup(dbClose)
+	t.Cleanup(dbClean)
 
 	return db
 }
 
 func GetServices(t *testing.T, cfg *configs.Config) Services {
+	t.Cleanup(func() {
+		goleak.VerifyNone(t,
+			goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"), // Ignore OpenCensus
+			goleak.IgnoreTopFunction("net/http.(*persistConn).writeLoop"),           // Ignore goroutine leak from AWS KMS
+			goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),              // Ignore goroutine leak from AWS KMS
+			goleak.IgnoreTopFunction("database/sql.(*DB).connectionOpener"),
+			goleak.IgnoreTopFunction("google.golang.org/grpc.(*ccBalancerWrapper).watcher"),
+			goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*controlBuffer).get"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPool).startWorkers.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPool).startDBJobScheduler.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/chain_events.(*Listener).Start.func1"),
+		)
+	})
 
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
-	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	templateStore := templates.NewGormStore(db)
-	tokenStore := tokens.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
-	systemStore := system.NewGormStore(db)
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
 	wp := jobs.NewWorkerPool(
-		jobStore,
+		jobs.NewGormStore(db),
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
 		jobs.WithMaxJobErrorCount(0),
@@ -78,17 +98,15 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		jobs.WithReSchedulableGracePeriod(0),
 	)
 
-	wpStop := func() { wp.Stop(false) }
-	t.Cleanup(wpStop)
+	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
-	templateService := templates.NewService(cfg, templateStore)
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	jobService := jobs.NewService(jobStore)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
-	systemService := system.NewService(systemStore)
+	templateService := templates.NewService(cfg, templates.NewGormStore(db))
+	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp)
+	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp)
+	jobService := jobs.NewService(jobs.NewGormStore(db))
+	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
+	systemService := system.NewService(system.NewGormStore(db))
 
-	store := chain_events.NewGormStore(db)
 	getTypes := func() ([]string, error) {
 		// Get all enabled tokens
 		tt, err := templateService.ListTokens(templates.NotSpecified)
@@ -108,13 +126,11 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	}
 
 	listener := chain_events.NewListener(
-		fc, store, getTypes,
+		fc, chain_events.NewGormStore(GetDatabase(t, cfg)), getTypes,
 		cfg.ChainListenerMaxBlocks,
 		1*time.Second,
 		cfg.ChainListenerStartingHeight,
 	)
-
-	t.Cleanup(listener.Stop)
 
 	// Register a handler for chain events
 	chain_events.Event.Register(&tokens.ChainEventHandler{
@@ -124,22 +140,28 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		TokenService:    tokenService,
 	})
 
-	ctx := context.Background()
-	err := accountService.InitAdminAccount(ctx)
+	err := accountService.InitAdminAccount(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// make sure all requested proposal keys are created
-	if err := km.CheckAdminProposalKeyCount(ctx); err != nil {
+	if err := km.CheckAdminProposalKeyCount(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
+	t.Cleanup(func() {
+		wp.Stop(false)
+		listener.Stop()
+	})
+
+	wp.Start()
 	listener.Start()
 
 	return &svcs{
 		accountService:     accountService,
 		jobService:         jobService,
+		templateService:    templateService,
 		tokenService:       tokenService,
 		transactionService: transactionService,
 		systemService:      systemService,
@@ -155,6 +177,10 @@ func (s *svcs) GetAccounts() *accounts.Service {
 
 func (s *svcs) GetJobs() *jobs.Service {
 	return s.jobService
+}
+
+func (s *svcs) GetTemplates() *templates.Service {
+	return s.templateService
 }
 
 func (s *svcs) GetTokens() *tokens.Service {

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
-	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	log "github.com/sirupsen/logrus"
@@ -48,13 +48,11 @@ func (s *Service) InitAdminAccount(ctx context.Context) error {
 			}
 
 			if keyCount < s.cfg.AdminProposalKeyCount {
-				err = s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount)
-				if err != nil {
+				if err := s.addAdminProposalKeys(ctx, s.cfg.AdminProposalKeyCount-keyCount); err != nil {
 					return err
 				}
 
-				_, err = s.km.InitAdminProposalKeys(ctx)
-				if err != nil {
+				if _, err := s.km.InitAdminProposalKeys(ctx); err != nil {
 					return err
 				}
 			}
@@ -72,12 +70,44 @@ func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16) error 
 		WithFields(log.Fields{"count": count}).
 		Info("Adding admin account proposal keys")
 
-	code := template_strings.AddProposalKeyTransaction
-	args := []transactions.Argument{
-		cadence.NewInt(s.cfg.AdminKeyIndex),
-		cadence.NewUInt16(count),
+	payer, err := s.km.AdminAuthorizer(ctx)
+	if err != nil {
+		return err
 	}
 
-	_, _, err := s.transactions.Create(ctx, true, s.cfg.AdminAddress, code, args, transactions.General)
-	return err
+	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, s.fc)
+	if err != nil {
+		return err
+	}
+
+	code := template_strings.AddProposalKeyTransaction
+
+	flowTx := flow.NewTransaction()
+	flowTx.
+		SetReferenceBlockID(*referenceBlockID).
+		SetProposalKey(payer.Address, payer.Key.Index, payer.Key.SequenceNumber).
+		SetPayer(payer.Address).
+		SetGasLimit(maxGasLimit).
+		SetScript([]byte(code))
+
+	if err := flowTx.AddArgument(cadence.NewInt(s.cfg.AdminKeyIndex)); err != nil {
+		return err
+	}
+
+	if err := flowTx.AddArgument(cadence.NewUInt16(count)); err != nil {
+		return err
+	}
+
+	flowTx.AddAuthorizer(payer.Address)
+
+	if err := flowTx.SignEnvelope(payer.Address, payer.Key.Index, payer.Signer); err != nil {
+		return err
+	}
+
+	// Send and wait for the transaction to be sealed
+	if _, err := flow_helpers.SendAndWait(ctx, s.fc, *flowTx, s.cfg.TransactionTimeout); err != nil {
+		return err
+	}
+
+	return nil
 }

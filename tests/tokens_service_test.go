@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
-	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
+	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 )
 

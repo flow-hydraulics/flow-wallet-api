@@ -2,13 +2,10 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/flow-hydraulics/flow-wallet-api/jobs"
-	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
+	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 )
 
 func Test_Add_New_Non_Custodial_Account(t *testing.T) {
@@ -118,14 +115,14 @@ func Test_Delete_Non_Custodial_Account_Is_Idempotent(t *testing.T) {
 
 // Test if the service is able to concurrently create multiple accounts
 func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
+	t.Skip("sqlite will cause a database locked error")
+
 	cfg := test.LoadConfig(t, testConfigPath)
 
-	// TODO: this test fails if instanceCount > 1 (database is locked, with sqlite)
 	instanceCount := 1
 	accountsToCreate := instanceCount * 5
 	// Worst case scenario where theoretically maximum number of transactions are done concurrently
-	// TODO: database is locked (with sqlite)
-	// cfg.WorkerCount = uint(accountsToCreate / instanceCount)
+	cfg.WorkerCount = uint(accountsToCreate / instanceCount)
 
 	svcs := make([]test.Services, instanceCount)
 
@@ -144,7 +141,7 @@ func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
 	}
 
 	wg := sync.WaitGroup{}
-	errChan := make(chan error, accountsToCreate*4)
+	errChan := make(chan error, accountsToCreate*2)
 
 	for i := 0; i < accountsToCreate; i++ {
 		wg.Add(1)
@@ -160,18 +157,8 @@ func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
 				return
 			}
 
-			for job.State == jobs.Init || job.State == jobs.Accepted || job.State == jobs.Error {
-				time.Sleep(100 * time.Millisecond)
-				if j, err := jobSvc.Details(job.ID.String()); err != nil {
-					continue
-				} else {
-					job = j
-				}
-			}
-
-			if job.State == jobs.Failed {
-				errChan <- fmt.Errorf(job.Error)
-				return
+			if _, err := test.WaitForJob(jobSvc, job.ID.String()); err != nil {
+				errChan <- err
 			}
 		}(i, svcs)
 	}

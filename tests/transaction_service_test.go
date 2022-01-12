@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
+	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/onflow/flow-go-sdk"
 )
 

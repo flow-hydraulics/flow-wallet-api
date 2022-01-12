@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
-	"github.com/flow-hydraulics/flow-wallet-api/tests/internal/test"
+	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/google/uuid"
 )
 
@@ -21,6 +21,7 @@ func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 	t.Cleanup(func() {
 		wp.Stop(false)
 	})
+	wp.Start()
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -73,6 +74,7 @@ func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
 	t.Cleanup(func() {
 		wp.Stop(false)
 	})
+	wp.Start()
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -125,6 +127,7 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 	t.Cleanup(func() {
 		wp.Stop(false)
 	})
+	wp.Start()
 
 	executedWG := &sync.WaitGroup{}
 	jobType := "job"
@@ -204,6 +207,7 @@ func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
 	t.Cleanup(func() {
 		wp.Stop(false)
 	})
+	wp.Start()
 
 	executedWG.Wait()
 
@@ -263,6 +267,7 @@ func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
 	t.Cleanup(func() {
 		wp.Stop(false)
 	})
+	wp.Start()
 
 	executedWG.Wait()
 
@@ -331,6 +336,7 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 	t.Cleanup(func() {
 		wp.Stop(false)
 	})
+	wp.Start()
 
 	// Gotta give DB job poller a bit of time to catch up.
 	time.Sleep(100 * time.Millisecond)
@@ -367,6 +373,7 @@ func Test_ExceedingWorkerpoolCapacity(t *testing.T) {
 	t.Cleanup(func() {
 		wp.Stop(false)
 	})
+	wp.Start()
 
 	jobType := "job"
 	jobFunc := func(ctx context.Context, j *jobs.Job) error {

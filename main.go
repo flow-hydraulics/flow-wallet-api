@@ -90,26 +90,16 @@ func runServer(cfg *configs.Config) {
 	}
 	defer gorm.Close(db)
 
-	systemStore := system.NewGormStore(db)
-	templateStore := templates.NewGormStore(db)
-	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
-	tokenStore := tokens.NewGormStore(db)
-
-	systemService := system.NewService(systemStore)
+	systemService := system.NewService(system.NewGormStore(db))
 
 	// Create a worker pool
 	wp := jobs.NewWorkerPool(
-		jobStore,
+		jobs.NewGormStore(db),
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
 		jobs.WithJobStatusWebhook(cfg.JobStatusWebhookUrl, cfg.JobStatusWebhookTimeout),
 		jobs.WithSystemService(systemService),
 	)
-
-	log.Info("Started workerpool")
 
 	defer func() {
 		wp.Stop(true)
@@ -119,14 +109,14 @@ func runServer(cfg *configs.Config) {
 	txRatelimiter := ratelimit.New(cfg.TransactionMaxSendRate, ratelimit.WithoutSlack)
 
 	// Key manager
-	km := basic.NewKeyManager(cfg, keyStore, fc)
+	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
 	// Services
-	templateService := templates.NewService(cfg, templateStore)
-	jobsService := jobs.NewService(jobStore)
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService, accounts.WithTxRatelimiter(txRatelimiter))
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
+	templateService := templates.NewService(cfg, templates.NewGormStore(db))
+	jobsService := jobs.NewService(jobs.NewGormStore(db))
+	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
+	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, accounts.WithTxRatelimiter(txRatelimiter))
+	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
 
 	// Register a handler for account added events
 	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{
@@ -138,6 +128,9 @@ func runServer(cfg *configs.Config) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	wp.Start()
+	log.Info("Started workerpool")
 
 	// HTTP handling
 	systemHandler := handlers.NewSystem(systemService)

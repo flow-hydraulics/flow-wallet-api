@@ -18,7 +18,7 @@ type GetEventTypes func() ([]string, error)
 
 type Listener struct {
 	ticker         *time.Ticker
-	done           chan bool
+	stopChan       chan struct{}
 	fc             *client.Client
 	db             Store
 	getTypes       GetEventTypes
@@ -50,7 +50,7 @@ func NewListener(
 
 	listener := &Listener{
 		ticker:         nil,
-		done:           make(chan bool),
+		stopChan:       make(chan struct{}),
 		fc:             fc,
 		db:             db,
 		getTypes:       getTypes,
@@ -124,7 +124,7 @@ func (l *Listener) Start() *Listener {
 
 		for {
 			select {
-			case <-l.done:
+			case <-l.stopChan:
 				return
 			case <-l.ticker.C:
 				// Check for maintenance mode
@@ -218,12 +218,10 @@ func (l *Listener) initHeight() error {
 func (l *Listener) Stop() {
 	log.Debug("Stopping Flow event listener")
 
+	close(l.stopChan)
+
 	if l.ticker != nil {
 		l.ticker.Stop()
-	}
-
-	if l.done != nil {
-		l.done <- true
 	}
 
 	l.ticker = nil
