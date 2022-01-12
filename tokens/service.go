@@ -16,7 +16,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -44,7 +43,7 @@ type Service interface {
 type ServiceImpl struct {
 	store        Store
 	km           keys.Manager
-	fc           *client.Client
+	fc           flow_helpers.FlowClient
 	wp           jobs.WorkerPool
 	transactions transactions.Service
 	templates    templates.Service
@@ -56,7 +55,7 @@ func NewService(
 	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
-	fc *client.Client,
+	fc flow_helpers.FlowClient,
 	wp jobs.WorkerPool,
 	txs transactions.Service,
 	tes templates.Service,

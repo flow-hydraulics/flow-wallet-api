@@ -7,6 +7,7 @@ import (
 	"time"
 
 	wallet_errors "github.com/flow-hydraulics/flow-wallet-api/errors"
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
@@ -24,7 +25,7 @@ type Listener interface {
 type ListenerImpl struct {
 	ticker         *time.Ticker
 	stopChan       chan struct{}
-	fc             *client.Client
+	fc             flow_helpers.FlowClient
 	db             Store
 	getTypes       GetEventTypes
 	maxBlocks      uint64
@@ -44,7 +45,7 @@ func (ListenerStatus) TableName() string {
 }
 
 func NewListener(
-	fc *client.Client,
+	fc flow_helpers.FlowClient,
 	db Store,
 	getTypes GetEventTypes,
 	maxDiff uint64,

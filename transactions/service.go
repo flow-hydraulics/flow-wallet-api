@@ -34,7 +34,7 @@ type Service interface {
 type ServiceImpl struct {
 	store         Store
 	km            keys.Manager
-	fc            *client.Client
+	fc            flow_helpers.FlowClient
 	wp            jobs.WorkerPool
 	cfg           *configs.Config
 	txRateLimiter ratelimit.Limiter
@@ -45,7 +45,7 @@ func NewService(
 	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
-	fc *client.Client,
+	fc flow_helpers.FlowClient,
 	wp jobs.WorkerPool,
 	opts ...ServiceOption,
 ) Service {

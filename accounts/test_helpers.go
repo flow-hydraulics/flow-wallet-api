@@ -9,7 +9,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
 )
@@ -17,7 +16,7 @@ import (
 // AddContract is used only in tests
 func AddContract(
 	ctx context.Context,
-	fc *client.Client,
+	fc flow_helpers.FlowClient,
 	km keys.Manager,
 	accountAddress string,
 	contract flow_templates.Contract,

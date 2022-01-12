@@ -11,7 +11,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/tests/test"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 )
 
 var max_tx_wait = 10 * time.Second
@@ -77,7 +76,7 @@ func Test_NonCustodialAccountDepositTracking(t *testing.T) {
 	}
 }
 
-func transferTokens(t *testing.T, ctx context.Context, fc *client.Client, km keys.Manager, amount, proposerAddr, receiverAddr string) {
+func transferTokens(t *testing.T, ctx context.Context, fc flow_helpers.FlowClient, km keys.Manager, amount, proposerAddr, receiverAddr string) {
 	t.Helper()
 
 	amountArg, err := cadence.NewUFix64(amount)
@@ -131,7 +130,7 @@ func transferTokens(t *testing.T, ctx context.Context, fc *client.Client, km key
 	}
 }
 
-func verifyBalance(t *testing.T, fc *client.Client, address flow.Address, expected uint64) {
+func verifyBalance(t *testing.T, fc flow_helpers.FlowClient, address flow.Address, expected uint64) {
 	t.Helper()
 
 	a, err := fc.GetAccount(context.Background(), address)

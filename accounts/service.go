@@ -12,7 +12,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
@@ -34,7 +33,7 @@ type ServiceImpl struct {
 	cfg           *configs.Config
 	store         Store
 	km            keys.Manager
-	fc            *client.Client
+	fc            flow_helpers.FlowClient
 	wp            jobs.WorkerPool
 	txRateLimiter ratelimit.Limiter
 }
@@ -44,7 +43,7 @@ func NewService(
 	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
-	fc *client.Client,
+	fc flow_helpers.FlowClient,
 	wp jobs.WorkerPool,
 	opts ...ServiceOption,
 ) Service {
