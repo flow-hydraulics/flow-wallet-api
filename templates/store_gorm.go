@@ -12,7 +12,7 @@ type GormStore struct {
 	tempStore map[string]*Token
 }
 
-func NewGormStore(db *gorm.DB) *GormStore {
+func NewGormStore(db *gorm.DB) Store {
 	return &GormStore{db, make(map[string]*Token)}
 }
 

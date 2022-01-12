@@ -8,8 +8,8 @@ import (
 )
 
 type AccountAddedHandler struct {
-	TemplateService *templates.Service
-	TokenService    *Service
+	TemplateService templates.Service
+	TokenService    Service
 }
 
 func (h *AccountAddedHandler) Handle(payload accounts.AccountAddedPayload) {
@@ -18,22 +18,7 @@ func (h *AccountAddedHandler) Handle(payload accounts.AccountAddedPayload) {
 }
 
 func (h *AccountAddedHandler) addFlowToken(address string) {
-	token, err := h.TemplateService.GetTokenByName("FlowToken")
-	if err != nil {
-		log.
-			WithFields(log.Fields{"error": err}).
-			Warn("Error while adding FlowToken to new account")
-	}
-
-	// No need to setup FlowToken
-
-	err = h.TokenService.store.InsertAccountToken(&AccountToken{
-		AccountAddress: address,
-		TokenAddress:   token.Address,
-		TokenName:      token.Name,
-		TokenType:      token.Type,
-	})
-	if err != nil {
+	if err := h.TokenService.AddAccountToken("FlowToken", address); err != nil {
 		log.
 			WithFields(log.Fields{"error": err}).
 			Warn("Error while adding FlowToken to new account")

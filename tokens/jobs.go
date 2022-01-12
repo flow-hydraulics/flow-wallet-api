@@ -14,7 +14,7 @@ type withdrawalCreateJobAttributes struct {
 	Request WithdrawalRequest
 }
 
-func (s *Service) executeCreateWithdrawalJob(ctx context.Context, j *jobs.Job) error {
+func (s *ServiceImpl) executeCreateWithdrawalJob(ctx context.Context, j *jobs.Job) error {
 	if j.Type != WithdrawalCreateJobType {
 		return jobs.ErrInvalidJobType
 	}

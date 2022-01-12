@@ -8,10 +8,10 @@ import (
 )
 
 type Tokens struct {
-	service *tokens.Service
+	service tokens.Service
 }
 
-func NewTokens(service *tokens.Service) *Tokens {
+func NewTokens(service tokens.Service) *Tokens {
 	return &Tokens{service}
 }
 

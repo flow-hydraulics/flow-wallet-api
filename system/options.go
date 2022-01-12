@@ -4,10 +4,10 @@ import (
 	"time"
 )
 
-type ServiceOption func(*Service)
+type ServiceOption func(*ServiceImpl)
 
 func WithPauseDuration(duration time.Duration) ServiceOption {
-	return func(svc *Service) {
+	return func(svc *ServiceImpl) {
 		svc.pauseDuration = duration
 	}
 }

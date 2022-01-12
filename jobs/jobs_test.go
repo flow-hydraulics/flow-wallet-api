@@ -36,7 +36,7 @@ func TestScheduleSendNotification(t *testing.T) {
 	logger, hook := test.NewNullLogger()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	wp := WorkerPool{
+	wp := WorkerPoolImpl{
 		context:       ctx,
 		cancelContext: cancel,
 		executors:     make(map[string]ExecutorFunc),
@@ -105,7 +105,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		logger, hook := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		wp := WorkerPool{
+		wp := WorkerPoolImpl{
 			context:       ctx,
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
@@ -161,7 +161,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		logger, hook := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		wp := WorkerPool{
+		wp := WorkerPoolImpl{
 			context:       ctx,
 			cancelContext: cancel,
 			executors:     make(map[string]ExecutorFunc),
@@ -208,7 +208,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		logger, _ := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		wp := WorkerPool{
+		wp := WorkerPoolImpl{
 			context:          ctx,
 			cancelContext:    cancel,
 			executors:        make(map[string]ExecutorFunc),
@@ -250,7 +250,7 @@ func TestExecuteSendNotification(t *testing.T) {
 		logger, hook := test.NewNullLogger()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		wp := WorkerPool{
+		wp := WorkerPoolImpl{
 			context:          ctx,
 			cancelContext:    cancel,
 			executors:        make(map[string]ExecutorFunc),
@@ -314,7 +314,7 @@ func TestJobErrorMessages(t *testing.T) {
 		defer svr.Close()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		wp := WorkerPool{
+		wp := WorkerPoolImpl{
 			context:          ctx,
 			cancelContext:    cancel,
 			executors:        make(map[string]ExecutorFunc),

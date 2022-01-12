@@ -11,18 +11,28 @@ import (
 
 	"github.com/flow-hydraulics/flow-wallet-api/errors"
 	"github.com/jpillora/backoff"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
 )
 
-type GetTransactionResultFunc func(ctx context.Context, id flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
+type FlowClient interface {
+	ExecuteScriptAtLatestBlock(ctx context.Context, script []byte, arguments []cadence.Value, opts ...grpc.CallOption) (cadence.Value, error)
+	GetAccount(ctx context.Context, address flow.Address, opts ...grpc.CallOption) (*flow.Account, error)
+	GetAccountAtLatestBlock(ctx context.Context, address flow.Address, opts ...grpc.CallOption) (*flow.Account, error)
+	GetTransaction(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.Transaction, error)
+	GetTransactionResult(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
+	GetLatestBlockHeader(ctx context.Context, isSealed bool, opts ...grpc.CallOption) (*flow.BlockHeader, error)
+	GetEventsForHeightRange(ctx context.Context, query client.EventRangeQuery, opts ...grpc.CallOption) ([]client.BlockEvents, error)
+	SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error
+}
 
 const hexPrefix = "0x"
 
 // LatestBlockId retuns the flow.Identifier for the latest block in the chain.
-func LatestBlockId(ctx context.Context, c *client.Client) (*flow.Identifier, error) {
-	block, err := c.GetLatestBlockHeader(ctx, true)
+func LatestBlockId(ctx context.Context, flowClient FlowClient) (*flow.Identifier, error) {
+	block, err := flowClient.GetLatestBlockHeader(ctx, true)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +44,7 @@ func LatestBlockId(ctx context.Context, c *client.Client) (*flow.Identifier, err
 // - the transaction gets an error status
 // - the transaction gets a "TransactionStatusSealed" or "TransactionStatusExpired" status
 // - timeout is reached
-func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
+func WaitForSeal(ctx context.Context, flowClient FlowClient, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
 	var (
 		result *flow.TransactionResult
 		err    error
@@ -54,7 +64,7 @@ func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flo
 	}
 
 	for {
-		result, err = getResult(ctx, id)
+		result, err = flowClient.GetTransactionResult(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -79,11 +89,11 @@ func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flo
 }
 
 // SendAndWait sends the transaction and waits for the transaction to be sealed
-func SendAndWait(ctx context.Context, c *client.Client, tx flow.Transaction, timeout time.Duration) (*flow.TransactionResult, error) {
-	if err := c.SendTransaction(ctx, tx); err != nil {
+func SendAndWait(ctx context.Context, flowClient FlowClient, tx flow.Transaction, timeout time.Duration) (*flow.TransactionResult, error) {
+	if err := flowClient.SendTransaction(ctx, tx); err != nil {
 		return nil, err
 	}
-	return WaitForSeal(ctx, c.GetTransactionResult, tx.ID(), timeout)
+	return WaitForSeal(ctx, flowClient, tx.ID(), timeout)
 }
 
 func HexString(str string) string {

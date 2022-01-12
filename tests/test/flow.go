@@ -23,7 +23,7 @@ var (
 	max_tx_wait = 10 * time.Second
 )
 
-func NewFlowClient(t *testing.T, cfg *configs.Config) *client.Client {
+func NewFlowClient(t *testing.T, cfg *configs.Config) flow_helpers.FlowClient {
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ func NewFlowClient(t *testing.T, cfg *configs.Config) *client.Client {
 	return fc
 }
 
-func NewFlowAccount(t *testing.T, fc *client.Client, creatorAddress flow.Address, creatorKey *flow.AccountKey, creatorSigner crypto.Signer) *flow.Account {
+func NewFlowAccount(t *testing.T, fc flow_helpers.FlowClient, creatorAddress flow.Address, creatorKey *flow.AccountKey, creatorSigner crypto.Signer) *flow.Account {
 	seed := make([]byte, seed_length)
 	readRandom(t, seed)
 
@@ -91,7 +91,7 @@ func NewFlowAccount(t *testing.T, fc *client.Client, creatorAddress flow.Address
 		panic("failed to send transaction to network")
 	}
 
-	result, err := flow_helpers.WaitForSeal(context.Background(), fc.GetTransactionResult, tx.ID(), max_tx_wait)
+	result, err := flow_helpers.WaitForSeal(context.Background(), fc, tx.ID(), max_tx_wait)
 	if err != nil {
 		t.Fatal(err)
 	}

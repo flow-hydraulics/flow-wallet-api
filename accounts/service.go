@@ -12,7 +12,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
@@ -20,13 +19,22 @@ import (
 
 const maxGasLimit = 9999
 
-// Service defines the API for account management.
-type Service struct {
+type Service interface {
+	List(limit, offset int) (result []Account, err error)
+	Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error)
+	AddNonCustodialAccount(address string) (*Account, error)
+	DeleteNonCustodialAccount(address string) error
+	Details(address string) (Account, error)
+	InitAdminAccount(ctx context.Context) error
+}
+
+// ServiceImpl defines the API for account management.
+type ServiceImpl struct {
 	cfg           *configs.Config
 	store         Store
 	km            keys.Manager
-	fc            *client.Client
-	wp            *jobs.WorkerPool
+	fc            flow_helpers.FlowClient
+	wp            jobs.WorkerPool
 	txRateLimiter ratelimit.Limiter
 }
 
@@ -35,14 +43,14 @@ func NewService(
 	cfg *configs.Config,
 	store Store,
 	km keys.Manager,
-	fc *client.Client,
-	wp *jobs.WorkerPool,
+	fc flow_helpers.FlowClient,
+	wp jobs.WorkerPool,
 	opts ...ServiceOption,
-) *Service {
+) Service {
 	var defaultTxRatelimiter = ratelimit.NewUnlimited()
 
 	// TODO(latenssi): safeguard against nil config?
-	svc := &Service{cfg, store, km, fc, wp, defaultTxRatelimiter}
+	svc := &ServiceImpl{cfg, store, km, fc, wp, defaultTxRatelimiter}
 
 	for _, opt := range opts {
 		opt(svc)
@@ -59,7 +67,7 @@ func NewService(
 }
 
 // List returns all accounts in the datastore.
-func (s *Service) List(limit, offset int) (result []Account, err error) {
+func (s *ServiceImpl) List(limit, offset int) (result []Account, err error) {
 	o := datastore.ParseListOptions(limit, offset)
 	return s.store.Accounts(o)
 }
@@ -68,7 +76,7 @@ func (s *Service) List(limit, offset int) (result []Account, err error) {
 // It receives a new account with a corresponding private key or resource ID
 // and stores both in datastore.
 // It returns a job, the new account and a possible error.
-func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error) {
+func (s *ServiceImpl) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error) {
 	log.WithFields(log.Fields{"sync": sync}).Trace("Create account")
 
 	if !sync {
@@ -93,7 +101,7 @@ func (s *Service) Create(ctx context.Context, sync bool) (*jobs.Job, *Account, e
 	return nil, account, nil
 }
 
-func (s *Service) AddNonCustodialAccount(_ context.Context, address string) (*Account, error) {
+func (s *ServiceImpl) AddNonCustodialAccount(address string) (*Account, error) {
 	log.WithFields(log.Fields{"address": address}).Trace("Add non-custodial account")
 
 	a := &Account{
@@ -109,7 +117,7 @@ func (s *Service) AddNonCustodialAccount(_ context.Context, address string) (*Ac
 	return a, nil
 }
 
-func (s *Service) DeleteNonCustodialAccount(_ context.Context, address string) error {
+func (s *ServiceImpl) DeleteNonCustodialAccount(address string) error {
 	log.WithFields(log.Fields{"address": address}).Trace("Delete non-custodial account")
 
 	a, err := s.store.Account(flow_helpers.HexString(address))
@@ -130,7 +138,7 @@ func (s *Service) DeleteNonCustodialAccount(_ context.Context, address string) e
 }
 
 // Details returns a specific account, does not include private keys
-func (s *Service) Details(address string) (Account, error) {
+func (s *ServiceImpl) Details(address string) (Account, error) {
 	log.WithFields(log.Fields{"address": address}).Trace("Account details")
 
 	// Check if the input is a valid address
@@ -157,7 +165,7 @@ func (s *Service) Details(address string) (Account, error) {
 // generated key. Admin account is used to pay for the transaction.
 //
 // Returns created account and the flow transaction ID of the account creation.
-func (s *Service) createAccount(ctx context.Context) (*Account, string, error) {
+func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, error) {
 	account := &Account{Type: AccountTypeCustodial}
 
 	// Important to ratelimit all the way up here so the keys and reference blocks

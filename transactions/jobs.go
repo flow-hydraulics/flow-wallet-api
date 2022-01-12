@@ -8,7 +8,7 @@ import (
 
 const TransactionJobType = "transaction"
 
-func (s *Service) executeTransactionJob(ctx context.Context, j *jobs.Job) error {
+func (s *ServiceImpl) executeTransactionJob(ctx context.Context, j *jobs.Job) error {
 	if j.Type != TransactionJobType {
 		return jobs.ErrInvalidJobType
 	}

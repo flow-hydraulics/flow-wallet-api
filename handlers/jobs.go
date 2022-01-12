@@ -10,11 +10,11 @@ import (
 // It provides details API.
 // It uses jobs service to interface with data.
 type Jobs struct {
-	service *jobs.Service
+	service jobs.Service
 }
 
 // NewJobs initiates a new jobs server.
-func NewJobs(service *jobs.Service) *Jobs {
+func NewJobs(service jobs.Service) *Jobs {
 	return &Jobs{service}
 }
 

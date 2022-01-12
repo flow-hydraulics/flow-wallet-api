@@ -2,10 +2,10 @@ package accounts
 
 import "go.uber.org/ratelimit"
 
-type ServiceOption func(*Service)
+type ServiceOption func(*ServiceImpl)
 
 func WithTxRatelimiter(limiter ratelimit.Limiter) ServiceOption {
-	return func(svc *Service) {
+	return func(svc *ServiceImpl) {
 		svc.txRateLimiter = limiter
 	}
 }

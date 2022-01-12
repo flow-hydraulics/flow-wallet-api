@@ -8,10 +8,10 @@ import (
 
 // Templates is a HTTP server for template management.
 type Templates struct {
-	service *templates.Service
+	service templates.Service
 }
 
-func NewTemplates(service *templates.Service) *Templates {
+func NewTemplates(service templates.Service) *Templates {
 	return &Templates{service}
 }
 

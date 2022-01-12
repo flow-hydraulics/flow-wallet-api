@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers/internal"
 	"github.com/onflow/flow-go-sdk"
-	"google.golang.org/grpc"
 )
 
 func TestAddressValidationAndFormatting(t *testing.T) {
@@ -43,23 +43,11 @@ func TestAddressValidationAndFormatting(t *testing.T) {
 
 func TestWaitForSeal(t *testing.T) {
 	t.Run("backoff", func(t *testing.T) {
+		flowClient := new(internal.MockFlowClient)
 		ctx := context.Background()
-		callCount := 0
-		getResult := func(ctx context.Context, id flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error) {
-			callCount++
-
-			status := flow.TransactionStatusPending
-
-			if callCount >= 3 {
-				status = flow.TransactionStatusSealed
-			}
-
-			return &flow.TransactionResult{Status: status}, nil
-		}
-
 		start := time.Now()
 
-		if _, err := WaitForSeal(ctx, getResult, flow.EmptyID, 0); err != nil {
+		if _, err := WaitForSeal(ctx, flowClient, flow.EmptyID, 0); err != nil {
 			t.Fatalf("did not expect an error, got: %s", err)
 		}
 

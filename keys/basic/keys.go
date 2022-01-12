@@ -15,13 +15,12 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/keys/google"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/local"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
 type KeyManager struct {
 	store           keys.Store
-	fc              *client.Client
+	fc              flow_helpers.FlowClient
 	crypter         encryption.Crypter
 	adminAccountKey keys.Private
 	cfg             *configs.Config
@@ -29,7 +28,7 @@ type KeyManager struct {
 
 // NewKeyManager initiates a new key manager.
 // It uses encryption.AESCrypter to encrypt and decrypt the keys.
-func NewKeyManager(cfg *configs.Config, store keys.Store, fc *client.Client) *KeyManager {
+func NewKeyManager(cfg *configs.Config, store keys.Store, fc flow_helpers.FlowClient) *KeyManager {
 	// TODO(latenssi): safeguard against nil config?
 
 	if cfg.DefaultKeyWeight < 0 {

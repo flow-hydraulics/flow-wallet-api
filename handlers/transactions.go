@@ -7,11 +7,11 @@ import (
 )
 
 type Transactions struct {
-	service *transactions.Service
+	service transactions.Service
 }
 
 // NewTransactions initiates a new transactions server.
-func NewTransactions(service *transactions.Service) *Transactions {
+func NewTransactions(service transactions.Service) *Transactions {
 	return &Transactions{service}
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 // DeployTokenContractForAccount is used for testing purposes.
-func (s *Service) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) error {
+func (s *ServiceImpl) DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) error {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {

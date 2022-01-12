@@ -10,18 +10,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Service defines the API for job HTTP handlers.
-type Service struct {
+type Service interface {
+	List(limit, offset int) (*[]Job, error)
+	Details(jobID string) (*Job, error)
+}
+
+// ServiceImpl defines the API for job HTTP handlers.
+type ServiceImpl struct {
 	store Store
 }
 
 // NewService initiates a new job service.
-func NewService(store Store) *Service {
-	return &Service{store}
+func NewService(store Store) Service {
+	return &ServiceImpl{store}
 }
 
 // List returns all jobs in the datastore.
-func (s *Service) List(limit, offset int) (*[]Job, error) {
+func (s *ServiceImpl) List(limit, offset int) (*[]Job, error) {
 	log.WithFields(log.Fields{"limit": limit, "offset": offset}).Trace("List jobs")
 
 	o := datastore.ParseListOptions(limit, offset)
@@ -35,7 +40,7 @@ func (s *Service) List(limit, offset int) (*[]Job, error) {
 }
 
 // Details returns a specific job.
-func (s *Service) Details(jobID string) (*Job, error) {
+func (s *ServiceImpl) Details(jobID string) (*Job, error) {
 	log.WithFields(log.Fields{"jobID": jobID}).Trace("Job details")
 
 	id, err := uuid.Parse(jobID)

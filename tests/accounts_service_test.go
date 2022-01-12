@@ -14,7 +14,7 @@ func Test_Add_New_Non_Custodial_Account(t *testing.T) {
 
 	addr := "0x0123456789"
 
-	a, err := svc.AddNonCustodialAccount(context.Background(), addr)
+	a, err := svc.AddNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,12 +30,12 @@ func Test_Add_Existing_Non_Custodial_Account_fails(t *testing.T) {
 
 	addr := "0x0123456789"
 
-	_, err := svc.AddNonCustodialAccount(context.Background(), addr)
+	_, err := svc.AddNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = svc.AddNonCustodialAccount(context.Background(), addr)
+	_, err = svc.AddNonCustodialAccount(addr)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -47,18 +47,18 @@ func Test_Add_Non_Custodial_Account_After_Delete(t *testing.T) {
 
 	addr := "0x0123456789"
 
-	_, err := svc.AddNonCustodialAccount(context.Background(), addr)
+	_, err := svc.AddNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = svc.DeleteNonCustodialAccount(context.Background(), addr)
+	err = svc.DeleteNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// One must be able to add the same account again after it was deleted.
-	_, err = svc.AddNonCustodialAccount(context.Background(), addr)
+	_, err = svc.AddNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func Test_Delete_Non_Existing_Account(t *testing.T) {
 
 	addr := "0x0123456789"
 
-	err := svc.DeleteNonCustodialAccount(context.Background(), addr)
+	err := svc.DeleteNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func Test_Delete_Fails_On_Custodial_Account(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = svc.DeleteNonCustodialAccount(context.Background(), a.Address)
+	err = svc.DeleteNonCustodialAccount(a.Address)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -97,17 +97,17 @@ func Test_Delete_Non_Custodial_Account_Is_Idempotent(t *testing.T) {
 
 	addr := "0x0123456789"
 
-	_, err := svc.AddNonCustodialAccount(context.Background(), addr)
+	_, err := svc.AddNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = svc.DeleteNonCustodialAccount(context.Background(), addr)
+	err = svc.DeleteNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = svc.DeleteNonCustodialAccount(context.Background(), addr)
+	err = svc.DeleteNonCustodialAccount(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
