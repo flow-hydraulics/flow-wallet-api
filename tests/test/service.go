@@ -88,19 +88,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
-	jobStore := jobs.NewGormStore(db)
-	accountStore := accounts.NewGormStore(db)
-	keyStore := keys.NewGormStore(db)
-	templateStore := templates.NewGormStore(db)
-	tokenStore := tokens.NewGormStore(db)
-	transactionStore := transactions.NewGormStore(db)
-	systemStore := system.NewGormStore(db)
-	listenerStore := chain_events.NewGormStore(GetDatabase(t, cfg))
-
-	km := basic.NewKeyManager(cfg, keyStore, fc)
-
 	wp := jobs.NewWorkerPool(
-		jobStore,
+		jobs.NewGormStore(db),
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
 		jobs.WithMaxJobErrorCount(0),
@@ -109,12 +98,14 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		jobs.WithReSchedulableGracePeriod(0),
 	)
 
-	templateService := templates.NewService(cfg, templateStore)
-	transactionService := transactions.NewService(cfg, transactionStore, km, fc, wp)
-	accountService := accounts.NewService(cfg, accountStore, km, fc, wp, transactionService)
-	jobService := jobs.NewService(jobStore)
-	tokenService := tokens.NewService(cfg, tokenStore, km, fc, wp, transactionService, templateService, accountService)
-	systemService := system.NewService(systemStore)
+	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
+
+	templateService := templates.NewService(cfg, templates.NewGormStore(db))
+	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp)
+	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp)
+	jobService := jobs.NewService(jobs.NewGormStore(db))
+	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
+	systemService := system.NewService(system.NewGormStore(db))
 
 	getTypes := func() ([]string, error) {
 		// Get all enabled tokens
@@ -135,7 +126,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	}
 
 	listener := chain_events.NewListener(
-		fc, listenerStore, getTypes,
+		fc, chain_events.NewGormStore(GetDatabase(t, cfg)), getTypes,
 		cfg.ChainListenerMaxBlocks,
 		1*time.Second,
 		cfg.ChainListenerStartingHeight,

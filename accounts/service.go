@@ -11,7 +11,6 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -28,7 +27,6 @@ type Service struct {
 	km            keys.Manager
 	fc            *client.Client
 	wp            *jobs.WorkerPool
-	transactions  *transactions.Service
 	txRateLimiter ratelimit.Limiter
 }
 
@@ -39,13 +37,12 @@ func NewService(
 	km keys.Manager,
 	fc *client.Client,
 	wp *jobs.WorkerPool,
-	txs *transactions.Service,
 	opts ...ServiceOption,
 ) *Service {
 	var defaultTxRatelimiter = ratelimit.NewUnlimited()
 
 	// TODO(latenssi): safeguard against nil config?
-	svc := &Service{cfg, store, km, fc, wp, txs, defaultTxRatelimiter}
+	svc := &Service{cfg, store, km, fc, wp, defaultTxRatelimiter}
 
 	for _, opt := range opts {
 		opt(svc)
