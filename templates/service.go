@@ -10,7 +10,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Service struct {
+type Service interface {
+	AddToken(t *Token) error
+	ListTokens(tType TokenType) (*[]BasicToken, error)
+	GetTokenById(id uint64) (*Token, error)
+	GetTokenByName(name string) (*Token, error)
+	RemoveToken(id uint64) error
+	TokenFromEvent(e flow.Event) (*Token, error)
+}
+
+type ServiceImpl struct {
 	store Store
 	cfg   *configs.Config
 }
@@ -30,7 +39,7 @@ func parseEnabledTokens(envEnabledTokens []string) map[string]Token {
 	return enabledTokens
 }
 
-func NewService(cfg *configs.Config, store Store) *Service {
+func NewService(cfg *configs.Config, store Store) Service {
 	// TODO(latenssi): safeguard against nil config?
 
 	// Add all enabled tokens from config as fungible tokens
@@ -59,10 +68,10 @@ func NewService(cfg *configs.Config, store Store) *Service {
 		store.InsertTemp(&token)
 	}
 
-	return &Service{store, cfg}
+	return &ServiceImpl{store, cfg}
 }
 
-func (s *Service) AddToken(t *Token) error {
+func (s *ServiceImpl) AddToken(t *Token) error {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(t.Address, s.cfg.ChainID)
 	if err != nil {
@@ -83,23 +92,23 @@ func (s *Service) AddToken(t *Token) error {
 	return s.store.Insert(t)
 }
 
-func (s *Service) ListTokens(tType TokenType) (*[]BasicToken, error) {
+func (s *ServiceImpl) ListTokens(tType TokenType) (*[]BasicToken, error) {
 	return s.store.List(tType)
 }
 
-func (s *Service) GetTokenById(id uint64) (*Token, error) {
+func (s *ServiceImpl) GetTokenById(id uint64) (*Token, error) {
 	return s.store.GetById(id)
 }
 
-func (s *Service) GetTokenByName(name string) (*Token, error) {
+func (s *ServiceImpl) GetTokenByName(name string) (*Token, error) {
 	return s.store.GetByName(name)
 }
 
-func (s *Service) RemoveToken(id uint64) error {
+func (s *ServiceImpl) RemoveToken(id uint64) error {
 	return s.store.Remove(id)
 }
 
-func (s *Service) TokenFromEvent(e flow.Event) (*Token, error) {
+func (s *ServiceImpl) TokenFromEvent(e flow.Event) (*Token, error) {
 	// Example event:
 	// A.0ae53cb6e3f42a79.FlowToken.TokensDeposited
 	ss := strings.Split(e.Type, ".")

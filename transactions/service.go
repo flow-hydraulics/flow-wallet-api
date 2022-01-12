@@ -18,12 +18,24 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// Service defines the API for transaction HTTP handlers.
-type Service struct {
+type Service interface {
+	Create(ctx context.Context, sync bool, proposerAddress string, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error)
+	Sign(ctx context.Context, proposerAddress string, code string, args []Argument) (*SignedTransaction, error)
+	List(limit, offset int) ([]Transaction, error)
+	ListForAccount(tType Type, address string, limit, offset int) ([]Transaction, error)
+	Details(ctx context.Context, transactionId string) (*Transaction, error)
+	DetailsForAccount(ctx context.Context, tType Type, address, transactionId string) (*Transaction, error)
+	ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error)
+	UpdateTransaction(t *Transaction) error
+	GetOrCreateTransaction(transactionId string) *Transaction
+}
+
+// ServiceImpl defines the API for transaction HTTP handlers.
+type ServiceImpl struct {
 	store         Store
 	km            keys.Manager
 	fc            *client.Client
-	wp            *jobs.WorkerPool
+	wp            jobs.WorkerPool
 	cfg           *configs.Config
 	txRateLimiter ratelimit.Limiter
 }
@@ -34,13 +46,13 @@ func NewService(
 	store Store,
 	km keys.Manager,
 	fc *client.Client,
-	wp *jobs.WorkerPool,
+	wp jobs.WorkerPool,
 	opts ...ServiceOption,
-) *Service {
+) Service {
 	var defaultTxRatelimiter = ratelimit.NewUnlimited()
 
 	// TODO(latenssi): safeguard against nil config?
-	svc := &Service{store, km, fc, wp, cfg, defaultTxRatelimiter}
+	svc := &ServiceImpl{store, km, fc, wp, cfg, defaultTxRatelimiter}
 
 	for _, opt := range opts {
 		opt(svc)
@@ -56,7 +68,7 @@ func NewService(
 	return svc
 }
 
-func (s *Service) Create(ctx context.Context, sync bool, proposerAddress string, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error) {
+func (s *ServiceImpl) Create(ctx context.Context, sync bool, proposerAddress string, code string, args []Argument, tType Type) (*jobs.Job, *Transaction, error) {
 	transaction, err := s.newTransaction(ctx, proposerAddress, code, args, tType)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error while getting new transaction: %w", err)
@@ -89,7 +101,7 @@ func (s *Service) Create(ctx context.Context, sync bool, proposerAddress string,
 	}
 }
 
-func (s *Service) Sign(ctx context.Context, proposerAddress string, code string, args []Argument) (*SignedTransaction, error) {
+func (s *ServiceImpl) Sign(ctx context.Context, proposerAddress string, code string, args []Argument) (*SignedTransaction, error) {
 	flowTx, err := s.buildFlowTransaction(ctx, proposerAddress, code, args)
 	if err != nil {
 		return nil, err
@@ -99,13 +111,13 @@ func (s *Service) Sign(ctx context.Context, proposerAddress string, code string,
 }
 
 // List returns all transactions in the datastore.
-func (s *Service) List(limit, offset int) ([]Transaction, error) {
+func (s *ServiceImpl) List(limit, offset int) ([]Transaction, error) {
 	o := datastore.ParseListOptions(limit, offset)
 	return s.store.Transactions(o)
 }
 
 // ListForAccount returns all transactions in the datastore for a given account.
-func (s *Service) ListForAccount(tType Type, address string, limit, offset int) ([]Transaction, error) {
+func (s *ServiceImpl) ListForAccount(tType Type, address string, limit, offset int) ([]Transaction, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -118,7 +130,7 @@ func (s *Service) ListForAccount(tType Type, address string, limit, offset int) 
 }
 
 // Details returns a specific transaction.
-func (s *Service) Details(ctx context.Context, transactionId string) (*Transaction, error) {
+func (s *ServiceImpl) Details(ctx context.Context, transactionId string) (*Transaction, error) {
 	// Check if the input is a valid transaction id
 	if err := flow_helpers.ValidateTransactionId(transactionId); err != nil {
 		return nil, err
@@ -146,7 +158,7 @@ func (s *Service) Details(ctx context.Context, transactionId string) (*Transacti
 }
 
 // DetailsForAccount returns a specific transaction.
-func (s *Service) DetailsForAccount(ctx context.Context, tType Type, address, transactionId string) (*Transaction, error) {
+func (s *ServiceImpl) DetailsForAccount(ctx context.Context, tType Type, address, transactionId string) (*Transaction, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -180,7 +192,7 @@ func (s *Service) DetailsForAccount(ctx context.Context, tType Type, address, tr
 }
 
 // Execute a script
-func (s *Service) ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error) {
+func (s *ServiceImpl) ExecuteScript(ctx context.Context, code string, args []Argument) (cadence.Value, error) {
 	return s.fc.ExecuteScriptAtLatestBlock(
 		ctx,
 		[]byte(code),
@@ -188,15 +200,15 @@ func (s *Service) ExecuteScript(ctx context.Context, code string, args []Argumen
 	)
 }
 
-func (s *Service) UpdateTransaction(t *Transaction) error {
+func (s *ServiceImpl) UpdateTransaction(t *Transaction) error {
 	return s.store.UpdateTransaction(t)
 }
 
-func (s *Service) GetOrCreateTransaction(transactionId string) *Transaction {
+func (s *ServiceImpl) GetOrCreateTransaction(transactionId string) *Transaction {
 	return s.store.GetOrCreateTransaction(transactionId)
 }
 
-func (s *Service) buildFlowTransaction(ctx context.Context, proposerAddress, code string, arguments []Argument) (*flow.Transaction, error) {
+func (s *ServiceImpl) buildFlowTransaction(ctx context.Context, proposerAddress, code string, arguments []Argument) (*flow.Transaction, error) {
 	latestBlockID, err := flow_helpers.LatestBlockId(ctx, s.fc)
 	if err != nil {
 		return nil, err
@@ -252,7 +264,7 @@ func (s *Service) buildFlowTransaction(ctx context.Context, proposerAddress, cod
 	return flowTx, nil
 }
 
-func (s *Service) newTransaction(ctx context.Context, proposerAddress string, code string, args []Argument, tType Type) (*Transaction, error) {
+func (s *ServiceImpl) newTransaction(ctx context.Context, proposerAddress string, code string, args []Argument, tType Type) (*Transaction, error) {
 	tx := &Transaction{
 		ProposerAddress: proposerAddress,
 		TransactionType: tType,
@@ -269,7 +281,7 @@ func (s *Service) newTransaction(ctx context.Context, proposerAddress string, co
 	return tx, nil
 }
 
-func (s *Service) getProposalAuthorizer(ctx context.Context, proposerAddress string) (keys.Authorizer, error) {
+func (s *ServiceImpl) getProposalAuthorizer(ctx context.Context, proposerAddress string) (keys.Authorizer, error) {
 	// Validate the input address.
 	proposerAddress, err := flow_helpers.ValidateAddress(proposerAddress, s.cfg.ChainID)
 	if err != nil {
@@ -292,7 +304,7 @@ func (s *Service) getProposalAuthorizer(ctx context.Context, proposerAddress str
 	return proposer, nil
 }
 
-func (s *Service) sendTransaction(ctx context.Context, tx *Transaction) error {
+func (s *ServiceImpl) sendTransaction(ctx context.Context, tx *Transaction) error {
 	// TODO: we should "recreate" the transaction as proposal key sequence numbering
 	// might have gotten out of sync by now (in async situations)
 

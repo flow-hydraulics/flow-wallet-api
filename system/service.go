@@ -8,15 +8,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Service struct {
+type Service interface {
+	GetSettings() (*Settings, error)
+	SaveSettings(settings *Settings) error
+	Pause() error
+	IsHalted() (bool, error)
+}
+
+type ServiceImpl struct {
 	store         Store
 	pauseDuration time.Duration
 }
 
 const defaultPauseDuration = time.Minute
 
-func NewService(store Store, opts ...ServiceOption) *Service {
-	svc := &Service{
+func NewService(store Store, opts ...ServiceOption) Service {
+	svc := &ServiceImpl{
 		store:         store,
 		pauseDuration: defaultPauseDuration,
 	}
@@ -29,11 +36,11 @@ func NewService(store Store, opts ...ServiceOption) *Service {
 	return svc
 }
 
-func (svc *Service) GetSettings() (*Settings, error) {
+func (svc *ServiceImpl) GetSettings() (*Settings, error) {
 	return svc.store.GetSettings()
 }
 
-func (svc *Service) SaveSettings(settings *Settings) error {
+func (svc *ServiceImpl) SaveSettings(settings *Settings) error {
 	if settings.ID == 0 {
 		return fmt.Errorf("settings object has no ID, get an existing settings first and alter it")
 	}
@@ -41,7 +48,7 @@ func (svc *Service) SaveSettings(settings *Settings) error {
 	return svc.store.SaveSettings(settings)
 }
 
-func (svc *Service) Pause() error {
+func (svc *ServiceImpl) Pause() error {
 	log.Trace("Pause system")
 	settings, err := svc.GetSettings()
 	if err != nil {
@@ -51,7 +58,7 @@ func (svc *Service) Pause() error {
 	return svc.SaveSettings(settings)
 }
 
-func (svc *Service) IsHalted() (bool, error) {
+func (svc *ServiceImpl) IsHalted() (bool, error) {
 	s, err := svc.GetSettings()
 	if err != nil {
 		return false, err

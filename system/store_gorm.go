@@ -8,7 +8,7 @@ type GormStore struct {
 	db *gorm.DB
 }
 
-func NewGormStore(db *gorm.DB) *GormStore {
+func NewGormStore(db *gorm.DB) Store {
 	return &GormStore{db}
 }
 

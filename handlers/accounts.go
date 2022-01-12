@@ -10,11 +10,11 @@ import (
 // It provides list, create and details APIs.
 // It uses an account service to interface with data.
 type Accounts struct {
-	service *accounts.Service
+	service accounts.Service
 }
 
 // NewAccounts initiates a new accounts server.
-func NewAccounts(service *accounts.Service) *Accounts {
+func NewAccounts(service accounts.Service) *Accounts {
 	return &Accounts{service}
 }
 

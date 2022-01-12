@@ -16,7 +16,12 @@ import (
 
 type GetEventTypes func() ([]string, error)
 
-type Listener struct {
+type Listener interface {
+	Start() Listener
+	Stop()
+}
+
+type ListenerImpl struct {
 	ticker         *time.Ticker
 	stopChan       chan struct{}
 	fc             *client.Client
@@ -26,7 +31,7 @@ type Listener struct {
 	interval       time.Duration
 	startingHeight uint64
 
-	systemService *system.Service
+	systemService system.Service
 }
 
 type ListenerStatus struct {
@@ -46,9 +51,9 @@ func NewListener(
 	interval time.Duration,
 	startingHeight uint64,
 	opts ...ListenerOption,
-) *Listener {
+) Listener {
 
-	listener := &Listener{
+	listener := &ListenerImpl{
 		ticker:         nil,
 		stopChan:       make(chan struct{}),
 		fc:             fc,
@@ -68,7 +73,7 @@ func NewListener(
 	return listener
 }
 
-func (l *Listener) run(ctx context.Context, start, end uint64) error {
+func (l *ListenerImpl) run(ctx context.Context, start, end uint64) error {
 	events := make([]flow.Event, 0)
 
 	eventTypes, err := l.getTypes()
@@ -91,13 +96,13 @@ func (l *Listener) run(ctx context.Context, start, end uint64) error {
 	}
 
 	for _, event := range events {
-		Event.Trigger(event)
+		Event.Trigger(ctx, event)
 	}
 
 	return nil
 }
 
-func (l *Listener) Start() *Listener {
+func (l *ListenerImpl) Start() Listener {
 	if l.ticker != nil {
 		// Already started
 		return l
@@ -194,7 +199,7 @@ func (l *Listener) Start() *Listener {
 	return l
 }
 
-func (l *Listener) initHeight() error {
+func (l *ListenerImpl) initHeight() error {
 	return l.db.LockedStatus(func(status *ListenerStatus) error {
 		if l.startingHeight > 0 && status.LatestHeight < l.startingHeight-1 {
 			status.LatestHeight = l.startingHeight - 1
@@ -215,7 +220,7 @@ func (l *Listener) initHeight() error {
 	})
 }
 
-func (l *Listener) Stop() {
+func (l *ListenerImpl) Stop() {
 	log.Debug("Stopping Flow event listener")
 
 	close(l.stopChan)
@@ -227,7 +232,7 @@ func (l *Listener) Stop() {
 	l.ticker = nil
 }
 
-func (l *Listener) systemHalted() (bool, error) {
+func (l *ListenerImpl) systemHalted() (bool, error) {
 	if l.systemService != nil {
 		return l.systemService.IsHalted()
 	}

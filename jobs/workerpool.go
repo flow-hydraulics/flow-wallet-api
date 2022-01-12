@@ -40,7 +40,18 @@ var (
 
 type ExecutorFunc func(ctx context.Context, j *Job) error
 
-type WorkerPool struct {
+type WorkerPool interface {
+	RegisterExecutor(jobType string, executorF ExecutorFunc)
+	CreateJob(jobType, txID string, opts ...JobOption) (*Job, error)
+	Schedule(j *Job) error
+	Status() (WorkerPoolStatus, error)
+	Start()
+	Stop(wait bool)
+	Capacity() uint
+	QueueSize() uint
+}
+
+type WorkerPoolImpl struct {
 	started       bool
 	wg            *sync.WaitGroup
 	jobChan       chan *Job
@@ -60,7 +71,7 @@ type WorkerPool struct {
 	reSchedulableGracePeriod time.Duration
 
 	notificationConfig *NotificationConfig
-	systemService      *system.Service
+	systemService      system.Service
 }
 
 type WorkerPoolStatus struct {
@@ -69,10 +80,10 @@ type WorkerPoolStatus struct {
 	WorkerCount int `json:"workerCount"`
 }
 
-func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) *WorkerPool {
+func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPoolOption) WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	pool := &WorkerPool{
+	pool := &WorkerPoolImpl{
 		wg:            &sync.WaitGroup{},
 		jobChan:       make(chan *Job, capacity),
 		stopChan:      make(chan struct{}),
@@ -104,7 +115,7 @@ func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPool
 	return pool
 }
 
-func (wp *WorkerPool) Status() (WorkerPoolStatus, error) {
+func (wp *WorkerPoolImpl) Status() (WorkerPoolStatus, error) {
 	var status WorkerPoolStatus
 
 	query, err := wp.store.Status()
@@ -138,7 +149,7 @@ func (wp *WorkerPool) Status() (WorkerPoolStatus, error) {
 }
 
 // CreateJob constructs a new Job for type `jobType` ready for scheduling.
-func (wp *WorkerPool) CreateJob(jobType, txID string, opts ...JobOption) (*Job, error) {
+func (wp *WorkerPoolImpl) CreateJob(jobType, txID string, opts ...JobOption) (*Job, error) {
 	// Init job
 	job := &Job{
 		State:         Init,
@@ -159,12 +170,12 @@ func (wp *WorkerPool) CreateJob(jobType, txID string, opts ...JobOption) (*Job, 
 	return job, nil
 }
 
-func (wp *WorkerPool) RegisterExecutor(jobType string, executorF ExecutorFunc) {
+func (wp *WorkerPoolImpl) RegisterExecutor(jobType string, executorF ExecutorFunc) {
 	wp.executors[jobType] = executorF
 }
 
 // Schedule will try to immediately schedule the run of a job
-func (wp *WorkerPool) Schedule(j *Job) error {
+func (wp *WorkerPoolImpl) Schedule(j *Job) error {
 	entry := j.logEntry(wp.logger.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "WorkerPool.Schedule",
@@ -193,7 +204,7 @@ func (wp *WorkerPool) Schedule(j *Job) error {
 	return nil
 }
 
-func (wp *WorkerPool) Start() {
+func (wp *WorkerPoolImpl) Start() {
 	if !wp.started {
 		wp.started = true
 		wp.startWorkers()
@@ -201,7 +212,7 @@ func (wp *WorkerPool) Start() {
 	}
 }
 
-func (wp *WorkerPool) Stop(wait bool) {
+func (wp *WorkerPoolImpl) Stop(wait bool) {
 	close(wp.stopChan)
 	// Give time for the stop channel to signal before closing job channel
 	time.Sleep(time.Millisecond * 100)
@@ -212,15 +223,15 @@ func (wp *WorkerPool) Stop(wait bool) {
 	}
 }
 
-func (wp *WorkerPool) Capacity() uint {
+func (wp *WorkerPoolImpl) Capacity() uint {
 	return wp.capacity
 }
 
-func (wp *WorkerPool) QueueSize() uint {
+func (wp *WorkerPoolImpl) QueueSize() uint {
 	return uint(len(wp.jobChan))
 }
 
-func (wp *WorkerPool) accept(job *Job) bool {
+func (wp *WorkerPoolImpl) accept(job *Job) bool {
 	entry := job.logEntry(wp.logger.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "WorkerPool.accept",
@@ -236,14 +247,14 @@ func (wp *WorkerPool) accept(job *Job) bool {
 	return true
 }
 
-func (wp *WorkerPool) systemHalted() (bool, error) {
+func (wp *WorkerPoolImpl) systemHalted() (bool, error) {
 	if wp.systemService != nil {
 		return wp.systemService.IsHalted()
 	}
 	return false, nil
 }
 
-func (wp *WorkerPool) startDBJobScheduler() {
+func (wp *WorkerPoolImpl) startDBJobScheduler() {
 	go func() {
 		var restTime time.Duration
 
@@ -287,7 +298,7 @@ func (wp *WorkerPool) startDBJobScheduler() {
 	}()
 }
 
-func (wp *WorkerPool) startWorkers() {
+func (wp *WorkerPoolImpl) startWorkers() {
 	for i := uint(0); i < wp.workerCount; i++ {
 		wp.wg.Add(1)
 		go func() {
@@ -327,7 +338,7 @@ func (wp *WorkerPool) startWorkers() {
 	}
 }
 
-func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
+func (wp *WorkerPoolImpl) tryEnqueue(job *Job, block bool) bool {
 	if block {
 		select {
 		case <-wp.stopChan:
@@ -347,7 +358,7 @@ func (wp *WorkerPool) tryEnqueue(job *Job, block bool) bool {
 	}
 }
 
-func (wp *WorkerPool) process(job *Job) error {
+func (wp *WorkerPoolImpl) process(job *Job) error {
 	entry := job.logEntry(wp.logger.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "WorkerPool.process",
@@ -401,7 +412,7 @@ func (wp *WorkerPool) process(job *Job) error {
 	}
 
 	if (job.State == Failed || job.State == Complete) && job.ShouldSendNotification && wp.notificationConfig.ShouldSendJobStatus() {
-		if err := ScheduleJobStatusNotification(wp, job); err != nil {
+		if err := scheduleJobStatusNotification(wp, job); err != nil {
 			entry.
 				WithFields(log.Fields{"error": err}).
 				Warn("Could not schedule a status update notification for job")
@@ -411,7 +422,7 @@ func (wp *WorkerPool) process(job *Job) error {
 	return nil
 }
 
-func (wp *WorkerPool) executeSendJobStatus(ctx context.Context, j *Job) error {
+func (wp *WorkerPoolImpl) executeSendJobStatus(ctx context.Context, j *Job) error {
 	if j.Type != SendJobStatusJobType {
 		return ErrInvalidJobType
 	}
@@ -425,7 +436,7 @@ func PermanentFailure(err error) error {
 	return fmt.Errorf("%w: %s", ErrPermanentFailure, err.Error())
 }
 
-func ScheduleJobStatusNotification(wp *WorkerPool, parent *Job) error {
+func scheduleJobStatusNotification(wp *WorkerPoolImpl, parent *Job) error {
 	entry := parent.logEntry(wp.logger.WithFields(log.Fields{
 		"package":  "jobs",
 		"function": "ScheduleJobStatusNotification",

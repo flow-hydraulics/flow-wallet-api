@@ -7,7 +7,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 )
 
-func WaitForJob(jobSvc *jobs.Service, jobId string) (*jobs.Job, error) {
+func WaitForJob(jobSvc jobs.Service, jobId string) (*jobs.Job, error) {
 	for {
 		if job, err := jobSvc.Details(jobId); err != nil {
 			return nil, err

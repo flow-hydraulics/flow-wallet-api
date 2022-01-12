@@ -91,7 +91,7 @@ func NewFlowAccount(t *testing.T, fc *client.Client, creatorAddress flow.Address
 		panic("failed to send transaction to network")
 	}
 
-	result, err := flow_helpers.WaitForSeal(context.Background(), fc.GetTransactionResult, tx.ID(), max_tx_wait)
+	result, err := flow_helpers.WaitForSeal(context.Background(), fc, tx.ID(), max_tx_wait)
 	if err != nil {
 		t.Fatal(err)
 	}

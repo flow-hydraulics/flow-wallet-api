@@ -11,10 +11,10 @@ import (
 
 // System is a HTTP server for system settings management.
 type System struct {
-	service *system.Service
+	service system.Service
 }
 
-func NewSystem(service *system.Service) *System {
+func NewSystem(service system.Service) *System {
 	return &System{service}
 }
 

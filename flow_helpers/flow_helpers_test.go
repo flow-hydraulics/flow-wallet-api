@@ -11,6 +11,26 @@ import (
 	"google.golang.org/grpc"
 )
 
+type mockFlowClient struct {
+	callCount uint
+}
+
+func (c *mockFlowClient) GetTransactionResult(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error) {
+	c.callCount++
+
+	status := flow.TransactionStatusPending
+
+	if c.callCount >= 3 {
+		status = flow.TransactionStatusSealed
+	}
+
+	return &flow.TransactionResult{Status: status}, nil
+}
+
+func (c *mockFlowClient) SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error {
+	return nil
+}
+
 func TestAddressValidationAndFormatting(t *testing.T) {
 
 	t.Run("ValidateAndFormatAddress formatting", func(t *testing.T) {
@@ -43,23 +63,11 @@ func TestAddressValidationAndFormatting(t *testing.T) {
 
 func TestWaitForSeal(t *testing.T) {
 	t.Run("backoff", func(t *testing.T) {
+		flowClient := new(mockFlowClient)
 		ctx := context.Background()
-		callCount := 0
-		getResult := func(ctx context.Context, id flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error) {
-			callCount++
-
-			status := flow.TransactionStatusPending
-
-			if callCount >= 3 {
-				status = flow.TransactionStatusSealed
-			}
-
-			return &flow.TransactionResult{Status: status}, nil
-		}
-
 		start := time.Now()
 
-		if _, err := WaitForSeal(ctx, getResult, flow.EmptyID, 0); err != nil {
+		if _, err := WaitForSeal(ctx, flowClient, flow.EmptyID, 0); err != nil {
 			t.Fatalf("did not expect an error, got: %s", err)
 		}
 

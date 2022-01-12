@@ -8,7 +8,7 @@ import (
 
 const AccountCreateJobType = "account_create"
 
-func (s *Service) executeAccountCreateJob(ctx context.Context, j *jobs.Job) error {
+func (s *ServiceImpl) executeAccountCreateJob(ctx context.Context, j *jobs.Job) error {
 	if j.Type != AccountCreateJobType {
 		return jobs.ErrInvalidJobType
 	}

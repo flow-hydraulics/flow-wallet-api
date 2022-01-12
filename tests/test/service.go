@@ -22,27 +22,27 @@ import (
 )
 
 type Services interface {
-	GetAccounts() *accounts.Service
-	GetJobs() *jobs.Service
-	GetTemplates() *templates.Service
-	GetTokens() *tokens.Service
-	GetTransactions() *transactions.Service
-	GetSystem() *system.Service
+	GetAccounts() accounts.Service
+	GetJobs() jobs.Service
+	GetTemplates() templates.Service
+	GetTokens() tokens.Service
+	GetTransactions() transactions.Service
+	GetSystem() system.Service
 
 	GetKeyManager() keys.Manager
-	GetListener() *chain_events.Listener
+	GetListener() chain_events.Listener
 }
 
 type svcs struct {
-	accountService     *accounts.Service
-	jobService         *jobs.Service
-	templateService    *templates.Service
-	tokenService       *tokens.Service
-	transactionService *transactions.Service
-	systemService      *system.Service
+	accountService     accounts.Service
+	jobService         jobs.Service
+	templateService    templates.Service
+	tokenService       tokens.Service
+	transactionService transactions.Service
+	systemService      system.Service
 
 	keyManager keys.Manager
-	listener   *chain_events.Listener
+	listener   chain_events.Listener
 }
 
 func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
@@ -79,9 +79,9 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 			goleak.IgnoreTopFunction("database/sql.(*DB).connectionOpener"),
 			goleak.IgnoreTopFunction("google.golang.org/grpc.(*ccBalancerWrapper).watcher"),
 			goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*controlBuffer).get"),
-			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPool).startWorkers.func1"),
-			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPool).startDBJobScheduler.func1"),
-			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/chain_events.(*Listener).Start.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPoolImpl).startWorkers.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPoolImpl).startDBJobScheduler.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/chain_events.(*ListenerImpl).Start.func1"),
 		)
 	})
 
@@ -171,23 +171,23 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	}
 }
 
-func (s *svcs) GetAccounts() *accounts.Service {
+func (s *svcs) GetAccounts() accounts.Service {
 	return s.accountService
 }
 
-func (s *svcs) GetJobs() *jobs.Service {
+func (s *svcs) GetJobs() jobs.Service {
 	return s.jobService
 }
 
-func (s *svcs) GetTemplates() *templates.Service {
+func (s *svcs) GetTemplates() templates.Service {
 	return s.templateService
 }
 
-func (s *svcs) GetTokens() *tokens.Service {
+func (s *svcs) GetTokens() tokens.Service {
 	return s.tokenService
 }
 
-func (s *svcs) GetTransactions() *transactions.Service {
+func (s *svcs) GetTransactions() transactions.Service {
 	return s.transactionService
 }
 
@@ -195,10 +195,10 @@ func (s *svcs) GetKeyManager() keys.Manager {
 	return s.keyManager
 }
 
-func (s *svcs) GetListener() *chain_events.Listener {
+func (s *svcs) GetListener() chain_events.Listener {
 	return s.listener
 }
 
-func (s *svcs) GetSystem() *system.Service {
+func (s *svcs) GetSystem() system.Service {
 	return s.systemService
 }

@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (s *Service) InitAdminAccount(ctx context.Context) error {
+func (s *ServiceImpl) InitAdminAccount(ctx context.Context) error {
 	log.Debug("Initializing admin account")
 
 	a, err := s.store.Account(s.cfg.AdminAddress)
@@ -64,7 +64,7 @@ func (s *Service) InitAdminAccount(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) addAdminProposalKeys(ctx context.Context, count uint16) error {
+func (s *ServiceImpl) addAdminProposalKeys(ctx context.Context, count uint16) error {
 
 	log.
 		WithFields(log.Fields{"count": count}).

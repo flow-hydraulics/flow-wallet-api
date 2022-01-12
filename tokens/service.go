@@ -25,14 +25,30 @@ const (
 	queryTypeDeposit    = "deposit"
 )
 
-type Service struct {
+type Service interface {
+	Setup(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error)
+	AddAccountToken(tokenName, address string) error
+	AccountTokens(address string, tType templates.TokenType) ([]AccountToken, error)
+	Details(ctx context.Context, tokenName, address string) (*Details, error)
+	CreateWithdrawal(ctx context.Context, sync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error)
+	ListWithdrawals(address, tokenName string) ([]*TokenWithdrawal, error)
+	ListDeposits(address, tokenName string) ([]*TokenDeposit, error)
+	GetWithdrawal(address, tokenName, transactionId string) (*TokenWithdrawal, error)
+	GetDeposit(address, tokenName, transactionId string) (*TokenDeposit, error)
+	RegisterDeposit(ctx context.Context, token *templates.Token, transactionId flow.Identifier, recipient accounts.Account, amountOrNftID string) error
+
+	// DeployTokenContractForAccount is only used in tests
+	DeployTokenContractForAccount(ctx context.Context, runSync bool, tokenName, address string) error
+}
+
+type ServiceImpl struct {
 	store        Store
 	km           keys.Manager
 	fc           *client.Client
-	wp           *jobs.WorkerPool
-	transactions *transactions.Service
-	templates    *templates.Service
-	accounts     *accounts.Service
+	wp           jobs.WorkerPool
+	transactions transactions.Service
+	templates    templates.Service
+	accounts     accounts.Service
 	cfg          *configs.Config
 }
 
@@ -41,14 +57,14 @@ func NewService(
 	store Store,
 	km keys.Manager,
 	fc *client.Client,
-	wp *jobs.WorkerPool,
-	txs *transactions.Service,
-	tes *templates.Service,
-	acs *accounts.Service,
-) *Service {
+	wp jobs.WorkerPool,
+	txs transactions.Service,
+	tes templates.Service,
+	acs accounts.Service,
+) Service {
 	// TODO(latenssi): safeguard against nil config?
 
-	svc := &Service{store, km, fc, wp, txs, tes, acs, cfg}
+	svc := &ServiceImpl{store, km, fc, wp, txs, tes, acs, cfg}
 
 	if wp == nil {
 		panic("workerpool nil")
@@ -60,7 +76,7 @@ func NewService(
 	return svc
 }
 
-func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
+func (s *ServiceImpl) Setup(ctx context.Context, sync bool, tokenName, address string) (*jobs.Job, *transactions.Transaction, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -106,7 +122,31 @@ func (s *Service) Setup(ctx context.Context, sync bool, tokenName, address strin
 	return job, tx, err
 }
 
-func (s *Service) AccountTokens(address string, tType templates.TokenType) ([]AccountToken, error) {
+func (s *ServiceImpl) AddAccountToken(tokenName, address string) error {
+	// Check if the input is a valid address
+	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
+	if err != nil {
+		return err
+	}
+
+	token, err := s.templates.GetTokenByName(tokenName)
+	if err != nil {
+		return err
+	}
+
+	if err := s.store.InsertAccountToken(&AccountToken{
+		AccountAddress: address,
+		TokenAddress:   token.Address,
+		TokenName:      token.Name,
+		TokenType:      token.Type,
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ServiceImpl) AccountTokens(address string, tType templates.TokenType) ([]AccountToken, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -117,7 +157,7 @@ func (s *Service) AccountTokens(address string, tType templates.TokenType) ([]Ac
 }
 
 // Details is used to get the accounts balance (or similar for NFTs) for a token.
-func (s *Service) Details(ctx context.Context, tokenName, address string) (*Details, error) {
+func (s *ServiceImpl) Details(ctx context.Context, tokenName, address string) (*Details, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -147,7 +187,7 @@ func (s *Service) Details(ctx context.Context, tokenName, address string) (*Deta
 	return &Details{TokenName: token.Name, Balance: &Balance{CadenceValue: res}}, nil
 }
 
-func (s *Service) CreateWithdrawal(ctx context.Context, sync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error) {
+func (s *ServiceImpl) CreateWithdrawal(ctx context.Context, sync bool, sender string, request WithdrawalRequest) (*jobs.Job, *transactions.Transaction, error) {
 	log.WithFields(log.Fields{"sync": sync}).Trace("Create withdrawal")
 
 	if !sync {
@@ -181,7 +221,7 @@ func (s *Service) CreateWithdrawal(ctx context.Context, sync bool, sender string
 	}
 }
 
-func (s *Service) ListTransfers(queryType, address, tokenName string) ([]*TokenTransfer, error) {
+func (s *ServiceImpl) listTransfers(queryType, address, tokenName string) ([]*TokenTransfer, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -211,8 +251,8 @@ func (s *Service) ListTransfers(queryType, address, tokenName string) ([]*TokenT
 	}
 }
 
-func (s *Service) ListWithdrawals(address, tokenName string) ([]*TokenWithdrawal, error) {
-	tt, err := s.ListTransfers(queryTypeWithdrawal, address, tokenName)
+func (s *ServiceImpl) ListWithdrawals(address, tokenName string) ([]*TokenWithdrawal, error) {
+	tt, err := s.listTransfers(queryTypeWithdrawal, address, tokenName)
 	if err != nil {
 		return nil, err
 	}
@@ -224,8 +264,8 @@ func (s *Service) ListWithdrawals(address, tokenName string) ([]*TokenWithdrawal
 	return res, nil
 }
 
-func (s *Service) ListDeposits(address, tokenName string) ([]*TokenDeposit, error) {
-	tt, err := s.ListTransfers(queryTypeDeposit, address, tokenName)
+func (s *ServiceImpl) ListDeposits(address, tokenName string) ([]*TokenDeposit, error) {
+	tt, err := s.listTransfers(queryTypeDeposit, address, tokenName)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +277,7 @@ func (s *Service) ListDeposits(address, tokenName string) ([]*TokenDeposit, erro
 	return res, nil
 }
 
-func (s *Service) GetTransfer(queryType, address, tokenName, transactionId string) (*TokenTransfer, error) {
+func (s *ServiceImpl) getTransfer(queryType, address, tokenName, transactionId string) (*TokenTransfer, error) {
 	// Check if the input is a valid address
 	address, err := flow_helpers.ValidateAddress(address, s.cfg.ChainID)
 	if err != nil {
@@ -273,8 +313,8 @@ func (s *Service) GetTransfer(queryType, address, tokenName, transactionId strin
 	}
 }
 
-func (s *Service) GetWithdrawal(address, tokenName, transactionId string) (*TokenWithdrawal, error) {
-	t, err := s.GetTransfer(queryTypeWithdrawal, address, tokenName, transactionId)
+func (s *ServiceImpl) GetWithdrawal(address, tokenName, transactionId string) (*TokenWithdrawal, error) {
+	t, err := s.getTransfer(queryTypeWithdrawal, address, tokenName, transactionId)
 	if err != nil {
 		return nil, err
 	}
@@ -282,8 +322,8 @@ func (s *Service) GetWithdrawal(address, tokenName, transactionId string) (*Toke
 	return &w, nil
 }
 
-func (s *Service) GetDeposit(address, tokenName, transactionId string) (*TokenDeposit, error) {
-	t, err := s.GetTransfer(queryTypeDeposit, address, tokenName, transactionId)
+func (s *ServiceImpl) GetDeposit(address, tokenName, transactionId string) (*TokenDeposit, error) {
+	t, err := s.getTransfer(queryTypeDeposit, address, tokenName, transactionId)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +332,7 @@ func (s *Service) GetDeposit(address, tokenName, transactionId string) (*TokenDe
 }
 
 // RegisterDeposit is an internal API for registering token deposits from on-chain events.
-func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Identifier, recipient accounts.Account, amountOrNftID string) error {
+func (s *ServiceImpl) RegisterDeposit(ctx context.Context, token *templates.Token, transactionId flow.Identifier, recipient accounts.Account, amountOrNftID string) error {
 	var (
 		ftAmount string
 		nftId    uint64
@@ -315,7 +355,7 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Ide
 
 	// Get existing transaction or create one
 	transaction := s.transactions.GetOrCreateTransaction(transactionId.Hex())
-	flowTx, err := s.fc.GetTransaction(context.Background(), transactionId)
+	flowTx, err := s.fc.GetTransaction(ctx, transactionId)
 	if err != nil {
 		return err
 	}
@@ -373,7 +413,7 @@ func (s *Service) RegisterDeposit(token *templates.Token, transactionId flow.Ide
 
 // createWithdrawal will synchronously create a withdrawal and store the transfer.
 // Used in job execution and sync API calls.
-func (s *Service) createWithdrawal(ctx context.Context, sender string, request WithdrawalRequest) (*transactions.Transaction, error) {
+func (s *ServiceImpl) createWithdrawal(ctx context.Context, sender string, request WithdrawalRequest) (*transactions.Transaction, error) {
 	// Check if the sender is a valid address
 	sender, err := flow_helpers.ValidateAddress(sender, s.cfg.ChainID)
 	if err != nil {

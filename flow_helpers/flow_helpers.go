@@ -16,7 +16,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-type GetTransactionResultFunc func(ctx context.Context, id flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
+type FlowClient interface {
+	GetTransactionResult(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
+	SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error
+}
 
 const hexPrefix = "0x"
 
@@ -34,7 +37,7 @@ func LatestBlockId(ctx context.Context, c *client.Client) (*flow.Identifier, err
 // - the transaction gets an error status
 // - the transaction gets a "TransactionStatusSealed" or "TransactionStatusExpired" status
 // - timeout is reached
-func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
+func WaitForSeal(ctx context.Context, flowClient FlowClient, id flow.Identifier, timeout time.Duration) (*flow.TransactionResult, error) {
 	var (
 		result *flow.TransactionResult
 		err    error
@@ -54,7 +57,7 @@ func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flo
 	}
 
 	for {
-		result, err = getResult(ctx, id)
+		result, err = flowClient.GetTransactionResult(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -79,11 +82,11 @@ func WaitForSeal(ctx context.Context, getResult GetTransactionResultFunc, id flo
 }
 
 // SendAndWait sends the transaction and waits for the transaction to be sealed
-func SendAndWait(ctx context.Context, c *client.Client, tx flow.Transaction, timeout time.Duration) (*flow.TransactionResult, error) {
-	if err := c.SendTransaction(ctx, tx); err != nil {
+func SendAndWait(ctx context.Context, flowClient FlowClient, tx flow.Transaction, timeout time.Duration) (*flow.TransactionResult, error) {
+	if err := flowClient.SendTransaction(ctx, tx); err != nil {
 		return nil, err
 	}
-	return WaitForSeal(ctx, c.GetTransactionResult, tx.ID(), timeout)
+	return WaitForSeal(ctx, flowClient, tx.ID(), timeout)
 }
 
 func HexString(str string) string {

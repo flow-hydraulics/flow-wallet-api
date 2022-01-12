@@ -92,7 +92,7 @@ func (s *Accounts) AddNonCustodialAccountFunc(rw http.ResponseWriter, r *http.Re
 		return
 	}
 
-	a, err := s.service.AddNonCustodialAccount(r.Context(), b.Address)
+	a, err := s.service.AddNonCustodialAccount(b.Address)
 	if err != nil {
 		handleError(rw, r, err)
 	}
@@ -103,7 +103,7 @@ func (s *Accounts) AddNonCustodialAccountFunc(rw http.ResponseWriter, r *http.Re
 func (s *Accounts) DeleteNonCustodialAccountFunc(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	err := s.service.DeleteNonCustodialAccount(r.Context(), vars["address"])
+	err := s.service.DeleteNonCustodialAccount(vars["address"])
 	if err != nil {
 		handleError(rw, r, err)
 		return

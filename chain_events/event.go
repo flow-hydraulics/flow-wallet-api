@@ -1,12 +1,14 @@
 package chain_events
 
 import (
+	"context"
+
 	"github.com/onflow/flow-go-sdk"
 	log "github.com/sirupsen/logrus"
 )
 
 type handler interface {
-	Handle(flow.Event)
+	Handle(context.Context, flow.Event)
 }
 
 type event struct {
@@ -22,7 +24,7 @@ func (e *event) Register(handler handler) {
 }
 
 // Trigger sends out an event with the payload
-func (e *event) Trigger(payload flow.Event) {
+func (e *event) Trigger(ctx context.Context, payload flow.Event) {
 	log.
 		WithFields(log.Fields{"payload": payload}).
 		Trace("Handling Flow event")
@@ -32,6 +34,6 @@ func (e *event) Trigger(payload flow.Event) {
 	}
 
 	for _, handler := range e.handlers {
-		go handler.Handle(payload)
+		go handler.Handle(ctx, payload)
 	}
 }
