@@ -69,6 +69,8 @@ func main() {
 }
 
 func runServer(cfg *configs.Config) {
+	configureLogger(cfg.LogLevel)
+
 	log.Info("Starting server")
 
 	// Flow client
@@ -362,4 +364,18 @@ func runServer(cfg *configs.Config) {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Warnf("Error in server shutdown: %s", err)
 	}
+}
+
+func configureLogger(logLevel string) {
+	ll, err := log.ParseLevel(logLevel)
+	if err != nil {
+		ll = log.DebugLevel
+	}
+
+	log.SetLevel(ll)
+
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
 }
