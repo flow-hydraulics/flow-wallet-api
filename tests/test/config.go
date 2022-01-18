@@ -1,6 +1,7 @@
 package test
 
 import (
+	"os"
 	"path"
 	"testing"
 
@@ -8,29 +9,18 @@ import (
 	"github.com/onflow/flow-go-sdk"
 )
 
-var defaultConfig = "default.test.env.cfg"
-
-// LoadConfig accepts an optional config file to be loaded. If none provided,
-// it loads a default one.
-//
-// DatabaseType is always `sqlite`.
-//
-// Configured database DSN points to a file in tempdir created for given test
-// and it's automatically cleaned up by t.CleanUp() in the end of test run.
-//
-func LoadConfig(t *testing.T, cfgFile ...string) *configs.Config {
+// LoadConfig loads default test config
+func LoadConfig(t *testing.T) *configs.Config {
 	t.Helper()
+	os.Clearenv()
+	defer os.Clearenv()
+	os.Setenv("FLOW_WALLET_ADMIN_ADDRESS", "0xf8d6e0586b0a20c7")
+	os.Setenv("FLOW_WALLET_ADMIN_PRIVATE_KEY", "91a22fbd87392b019fbe332c32695c14cf2ba5b6521476a8540228bdf1987068")
+	os.Setenv("FLOW_WALLET_ACCESS_API_HOST", "localhost:3569")
+	os.Setenv("FLOW_WALLET_ENCRYPTION_KEY", "faae4ed1c30f4e4555ee3a71f1044a8e")
+	os.Setenv("FLOW_WALLET_ENCRYPTION_KEY_TYPE", "local")
 
-	opts := &configs.Options{EnvFilePath: defaultConfig, Version: "test"}
-
-	// Allow optional override of config file
-	if len(cfgFile) == 1 {
-		opts.EnvFilePath = cfgFile[0]
-	} else if len(cfgFile) > 1 {
-		t.Fatalf("maximum of one config file allowed, got %d", len(cfgFile))
-	}
-
-	cfg, err := configs.ParseConfig(opts)
+	cfg, err := configs.Parse()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,6 +31,9 @@ func LoadConfig(t *testing.T, cfgFile ...string) *configs.Config {
 
 	cfg.WorkerQueueCapacity = 100
 	cfg.WorkerCount = 1
+
+	cfg.EnabledTokens = []string{"FUSD:0xf8d6e0586b0a20c7:fusd", "FlowToken:0x0ae53cb6e3f42a79:flowToken"}
+	cfg.AdminProposalKeyCount = 100
 
 	return cfg
 }

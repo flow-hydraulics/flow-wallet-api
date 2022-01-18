@@ -23,7 +23,7 @@ import (
 )
 
 func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svcs := test.GetServices(t, cfg)
 
 	accHandler := handlers.NewAccounts(svcs.GetAccounts())
@@ -91,7 +91,7 @@ func TestEmulatorAcceptsSignedTransaction(t *testing.T) {
 }
 
 func TestWatchlistAccountManagement(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	fc := test.NewFlowClient(t, cfg)
 	svcs := test.GetServices(t, cfg)
 	km := svcs.GetKeyManager()

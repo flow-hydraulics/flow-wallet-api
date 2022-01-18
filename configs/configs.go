@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"github.com/joho/godotenv"
 	"github.com/onflow/flow-go-sdk"
 	log "github.com/sirupsen/logrus"
 )
@@ -129,27 +128,23 @@ type Config struct {
 	TransactionMaxSendRate int `env:"FLOW_WALLET_MAX_TPS" envDefault:"10"`
 }
 
-type Options struct {
-	EnvFilePath string
-	Version     string
+// Parse parses environment variables and flags to a valid Config.
+func Parse() (*Config, error) {
+	cfg := Config{}
+	err := env.Parse(&cfg)
+	return &cfg, err
 }
 
-// ParseConfig parses environment variables and flags to a valid Config.
-func ParseConfig(opt *Options) (*Config, error) {
-	if opt != nil && opt.EnvFilePath != "" {
-		// Load variables from a file to the environment of the process
-		if err := godotenv.Load(opt.EnvFilePath); err != nil {
-			log.
-				WithFields(log.Fields{"error": err}).
-				Warn("Could not load environment variables from file. If running inside a docker container this can be ignored.")
-		}
+func ConfigureLogger(logLevel string) {
+	ll, err := log.ParseLevel(logLevel)
+	if err != nil {
+		ll = log.DebugLevel
 	}
 
-	cfg := Config{}
+	log.SetLevel(ll)
 
-	if err := env.Parse(&cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
 }

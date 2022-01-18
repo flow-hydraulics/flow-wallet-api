@@ -13,7 +13,7 @@ import (
 )
 
 func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
@@ -66,7 +66,7 @@ func Test_WorkerPoolExecutesJobWithSuccess(t *testing.T) {
 }
 
 func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
@@ -119,7 +119,7 @@ func Test_WorkerPoolExecutesJobWithError(t *testing.T) {
 }
 
 func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(jobStore, 10, 10)
@@ -172,7 +172,7 @@ func Test_WorkerPoolExecutesJobWithPermanentError(t *testing.T) {
 }
 
 func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 
@@ -232,7 +232,7 @@ func Test_WorkerPoolPicksUpInitJob(t *testing.T) {
 }
 
 func Test_WorkerPoolPicksUpErroredJob(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 
@@ -303,7 +303,7 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 	// The last and maybe most difficult and controversial problem is that
 	// there's no way to prove that something that was not expected to happen,
 	// does not happen, even over longer period of time.
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 
@@ -362,7 +362,7 @@ func Test_WorkerPoolDoesntPickupFailedJob(t *testing.T) {
 }
 
 func Test_ExceedingWorkerpoolCapacity(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	db := test.GetDatabase(t, cfg)
 	jobStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(
