@@ -1,23 +1,34 @@
 package chain_events
 
 import (
+	"sync"
+
+	ds_gorm "github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GormStore struct {
-	db *gorm.DB
+	statusMutex sync.Mutex
+	db          *gorm.DB
 }
 
 func NewGormStore(db *gorm.DB) Store {
-	return &GormStore{db}
+	return &GormStore{db: db}
 }
 
 // LockedStatus runs a transaction on the database manipulating 'status' of type ListenerStatus.
 func (s *GormStore) LockedStatus(fn func(status *ListenerStatus) error) error {
-	return s.db.Transaction(func(tx *gorm.DB) error {
+	s.statusMutex.Lock()
+	defer s.statusMutex.Unlock()
+
+	return ds_gorm.Transaction(s.db, func(tx *gorm.DB) error {
 		status := ListenerStatus{}
 
-		if err := tx.FirstOrCreate(&status).Error; err != nil {
+		if err := tx.
+			// NOWAIT so this call will fail rather than use a stale value
+			Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).
+			FirstOrCreate(&status).Error; err != nil {
 			return err // rollback
 		}
 
