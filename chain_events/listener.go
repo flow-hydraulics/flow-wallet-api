@@ -97,7 +97,7 @@ func (l *ListenerImpl) run(ctx context.Context, start, end uint64) error {
 	}
 
 	for _, event := range events {
-		Event.Trigger(ctx, event)
+		ChainEvent.Trigger(ctx, event)
 	}
 
 	return nil
