@@ -10,7 +10,7 @@ import (
 )
 
 func Test_TransactionSignByAdmin(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	txSvc := test.GetServices(t, cfg).GetTransactions()
 
 	tx, err := txSvc.Sign(context.Background(), cfg.AdminAddress, "", nil)
@@ -35,7 +35,7 @@ func Test_TransactionSignByAdmin(t *testing.T) {
 
 func Test_TransactionSignByAnotherAccount(t *testing.T) {
 	ctx := context.Background()
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svcs := test.GetServices(t, cfg)
 
 	_, acc, err := svcs.GetAccounts().Create(ctx, true)

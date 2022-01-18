@@ -38,17 +38,9 @@ var (
 )
 
 func main() {
-	var (
-		printVersion bool
-		envFilePath  string
-	)
-
+	var printVersion bool
 	// If we should just print the version number and exit
 	flag.BoolVar(&printVersion, "version", false, "if true, print version and exit")
-
-	// Allow configuration of envfile path
-	// If not set, ParseConfig will not try to load variables to environment from a file
-	flag.StringVar(&envFilePath, "envfile", "", "envfile path")
 
 	flag.Parse()
 
@@ -57,8 +49,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	opts := &configs.Options{EnvFilePath: envFilePath, Version: version}
-	cfg, err := configs.ParseConfig(opts)
+	cfg, err := configs.Parse()
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +60,7 @@ func main() {
 }
 
 func runServer(cfg *configs.Config) {
-	configureLogger(cfg.LogLevel)
+	configs.ConfigureLogger(cfg.LogLevel)
 
 	log.Info("Starting server")
 
@@ -364,18 +355,4 @@ func runServer(cfg *configs.Config) {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Warnf("Error in server shutdown: %s", err)
 	}
-}
-
-func configureLogger(logLevel string) {
-	ll, err := log.ParseLevel(logLevel)
-	if err != nil {
-		ll = log.DebugLevel
-	}
-
-	log.SetLevel(ll)
-
-	log.SetFormatter(&log.TextFormatter{
-		DisableColors: true,
-		FullTimestamp: true,
-	})
 }
