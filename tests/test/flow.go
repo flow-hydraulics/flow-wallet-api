@@ -13,6 +13,7 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/templates"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -24,7 +25,7 @@ var (
 )
 
 func NewFlowClient(t *testing.T, cfg *configs.Config) flow_helpers.FlowClient {
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
 	}

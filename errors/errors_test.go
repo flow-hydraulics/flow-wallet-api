@@ -8,6 +8,7 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -55,7 +56,7 @@ func TestIsChainConnectionError(t *testing.T) {
 	})
 
 	t.Run("non existent gateway", func(t *testing.T) {
-		fc, err := client.New("non-existent-address", grpc.WithInsecure())
+		fc, err := client.New("non-existent-address", grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			t.Fatal(err)
 		}
