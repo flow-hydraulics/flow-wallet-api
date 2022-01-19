@@ -1,0 +1,69 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: wallet_test
+      POSTGRES_USER: wallet_test
+      POSTGRES_PASSWORD: wallet_test
+
+  redis:
+    image: redis:6.2-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis-config/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-config/users.acl:/usr/local/etc/redis/users.acl
+
+  flow:
+    build:
+      context: ./docker/flow-cli
+      args:
+        FLOW_CLI_VERSION: v0.28.3
+    entrypoint: ["/bin/sh","-c"]
+    command:
+       - |
+        flow emulator -b 100ms &
+        sleep 1
+        flow project deploy --network=emulator --update=true
+        tail -F anything
+    environment:
+      FLOW_SERVICEPRIVATEKEY: 91a22fbd87392b019fbe332c32695c14cf2ba5b6521476a8540228bdf1987068
+      FLOW_SERVICEKEYSIGALGO: ECDSA_P256
+      FLOW_SERVICEKEYHASHALGO: SHA3_256
+    working_dir: /flow
+    volumes:
+      - "./flow:/flow:ro"
+
+  test-api:
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
+      target: dependencies
+      network: host # docker build sometimes has problems fetching from alpine's CDN
+    environment:
+      FLOW_WALLET_ACCESS_API_HOST: flow:3569
+      FLOW_WALLET_ADMIN_ADDRESS: "0xf8d6e0586b0a20c7"
+      FLOW_WALLET_ADMIN_PRIVATE_KEY: 91a22fbd87392b019fbe332c32695c14cf2ba5b6521476a8540228bdf1987068
+      FLOW_WALLET_ADMIN_PROPOSAL_KEY_COUNT: 100
+      FLOW_WALLET_CHAIN_ID: flow-emulator
+      FLOW_WALLET_ENABLED_TOKENS: FUSD:0xf8d6e0586b0a20c7:fusd,FlowToken:0x0ae53cb6e3f42a79:flowToken
+      FLOW_WALLET_ENCRYPTION_KEY: faae4ed1c30f4e4555ee3a71f1044a8e
+      FLOW_WALLET_ENCRYPTION_KEY_TYPE: local
+      FLOW_WALLET_DATABASE_DSN: postgresql://wallet_test:wallet_test@db:5432/wallet_test
+      FLOW_WALLET_DATABASE_TYPE: psql
+      FLOW_WALLET_DEFAULT_KEY_TYPE: local
+      FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_DATABASE_TYPE: redis
+      FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_REDIS_URL: redis://walletapi:wallet-api-redis@localhost:6379/
+    working_dir: /flow-wallet-api
+    volumes:
+      - ".:/flow-wallet-api:ro"
+    depends_on:
+      - db
+      - redis
+      - flow
+
+  lint:
+    image: golangci/golangci-lint
+    working_dir: /flow-wallet-api
+    volumes:
+      - ".:/flow-wallet-api:ro"

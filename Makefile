@@ -58,3 +58,14 @@ emulator.pid:
 .PHONY: lint
 lint:
 	@golangci-lint run
+
+.PHONY: run-test-suite
+run-test-suite:
+	@docker-compose -f docker-compose.test-suite.yml build flow test-api
+	@docker-compose -f docker-compose.test-suite.yml up --remove-orphans -d db redis flow
+	@echo "\nRunning tests, hang on...\n" \
+	; docker-compose -f docker-compose.test-suite.yml run --rm test-api go test ./... -p 1 \
+	; echo "\nRunning linter, hang on...\n" \
+	; docker-compose -f docker-compose.test-suite.yml run --rm lint golangci-lint run \
+	; echo "\nStopping services...\n" \
+	; docker-compose -f docker-compose.test-suite.yml stop

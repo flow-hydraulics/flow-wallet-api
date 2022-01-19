@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM golang:1.17-alpine AS dependencies
 
 RUN apk update && apk add --no-cache \
   ca-certificates \
@@ -18,6 +18,8 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 
+FROM dependencies AS builder
+
 COPY . .
 
 RUN ./build.sh
@@ -26,7 +28,7 @@ WORKDIR /dist
 
 RUN cp /build/main .
 
-FROM scratch
+FROM scratch as dist
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /dist/main /

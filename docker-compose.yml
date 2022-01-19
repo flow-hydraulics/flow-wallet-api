@@ -30,7 +30,7 @@ services:
     ports:
       - "5050:80"
 
-  wallet:
+  api:
     build:
       context: .
       dockerfile: ./docker/wallet/Dockerfile

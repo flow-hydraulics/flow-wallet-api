@@ -22,14 +22,15 @@ tmp/
 *.pid
 
 # Docker specific
-flow/
-api/
 .github/
+api/
 examples/
 docker/
+docker-compose.yml
+docker-compose.test-suite.yml
+Makefile
 
 # Not required for build
-flow/
 api-test-scripts/
 *.md
 *.svg
