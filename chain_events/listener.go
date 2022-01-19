@@ -224,8 +224,6 @@ func (l *ListenerImpl) Stop() {
 	if l.ticker != nil {
 		l.ticker.Stop()
 	}
-
-	l.ticker = nil
 }
 
 func (l *ListenerImpl) systemHalted() (bool, error) {
