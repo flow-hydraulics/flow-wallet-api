@@ -27,6 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const version = "0.9.0"
@@ -65,7 +66,7 @@ func runServer(cfg *configs.Config) {
 
 	// Flow client
 	// TODO: WithInsecure()?
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithInsecure())
+	fc, err := client.New(cfg.AccessAPIHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -325,7 +326,7 @@ func runServer(cfg *configs.Config) {
 		}()
 
 		// Register a handler for chain events
-		chain_events.Event.Register(&tokens.ChainEventHandler{
+		chain_events.ChainEvent.Register(&tokens.ChainEventHandler{
 			AccountService:  accountService,
 			ChainListener:   listener,
 			TemplateService: templateService,
