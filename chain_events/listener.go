@@ -97,7 +97,7 @@ func (l *ListenerImpl) run(ctx context.Context, start, end uint64) error {
 	}
 
 	for _, event := range events {
-		Event.Trigger(ctx, event)
+		ChainEvent.Trigger(ctx, event)
 	}
 
 	return nil
@@ -154,11 +154,6 @@ func (l *ListenerImpl) Start() Listener {
 						start := status.LatestHeight + 1                  // LatestHeight has already been checked, add 1
 						end := min(latestBlock.Height, start+l.maxBlocks) // Limit maximum end
 						if err := l.run(ctx, start, end); err != nil {
-							if strings.Contains(err.Error(), "database is locked") {
-								// Sqlite throws this error from time to time when accessing it from
-								// multiple threads; listener is run in a separate thread.
-								return nil
-							}
 							return err
 						}
 						status.LatestHeight = end

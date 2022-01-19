@@ -133,7 +133,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	)
 
 	// Register a handler for chain events
-	chain_events.Event.Register(&tokens.ChainEventHandler{
+	chain_events.ChainEvent.Register(&tokens.ChainEventHandler{
 		AccountService:  accountService,
 		ChainListener:   listener,
 		TemplateService: templateService,

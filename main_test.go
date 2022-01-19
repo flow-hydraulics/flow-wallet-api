@@ -1499,7 +1499,7 @@ func TestTemplateHandlers(t *testing.T) {
 			body:        strings.NewReader(fmt.Sprintf(`{"name":"TestToken","address":"%s"}`, cfg.AdminAddress)),
 			contentType: "application/json",
 			url:         "/",
-			expected:    `UNIQUE constraint failed: tokens.name`,
+			expected:    `.*`, // Error message differs based on used db dialector
 			status:      http.StatusBadRequest,
 		},
 		{

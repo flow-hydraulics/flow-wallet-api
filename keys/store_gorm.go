@@ -1,24 +1,35 @@
 package keys
 
 import (
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
+	ds_gorm "github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
 )
 
 type GormStore struct {
-	db *gorm.DB
+	accountKeyMutex  sync.Mutex
+	proposalKeyMutex sync.Mutex
+	db               *gorm.DB
 }
 
 func NewGormStore(db *gorm.DB) Store {
-	return &GormStore{db}
+	return &GormStore{db: db}
 }
 
 func (s *GormStore) AccountKey(address string) (Storable, error) {
+	s.accountKeyMutex.Lock()
+	defer s.accountKeyMutex.Unlock()
+
 	k := Storable{}
 
-	err := s.db.Transaction(func(tx *gorm.DB) error {
+	err := ds_gorm.Transaction(s.db, func(tx *gorm.DB) error {
 		if err := tx.
+			// NOWAIT so this call will fail rather than use a stale value
+			Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).
 			Where(&Storable{AccountAddress: address}).
 			Order("updated_at asc").
 			Limit(1).Find(&k).Error; err != nil {
@@ -36,10 +47,15 @@ func (s *GormStore) AccountKey(address string) (Storable, error) {
 }
 
 func (s *GormStore) ProposalKeyIndex() (int, error) {
+	s.proposalKeyMutex.Lock()
+	defer s.proposalKeyMutex.Unlock()
+
 	p := ProposalKey{}
 
-	err := s.db.Transaction(func(tx *gorm.DB) error {
+	err := ds_gorm.Transaction(s.db, func(tx *gorm.DB) error {
 		if err := tx.
+			// NOWAIT so this call will fail rather than use a stale value
+			Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).
 			Order("updated_at asc").
 			Limit(1).Find(&p).Error; err != nil {
 			return err

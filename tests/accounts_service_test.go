@@ -115,8 +115,6 @@ func Test_Delete_Non_Custodial_Account_Is_Idempotent(t *testing.T) {
 
 // Test if the service is able to concurrently create multiple accounts
 func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
-	t.Skip("sqlite will cause a database locked error")
-
 	cfg := test.LoadConfig(t, testConfigPath)
 
 	instanceCount := 1

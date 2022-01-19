@@ -7,24 +7,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type handler interface {
+type chainEventHandler interface {
 	Handle(context.Context, flow.Event)
 }
 
-type event struct {
-	handlers []handler
+type chainEvent struct {
+	handlers []chainEventHandler
 }
 
-var Event event // singleton of type event
+var ChainEvent chainEvent // singleton of type event
 
 // Register adds an event handler for this event
-func (e *event) Register(handler handler) {
+func (e *chainEvent) Register(handler chainEventHandler) {
 	log.Debug("Registering Flow event handler")
 	e.handlers = append(e.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
-func (e *event) Trigger(ctx context.Context, payload flow.Event) {
+func (e *chainEvent) Trigger(ctx context.Context, payload flow.Event) {
 	log.
 		WithFields(log.Fields{"payload": payload}).
 		Trace("Handling Flow event")
