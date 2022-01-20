@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS dependencies
+FROM golang:1.17.6-alpine3.15 AS dependencies
 
 RUN apk update && apk add --no-cache \
   ca-certificates \
