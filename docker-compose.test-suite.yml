@@ -34,7 +34,7 @@ services:
     volumes:
       - "./flow:/flow:ro"
 
-  test-api:
+  api:
     build:
       context: .
       dockerfile: ./docker/wallet/Dockerfile
@@ -56,7 +56,9 @@ services:
       FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_REDIS_URL: redis://walletapi:wallet-api-redis@localhost:6379/
     working_dir: /flow-wallet-api
     volumes:
-      - ".:/flow-wallet-api:ro"
+      - .:/flow-wallet-api:ro
+      - go-modules:/go/pkg/mod
+      - go-cache:/root/.cache/go-build
     depends_on:
       - db
       - redis
@@ -66,4 +68,10 @@ services:
     image: golangci/golangci-lint
     working_dir: /flow-wallet-api
     volumes:
-      - ".:/flow-wallet-api:ro"
+      - .:/flow-wallet-api:ro
+      - go-modules:/go/pkg/mod
+      - go-cache:/root/.cache/go-build
+
+volumes:
+  go-modules:
+  go-cache:
