@@ -35,12 +35,13 @@ func LoadConfig(t *testing.T, cfgFile ...string) *configs.Config {
 		t.Fatal(err)
 	}
 
-	cfg.DatabaseDSN = path.Join(t.TempDir(), "test.db")
-	cfg.DatabaseType = "sqlite"
-	cfg.ChainID = flow.Emulator
+	// Check if using default
+	if cfg.DatabaseDSN == "wallet.db" {
+		cfg.DatabaseDSN = path.Join(t.TempDir(), "test.db")
+		cfg.DatabaseType = "sqlite"
+	}
 
-	cfg.WorkerQueueCapacity = 100
-	cfg.WorkerCount = 1
+	cfg.ChainID = flow.Emulator
 
 	return cfg
 }
