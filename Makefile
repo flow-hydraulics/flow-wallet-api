@@ -10,18 +10,21 @@ ifeq (, $(shell which go))
 $(error "No go in PATH")
 endif
 
+
+dev = docker-compose -f docker-compose.dev.yml -p flow-wallet-api-dev
+test = docker-compose -f docker-compose.test-suite.yml -p flow-wallet-api-test
+
 .PHONY: dev
 dev:
-	@docker-compose up -d db pgadmin emulator redis
-	@docker-compose logs -f
+	@$(dev) up --remove-orphans -d db pgadmin emulator redis
 
 .PHONY: stop
 stop:
-	@docker-compose stop
+	@$(dev) stop
 
 .PHONY: down
 down:
-	@docker-compose down
+	@$(dev) down --remove-orphans
 
 .PHONY: reset
 reset: down dev
@@ -58,3 +61,16 @@ emulator.pid:
 .PHONY: lint
 lint:
 	@golangci-lint run
+
+.PHONY: run-test-suite
+run-test-suite:
+	@$(test) build flow api
+	@$(test) up --remove-orphans -d db redis flow
+	@echo "\nRunning tests, hang on...\n" \
+	; $(test) run --rm api go test ./... -p 1 \
+	; echo "\nRunning linter, hang on...\n" \
+	; $(test) run --rm lint golangci-lint run
+
+.PHONY: stop-test-suite
+stop-test-suite:
+	@$(test) down --remove-orphans

@@ -2,7 +2,6 @@ version: "3.9"
 services:
   db:
     image: postgres:13-alpine
-    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
@@ -12,47 +11,23 @@ services:
 
   redis:
     image: redis:6.2-alpine
-    restart: unless-stopped
     command: redis-server /usr/local/etc/redis/redis.conf
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
       - ./redis-config/redis.conf:/usr/local/etc/redis/redis.conf
       - ./redis-config/users.acl:/usr/local/etc/redis/users.acl
 
   pgadmin:
     image: dpage/pgadmin4
-    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
 
-  wallet:
-    build:
-      context: .
-      dockerfile: ./docker/wallet/Dockerfile
-      network: host # docker build sometimes has problems fetching from alpine's CDN
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    env_file:
-      - ./.env
-    environment:
-      FLOW_WALLET_DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
-      FLOW_WALLET_DATABASE_TYPE: psql
-      FLOW_WALLET_ACCESS_API_HOST: emulator:3569
-      FLOW_WALLET_CHAIN_ID: flow-emulator
-    depends_on:
-      - db
-      - emulator
-      - redis
-
   emulator:
     image: gcr.io/flow-container-registry/emulator:0.27.3
-    restart: unless-stopped
     command: emulator -v --persist
     ports:
       - "3569:3569"
@@ -66,6 +41,32 @@ services:
       - FLOW_SERVICEKEYHASHALGO=SHA3_256
       - FLOW_DBPATH=/flowdb
 
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
+      target: dependencies
+      network: host # docker build sometimes has problems fetching from alpine's CDN
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env
+    environment:
+      FLOW_WALLET_DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
+      FLOW_WALLET_DATABASE_TYPE: psql
+      FLOW_WALLET_ACCESS_API_HOST: emulator:3569
+      FLOW_WALLET_CHAIN_ID: flow-emulator
+    working_dir: /flow-wallet-api
+    volumes:
+      - .:/flow-wallet-api:ro
+      - go-modules:/go/pkg/mod
+      - go-cache:/root/.cache/go-build
+    depends_on:
+      - db
+      - emulator
+      - redis
+
 volumes:
-  redis_data:
   emulator_persist:
+  go-modules:
+  go-cache:
