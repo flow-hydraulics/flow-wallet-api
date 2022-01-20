@@ -257,7 +257,6 @@ If you want to use an AWS KMS symmetric encryption key for encrypting the stored
 | `EncryptionKeyType` | `FLOW_WALLET_ENCRYPTION_KEY_TYPE` | Encryption key type    | `local` | `aws_kms`                                                                       |
 | `EncryptionKey`     | `FLOW_WALLET_ENCRYPTION_KEY`      | KMS encryption key ARN | -       | `arn:aws:kms:eu-central-1:012345678910:key/00000000-aaaa-bbbb-cccc-12345678910` |
 
-
 ### Idempotency middleware
 
 Idempotency middleware ensures that `POST` requests are idempotent. When the middleware is enabled an `Idempotency-Key` HTTP header is required for `POST` requests. The header value should be a unique identifier for the request (UUID or similar is recommended). Trying to send a request with a duplicate idempotency key will result in a `409 Conflict` HTTP response.
@@ -271,6 +270,7 @@ To configure the middleware set the following configuration settings;
 | `IdempotencyMiddlewareRedisURL`     | `FLOW_WALLET_IDEMPOTENCY_MIDDLEWARE_REDIS_URL`     | Redis URL for idempotency key middleware storage | -       | `redis://walletapi:wallet-api-redis@localhost:6379/` |
 
 NOTE:
+
 - The `local` option for `IdempotencyMiddlewareDatabaseType` does not support multiple instances.
 - The provided `docker-compose.yml` provides a basic Redis instance for local development purposes, with basic configuration files in the [`redis-config`](redis-config) directory.
 - There is currently no automatic cleanup of old idempotency keys when using the `shared` (sql) database. Redis is recommended for production use.
@@ -305,3 +305,13 @@ The Flow Wallet API is developed and maintained by [Equilibrium](https://equilib
 with support from the Flow core contributors.
 
 <a href="https://equilibrium.co/"><img src="equilibrium.svg" alt="Equilibrium" width="200"/></a>
+
+## Testing
+
+You can run a fully dockerized test suite if you have _Docker_ and _docker-compose_ installed.
+
+    # Run the test suite
+    make run-test-suite
+
+    # If you don't want to leave background services running (database, redis, flow-emulator)
+    make stop-test-suite
