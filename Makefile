@@ -74,3 +74,7 @@ run-test-suite:
 .PHONY: stop-test-suite
 stop-test-suite:
 	@$(test) down --remove-orphans
+
+.PHONY: clean-test-suite
+clean-test-suite:
+	@$(test) run --rm api go clean -testcache
