@@ -123,6 +123,33 @@ paths:
         description: Post only fields you want to be changed.
       parameters:
         - $ref: '#/components/parameters/idempotencyKey'
+  /system/sync-account-key-count:
+    post:
+      summary: Sync key count for existing accounts
+      tags:
+        - System
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/job'
+      operationId: post-system-sync-account-key-count
+      parameters:
+        - $ref: '#/components/parameters/idempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                address:
+                  type: string
+            examples:
+              example-1:
+                value:
+                  address: '0xf669cb8d41ce0c74'
   /health/ready:
     get:
       summary: Healthcheck ready
@@ -1030,11 +1057,11 @@ components:
         payloadSignatures:
           type: array
           items:
-            $ref: '#components/schemas/transactionSignature'
+            $ref: '#/components/schemas/transactionSignature'
         envelopeSignatures:
           type: array
           items:
-            $ref: '#components/schemas/transactionSignature'
+            $ref: '#/components/schemas/transactionSignature'
     transactionSignature:
       type: object
       properties:

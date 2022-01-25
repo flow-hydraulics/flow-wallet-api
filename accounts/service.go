@@ -2,8 +2,10 @@ package accounts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
@@ -11,7 +13,11 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
+	"github.com/flow-hydraulics/flow-wallet-api/transactions"
+	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
+	flow_crypto "github.com/onflow/flow-go-sdk/crypto"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
@@ -24,6 +30,7 @@ type Service interface {
 	Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error)
 	AddNonCustodialAccount(address string) (*Account, error)
 	DeleteNonCustodialAccount(address string) error
+	SyncAccountKeyCount(ctx context.Context, address flow.Address) (*jobs.Job, error)
 	Details(address string) (Account, error)
 	InitAdminAccount(ctx context.Context) error
 }
@@ -35,6 +42,7 @@ type ServiceImpl struct {
 	km            keys.Manager
 	fc            flow_helpers.FlowClient
 	wp            jobs.WorkerPool
+	txs           transactions.Service
 	txRateLimiter ratelimit.Limiter
 }
 
@@ -45,12 +53,13 @@ func NewService(
 	km keys.Manager,
 	fc flow_helpers.FlowClient,
 	wp jobs.WorkerPool,
+	txs transactions.Service,
 	opts ...ServiceOption,
 ) Service {
 	var defaultTxRatelimiter = ratelimit.NewUnlimited()
 
 	// TODO(latenssi): safeguard against nil config?
-	svc := &ServiceImpl{cfg, store, km, fc, wp, defaultTxRatelimiter}
+	svc := &ServiceImpl{cfg, store, km, fc, wp, txs, defaultTxRatelimiter}
 
 	for _, opt := range opts {
 		opt(svc)
@@ -60,8 +69,9 @@ func NewService(
 		panic("workerpool nil")
 	}
 
-	// Register asynchronous job executor.
+	// Register asynchronous job executors
 	wp.RegisterExecutor(AccountCreateJobType, svc.executeAccountCreateJob)
+	wp.RegisterExecutor(SyncAccountKeyCountJobType, svc.executeSyncAccountKeyCountJob)
 
 	return svc
 }
@@ -158,6 +168,150 @@ func (s *ServiceImpl) Details(address string) (Account, error) {
 	}
 
 	return account, nil
+}
+
+// SyncKeyCount syncs number of keys for given account
+func (s *ServiceImpl) SyncAccountKeyCount(ctx context.Context, address flow.Address) (*jobs.Job, error) {
+	// Validate address, they might be legit addresses but for the wrong chain
+	if !address.IsValid(s.cfg.ChainID) {
+		return nil, fmt.Errorf(`not a valid address for %s: "%s"`, s.cfg.ChainID, address)
+	}
+
+	// Prepare job attributes required for executing the job
+	attrs := syncAccountKeyCountJobAttributes{Address: address, NumKeys: int(s.cfg.DefaultAccountKeyCount)}
+	attrBytes, err := json.Marshal(attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create & schedule the "sync key count" job
+	job, err := s.wp.CreateJob(SyncAccountKeyCountJobType, "", jobs.WithAttributes(attrBytes))
+	if err != nil {
+		return nil, err
+	}
+	err = s.wp.Schedule(job)
+	if err != nil {
+		return nil, err
+	}
+
+	return job, nil
+}
+
+// syncAccountKeyCount syncs the number of account keys with the given numKeys and
+// returns the number of keys, transaction ID and error.
+func (s *ServiceImpl) syncAccountKeyCount(ctx context.Context, address flow.Address, numKeys int) (int, string, error) {
+	entry := log.WithFields(log.Fields{"address": address, "numKeys": numKeys, "function": "ServiceImpl.syncAccountKeyCount"})
+
+	if numKeys < 1 {
+		return 0, "", fmt.Errorf("invalid number of keys specified: %d, min. 1 expected", numKeys)
+	}
+
+	// Check on-chain keys
+	flowAccount, err := s.fc.GetAccount(ctx, address)
+	if err != nil {
+		entry.WithFields(log.Fields{"err": err}).Error("failed to get Flow account")
+		return 0, "", err
+	}
+
+	// Get stored account
+	dbAccount, err := s.store.Account(flow_helpers.FormatAddress(address))
+	if err != nil {
+		entry.WithFields(log.Fields{"err": err}).Error("failed to get account from database")
+		return 0, "", err
+	}
+
+	// Pick a source key that will be used to create the new keys & decode public key
+	sourceKey := dbAccount.Keys[0] // NOTE: Only valid (not revoked) keys should be stored in the database
+	sourceKeyPbkString := strings.TrimPrefix(sourceKey.PublicKey, "0x")
+	sourcePbk, err := flow_crypto.DecodePublicKeyHex(flow_crypto.StringToSignatureAlgorithm(sourceKey.SignAlgo), sourceKeyPbkString)
+	if err != nil {
+		entry.WithFields(log.Fields{"err": err, "sourceKeyPbkString": sourceKeyPbkString}).Error("failed to decode public key for source key")
+		return 0, "", err
+	}
+	entry.WithFields(log.Fields{"sourceKeyId": sourceKey.ID, "sourcePbk": sourcePbk}).Trace("source key selected")
+
+	// Count valid keys, as some keys might be revoked, assuming dbAccount.Keys are clones (all have same public key)
+	var validKeys []*flow.AccountKey
+	for i := range flowAccount.Keys {
+		key := flowAccount.Keys[i]
+		if !key.Revoked && key.PublicKey.Equals(sourcePbk) {
+			validKeys = append(validKeys, key)
+		}
+	}
+
+	if len(validKeys) != len(dbAccount.Keys) {
+		entry.WithFields(log.Fields{"onChain": len(validKeys), "database": len(dbAccount.Keys)}).Warn("on-chain vs. database key count mismatch")
+	}
+
+	entry.WithFields(log.Fields{"validKeys": validKeys}).Trace("filtered valid keys")
+
+	// Add keys by cloning the source key
+	if len(validKeys) < numKeys {
+
+		cloneCount := numKeys - len(validKeys)
+		code := template_strings.AddAccountKeysTransaction
+		pbks := []cadence.Value{}
+
+		entry.WithFields(log.Fields{"validKeys": len(validKeys), "numKeys": numKeys, "cloneCount": cloneCount}).Debug("going to add keys")
+
+		// Sort keys by index
+		sort.SliceStable(dbAccount.Keys, func(i, j int) bool {
+			return dbAccount.Keys[i].Index < dbAccount.Keys[j].Index
+		})
+
+		// Push publickeys to args and prepare db update
+		for i := 0; i < cloneCount; i++ {
+			pbk, err := cadence.NewString(sourceKey.PublicKey[2:]) // TODO: use a helper function to trim "0x" prefix
+			if err != nil {
+				return 0, "", err
+			}
+			pbks = append(pbks, pbk)
+
+			// Create cloned account key & update index
+			cloned := keys.Storable{
+				ID:             0, // Reset ID to create a new key to DB
+				AccountAddress: sourceKey.AccountAddress,
+				Index:          dbAccount.Keys[len(dbAccount.Keys)-1].Index + 1,
+				Type:           sourceKey.Type,
+				Value:          sourceKey.Value,
+				PublicKey:      sourceKey.PublicKey,
+				SignAlgo:       sourceKey.SignAlgo,
+				HashAlgo:       sourceKey.HashAlgo,
+			}
+
+			dbAccount.Keys = append(dbAccount.Keys, cloned)
+		}
+
+		// Prepare transaction arguments
+		x := cadence.NewArray(pbks)
+		args := []transactions.Argument{x}
+
+		entry.WithFields(log.Fields{"args": args}).Debug("args prepared")
+
+		// NOTE: sync, so will wait for transaction to be sent & sealed
+		_, tx, err := s.txs.Create(ctx, true, dbAccount.Address, code, args, transactions.General)
+		if err != nil {
+			entry.WithFields(log.Fields{"err": err}).Error("failed to create transaction")
+			return 0, tx.TransactionId, err
+		}
+
+		// Update account in database
+		// TODO: if update fails, should sync keys from chain later
+		err = s.store.SaveAccount(&dbAccount)
+		if err != nil {
+			entry.WithFields(log.Fields{"err": err}).Error("failed to update account in database")
+			return 0, tx.TransactionId, err
+		}
+
+		return len(dbAccount.Keys), tx.TransactionId, err
+	} else if len(validKeys) > numKeys {
+		entry.Debug("too many valid keys", len(validKeys), " vs. ", numKeys)
+	} else {
+		entry.Debug("correct number of keys")
+		return numKeys, "", nil
+	}
+
+	return 0, "", nil
 }
 
 // createAccount creates a new account on the flow blockchain. It generates a

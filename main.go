@@ -117,7 +117,7 @@ func runServer(cfg *configs.Config) {
 	templateService := templates.NewService(cfg, templates.NewGormStore(db))
 	jobsService := jobs.NewService(jobs.NewGormStore(db))
 	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
-	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, accounts.WithTxRatelimiter(txRatelimiter))
+	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, accounts.WithTxRatelimiter(txRatelimiter))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
 
 	// Register a handler for account added events
@@ -159,6 +159,8 @@ func runServer(cfg *configs.Config) {
 	// System
 	rv.Handle("/system/settings", systemHandler.GetSettings()).Methods(http.MethodGet)
 	rv.Handle("/system/settings", systemHandler.SetSettings()).Methods(http.MethodPost)
+
+	rv.Handle("/system/sync-account-key-count", accountHandler.SyncAccountKeyCount()).Methods(http.MethodPost)
 
 	// Jobs
 	rv.Handle("/jobs", jobsHandler.List()).Methods(http.MethodGet)            // list

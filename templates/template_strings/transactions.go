@@ -75,7 +75,7 @@ transaction {
 `
 
 const AddProposalKeyTransaction = `
-transaction(adminKeyIndex: Int, numProposalKeys: UInt16) {  
+transaction(adminKeyIndex: Int, numProposalKeys: UInt16) {
   prepare(account: AuthAccount) {
     let key = account.keys.get(keyIndex: adminKeyIndex)!
     var count: UInt16 = 0
@@ -86,6 +86,26 @@ transaction(adminKeyIndex: Int, numProposalKeys: UInt16) {
             weight: 0.0
         )
         count = count + 1
+    }
+  }
+}
+`
+
+// TODO: sigAlgo & hashAlgo as params, add pre-&post-conditions
+const AddAccountKeysTransaction = `
+transaction(publicKeys: [String]) {
+  prepare(signer: AuthAccount) {
+    for pbk in publicKeys {
+      let key = PublicKey(
+        publicKey: pbk.decodeHex(),
+        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+      )
+
+      signer.keys.add(
+        publicKey: key,
+        hashAlgorithm: HashAlgorithm.SHA3_256,
+        weight: 1000.0
+      )
     }
   }
 }
