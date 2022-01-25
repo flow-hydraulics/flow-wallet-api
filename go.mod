@@ -15,7 +15,8 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/joho/godotenv v1.4.0
+	github.com/jackc/pgx/v4 v4.14.1 // indirect
+	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/jpillora/backoff v1.0.0
 	github.com/lib/pq v1.10.4
 	github.com/onflow/cadence v0.20.1
