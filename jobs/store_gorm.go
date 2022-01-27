@@ -40,10 +40,20 @@ func (s *GormStore) UpdateJob(j *Job) error {
 	return s.db.Save(j).Error
 }
 
-func (s *GormStore) AcceptJob(j *Job, acceptedGracePeriod time.Duration) error {
+func isAcceptable(j *Job, acceptedGracePeriod time.Duration) bool {
 	tAccepted := time.Now().Add(-1 * acceptedGracePeriod)
 	if j.State == Accepted && j.UpdatedAt.After(tAccepted) {
-		return fmt.Errorf("error job is already accepted")
+		return false
+	}
+	if j.State == Complete || j.State == Failed {
+		return false
+	}
+	return true
+}
+
+func (s *GormStore) AcceptJob(j *Job, acceptedGracePeriod time.Duration) error {
+	if !isAcceptable(j, acceptedGracePeriod) {
+		return fmt.Errorf("error job is not acceptable")
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var job Job
@@ -51,8 +61,8 @@ func (s *GormStore) AcceptJob(j *Job, acceptedGracePeriod time.Duration) error {
 		if err != nil {
 			return err
 		}
-		if job.State == Accepted && job.UpdatedAt.After(tAccepted) {
-			return fmt.Errorf("error job is already accepted")
+		if !isAcceptable(&job, acceptedGracePeriod) {
+			return fmt.Errorf("error job is not acceptable")
 		}
 		j.State = Accepted
 		j.ExecCount = job.ExecCount + 1
