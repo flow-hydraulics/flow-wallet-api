@@ -13,7 +13,7 @@ type Store interface {
 	Job(id uuid.UUID) (Job, error)
 	InsertJob(*Job) error
 	UpdateJob(*Job) error
-	IncreaseExecCount(j *Job) error
+	AcceptJob(j *Job, acceptedGracePeriod time.Duration) error
 	SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod time.Duration, o datastore.ListOptions) ([]Job, error)
 	Status() ([]StatusQuery, error)
 }
