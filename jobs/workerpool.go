@@ -288,8 +288,8 @@ func (wp *WorkerPoolImpl) startDBJobScheduler() {
 				continue
 			}
 
-			for _, j := range jobs {
-				wp.tryEnqueue(&j, true)
+			for i := range jobs {
+				wp.tryEnqueue(&jobs[i], true)
 			}
 
 			elapsed := time.Since(begin)
