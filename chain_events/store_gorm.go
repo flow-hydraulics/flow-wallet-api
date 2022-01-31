@@ -3,7 +3,7 @@ package chain_events
 import (
 	"sync"
 
-	ds_gorm "github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
+	"github.com/flow-hydraulics/flow-wallet-api/datastore/lib"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -22,7 +22,7 @@ func (s *GormStore) LockedStatus(fn func(status *ListenerStatus) error) error {
 	s.statusMutex.Lock()
 	defer s.statusMutex.Unlock()
 
-	return ds_gorm.Transaction(s.db, func(tx *gorm.DB) error {
+	return lib.GormTransaction(s.db, func(tx *gorm.DB) error {
 		status := ListenerStatus{}
 
 		if err := tx.

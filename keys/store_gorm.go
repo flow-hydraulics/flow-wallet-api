@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	ds_gorm "github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
+	"github.com/flow-hydraulics/flow-wallet-api/datastore/lib"
 )
 
 type GormStore struct {
@@ -26,7 +26,7 @@ func (s *GormStore) AccountKey(address string) (Storable, error) {
 
 	k := Storable{}
 
-	err := ds_gorm.Transaction(s.db, func(tx *gorm.DB) error {
+	err := lib.GormTransaction(s.db, func(tx *gorm.DB) error {
 		if err := tx.
 			// NOWAIT so this call will fail rather than use a stale value
 			Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).
@@ -52,7 +52,7 @@ func (s *GormStore) ProposalKeyIndex() (int, error) {
 
 	p := ProposalKey{}
 
-	err := ds_gorm.Transaction(s.db, func(tx *gorm.DB) error {
+	err := lib.GormTransaction(s.db, func(tx *gorm.DB) error {
 		if err := tx.
 			// NOWAIT so this call will fail rather than use a stale value
 			Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).

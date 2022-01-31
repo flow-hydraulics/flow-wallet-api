@@ -1,11 +1,11 @@
-package gorm
+package lib
 
 import "gorm.io/gorm"
 
-// Transaction performs a function on a gorm database transaction instance
+// GormTransaction performs a function on a gorm database transaction instance
 // when using something else than sqlite as the dialector (mysql or psql).
 // When using sqlite it will fallback to regular gorm database instance.
-func Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error {
+func GormTransaction(db *gorm.DB, fn func(tx *gorm.DB) error) error {
 	isSqlite := db.Config.Dialector.Name() == "sqlite"
 
 	var tx *gorm.DB
