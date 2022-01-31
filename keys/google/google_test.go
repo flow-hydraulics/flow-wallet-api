@@ -6,28 +6,19 @@ import (
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
-	"github.com/onflow/flow-go-sdk"
 )
 
+// Needs to be run manually with proper env configuration
+// It's skipped during standard test execution
 func TestGenerate(t *testing.T) {
-	opts := &configs.Options{EnvFilePath: "../../.env.test"}
-	testCfg, err := configs.ParseConfig(opts)
+	cfg := configs.ParseTestConfig(t)
 
-	// Safety measures
-	testCfg.DatabaseDSN = "google_tests.db"
-	testCfg.DatabaseType = "sqlite"
-	testCfg.ChainID = flow.Emulator
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if testCfg.DefaultKeyType != keys.AccountKeyTypeGoogleKMS {
+	if cfg.DefaultKeyType != keys.AccountKeyTypeGoogleKMS {
 		t.Skip("skipping since DefaultKeyType is not", keys.AccountKeyTypeGoogleKMS)
 	}
 
 	t.Run("key is generated", func(t *testing.T) {
-		flowAccountKey, privateKey, err := Generate(testCfg, context.Background(), 0, 1000)
+		flowAccountKey, privateKey, err := Generate(cfg, context.Background(), 0, 1000)
 
 		if err != nil {
 			t.Fatal(err)

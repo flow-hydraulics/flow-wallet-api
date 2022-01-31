@@ -40,25 +40,24 @@ var (
 func main() {
 	var (
 		printVersion bool
-		envFilePath  string
+		envFilePath  string // LEGACY: now used to check if user still is using envFilePath
 	)
 
 	// If we should just print the version number and exit
 	flag.BoolVar(&printVersion, "version", false, "if true, print version and exit")
-
-	// Allow configuration of envfile path
-	// If not set, ParseConfig will not try to load variables to environment from a file
-	flag.StringVar(&envFilePath, "envfile", "", "envfile path")
-
+	flag.StringVar(&envFilePath, "envfile", "", "deprecated")
 	flag.Parse()
+
+	if envFilePath != "" {
+		panic("'-envfile' is no longer supported, see readme")
+	}
 
 	if printVersion {
 		fmt.Printf("v%s build on %s from sha1 %s\n", version, buildTime, sha1ver)
 		os.Exit(0)
 	}
 
-	opts := &configs.Options{EnvFilePath: envFilePath, Version: version}
-	cfg, err := configs.ParseConfig(opts)
+	cfg, err := configs.Parse()
 	if err != nil {
 		panic(err)
 	}
@@ -69,6 +68,8 @@ func main() {
 }
 
 func runServer(cfg *configs.Config) {
+	configs.ConfigureLogger(cfg.LogLevel)
+
 	log.Info("Starting server")
 
 	// Flow client

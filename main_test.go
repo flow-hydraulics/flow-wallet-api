@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"path"
 	"sort"
 
 	"net/http"
@@ -32,8 +31,6 @@ import (
 )
 
 const testCadenceTxBasePath = "./flow/cadence/transactions"
-
-var testConfigPath = path.Join(".", ".env.test")
 
 type httpTestStep struct {
 	name        string
@@ -90,7 +87,7 @@ func handleStepRequest(s httpTestStep, r *mux.Router, t *testing.T) *httptest.Re
 }
 
 func TestAccountServices(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetAccounts()
@@ -144,7 +141,7 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("create with custom init script", func(t *testing.T) {
-		cfg2 := test.LoadConfig(t, testConfigPath)
+		cfg2 := test.LoadConfig(t)
 
 		// Set custom script path
 		cfg2.ScriptPathCreateAccount = "./flow/cadence/transactions/custom_create_account.cdc"
@@ -168,7 +165,7 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("sync create with multiple keys", func(t *testing.T) {
-		cfg2 := test.LoadConfig(t, testConfigPath)
+		cfg2 := test.LoadConfig(t)
 		cfg2.DefaultAccountKeyCount = 3
 
 		app2 := test.GetServices(t, cfg2)
@@ -201,7 +198,7 @@ func TestAccountServices(t *testing.T) {
 	})
 
 	t.Run("async create with multiple keys", func(t *testing.T) {
-		cfg2 := test.LoadConfig(t, testConfigPath)
+		cfg2 := test.LoadConfig(t)
 		cfg2.DefaultAccountKeyCount = 3
 
 		app2 := test.GetServices(t, cfg2)
@@ -242,7 +239,7 @@ func TestAccountServices(t *testing.T) {
 }
 
 func TestAccountHandlers(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetAccounts()
@@ -355,7 +352,7 @@ func TestAccountHandlers(t *testing.T) {
 }
 
 func TestAccountTransactionHandlers(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTransactions()
@@ -596,7 +593,7 @@ func TestAccountTransactionHandlers(t *testing.T) {
 }
 
 func TestTransactionHandlers(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTransactions()
@@ -714,7 +711,7 @@ func TestTransactionHandlers(t *testing.T) {
 }
 
 func TestScriptsHandlers(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTransactions()
@@ -792,7 +789,7 @@ func TestScriptsHandlers(t *testing.T) {
 }
 
 func TestTokenServices(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTokens()
@@ -926,7 +923,7 @@ func TestTokenServices(t *testing.T) {
 }
 
 func TestTokenHandlers(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTokens()
@@ -1421,7 +1418,7 @@ func TestTokenHandlers(t *testing.T) {
 func TestNFTDeployment(t *testing.T) {
 	t.Skip("currently not supported")
 
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTokens()
@@ -1435,7 +1432,7 @@ func TestNFTDeployment(t *testing.T) {
 }
 
 func TestTemplateHandlers(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTemplates()
@@ -1623,7 +1620,7 @@ func TestTemplateHandlers(t *testing.T) {
 }
 
 func TestTemplateService(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	app := test.GetServices(t, cfg)
 
 	svc := app.GetTemplates()

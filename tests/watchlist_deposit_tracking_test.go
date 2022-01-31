@@ -16,7 +16,7 @@ import (
 var max_tx_wait = 10 * time.Second
 
 func Test_NonCustodialAccountDepositTracking(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	fc := test.NewFlowClient(t, cfg)
 	svcs := test.GetServices(t, cfg)
 	accountSvc := svcs.GetAccounts()

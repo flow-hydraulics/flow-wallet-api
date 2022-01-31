@@ -9,7 +9,7 @@ import (
 )
 
 func Test_Add_New_Non_Custodial_Account(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svc := test.GetServices(t, cfg).GetAccounts()
 
 	addr := "0x0123456789"
@@ -25,7 +25,7 @@ func Test_Add_New_Non_Custodial_Account(t *testing.T) {
 }
 
 func Test_Add_Existing_Non_Custodial_Account_fails(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svc := test.GetServices(t, cfg).GetAccounts()
 
 	addr := "0x0123456789"
@@ -42,7 +42,7 @@ func Test_Add_Existing_Non_Custodial_Account_fails(t *testing.T) {
 }
 
 func Test_Add_Non_Custodial_Account_After_Delete(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svc := test.GetServices(t, cfg).GetAccounts()
 
 	addr := "0x0123456789"
@@ -65,7 +65,7 @@ func Test_Add_Non_Custodial_Account_After_Delete(t *testing.T) {
 }
 
 func Test_Delete_Non_Existing_Account(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svc := test.GetServices(t, cfg).GetAccounts()
 
 	addr := "0x0123456789"
@@ -77,7 +77,7 @@ func Test_Delete_Non_Existing_Account(t *testing.T) {
 }
 
 func Test_Delete_Fails_On_Custodial_Account(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svc := test.GetServices(t, cfg).GetAccounts()
 
 	_, a, err := svc.Create(context.Background(), true)
@@ -92,7 +92,7 @@ func Test_Delete_Fails_On_Custodial_Account(t *testing.T) {
 }
 
 func Test_Delete_Non_Custodial_Account_Is_Idempotent(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svc := test.GetServices(t, cfg).GetAccounts()
 
 	addr := "0x0123456789"
@@ -115,7 +115,9 @@ func Test_Delete_Non_Custodial_Account_Is_Idempotent(t *testing.T) {
 
 // Test if the service is able to concurrently create multiple accounts
 func Test_Add_Multiple_New_Custodial_Accounts(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	t.Skip("sqlite will cause a database locked error")
+
+	cfg := test.LoadConfig(t)
 
 	instanceCount := 1
 	accountsToCreate := instanceCount * 5

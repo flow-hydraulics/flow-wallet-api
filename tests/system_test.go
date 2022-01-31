@@ -16,7 +16,7 @@ import (
 )
 
 func TestSettingsE2E(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svcs := test.GetServices(t, cfg)
 
 	sysHandler := handlers.NewSystem(svcs.GetSystem())
@@ -69,7 +69,7 @@ func TestSettingsE2E(t *testing.T) {
 }
 
 func TestIsMaintenanceMode(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svcs := test.GetServices(t, cfg)
 
 	sysService := svcs.GetSystem()
@@ -100,7 +100,7 @@ func TestIsMaintenanceMode(t *testing.T) {
 }
 
 func TestIsPaused(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svcs := test.GetServices(t, cfg)
 
 	sysService := svcs.GetSystem()
@@ -131,7 +131,7 @@ func TestIsPaused(t *testing.T) {
 }
 
 func TestPausing(t *testing.T) {
-	cfg := test.LoadConfig(t, testConfigPath)
+	cfg := test.LoadConfig(t)
 	svcs := test.GetServices(t, cfg)
 
 	sysService := svcs.GetSystem()

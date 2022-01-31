@@ -80,6 +80,16 @@ docker-compose down
 
 ## Configuration
 
+The application is configured using _environment variables_. Make sure to prefix variables with `"FLOW_WALLET_"`
+
+If you have an existing `.env` file (or you were using `-envfile`) you can run a command with the variables loaded:
+
+    # Replace <command> with the command you want to run
+    env $(grep -e '^#' .env | xargs) <command>
+
+    # For example
+    env $(grep -e '^#' .env | xargs) go run main.go
+
 ### Maintenance mode
 
 You can put the service in maintenance mode via the [System API](https://flow-hydraulics.github.io/flow-wallet-api/#tag/System) by sending the following JSON body as a `POST` request to `/system/settings` (example in [api-test-scripts/system.http](api-test-scripts/system.http)):
