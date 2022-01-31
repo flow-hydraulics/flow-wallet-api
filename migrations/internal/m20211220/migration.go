@@ -4,7 +4,6 @@ package m20211220
 import (
 	"time"
 
-	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -16,7 +15,7 @@ const ID = "20211220"
 type Job struct {
 	ID                     uuid.UUID      `gorm:"column:id;primary_key;type:uuid;"`
 	Type                   string         `gorm:"column:type"`
-	State                  jobs.State     `gorm:"column:state;default:INIT"`
+	State                  string         `gorm:"column:state;default:INIT"`
 	Error                  string         `gorm:"column:error"`
 	Result                 string         `gorm:"column:result"`
 	TransactionID          string         `gorm:"column:transaction_id"`
