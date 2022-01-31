@@ -32,7 +32,7 @@ services:
     ports:
       - "3569:3569"
     volumes:
-      - emulator_persist:/flowdb
+      - emulator-persist:/flowdb
     env_file:
       - ./.env
     environment:
@@ -67,6 +67,6 @@ services:
       - redis
 
 volumes:
-  emulator_persist:
+  emulator-persist:
   go-modules:
   go-cache:

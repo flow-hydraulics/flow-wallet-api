@@ -66,10 +66,12 @@ lint:
 run-test-suite:
 	@$(test) build flow api
 	@$(test) up --remove-orphans -d db redis flow
-	@echo "\nRunning tests, hang on...\n" \
+	@$(test) unpause \
+	; echo "\nRunning tests, hang on...\n" \
 	; $(test) run --rm api go test ./... -p 1 \
 	; echo "\nRunning linter, hang on...\n" \
-	; $(test) run --rm lint golangci-lint run
+	; $(test) run --rm lint golangci-lint run \
+	; $(test) pause
 
 .PHONY: stop-test-suite
 stop-test-suite:
