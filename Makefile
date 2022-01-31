@@ -12,7 +12,7 @@ endif
 
 
 dev = docker-compose -f docker-compose.dev.yml -p flow-wallet-api-dev
-test = docker-compose -f docker-compose.test-suite.yml -p flow-wallet-api-test
+test-suite = docker-compose -f docker-compose.test-suite.yml -p flow-wallet-api-test
 
 .PHONY: dev
 dev:
@@ -64,19 +64,19 @@ lint:
 
 .PHONY: run-test-suite
 run-test-suite:
-	@$(test) build flow api
-	@$(test) up --remove-orphans -d db redis flow
-	@$(test) unpause \
+	@$(test-suite) build flow api
+	@$(test-suite) up --remove-orphans -d db redis flow
+	@$(test-suite) unpause \
 	; echo "\nRunning tests, hang on...\n" \
-	; $(test) run --rm api go test ./... -p 1 \
+	; $(test-suite) run --rm api go test ./... -p 1 \
 	; echo "\nRunning linter, hang on...\n" \
-	; $(test) run --rm lint golangci-lint run \
-	; $(test) pause
+	; $(test-suite) run --rm lint golangci-lint run \
+	; $(test-suite) pause
 
 .PHONY: stop-test-suite
 stop-test-suite:
-	@$(test) down --remove-orphans
+	@$(test-suite) down --remove-orphans
 
 .PHONY: clean-test-suite
 clean-test-suite:
-	@$(test) run --rm api go clean -testcache
+	@$(test-suite) run --rm api go clean -testcache
