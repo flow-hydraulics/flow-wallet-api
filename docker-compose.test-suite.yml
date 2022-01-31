@@ -22,7 +22,7 @@ services:
     entrypoint: ["/bin/sh","-c"]
     command:
        - |
-        flow emulator -b 100ms &
+        flow emulator -b 100ms --persist &
         sleep 1
         flow project deploy --network=emulator --update=true
         tail -F anything
@@ -30,9 +30,11 @@ services:
       FLOW_SERVICEPRIVATEKEY: 91a22fbd87392b019fbe332c32695c14cf2ba5b6521476a8540228bdf1987068
       FLOW_SERVICEKEYSIGALGO: ECDSA_P256
       FLOW_SERVICEKEYHASHALGO: SHA3_256
+      FLOW_DBPATH: /flowdb
     working_dir: /flow
     volumes:
       - "./flow:/flow:ro"
+      - emulator-persist:/flowdb
 
   api:
     build:
@@ -73,5 +75,6 @@ services:
       - go-cache:/root/.cache/go-build
 
 volumes:
+  emulator-persist:
   go-modules:
   go-cache:
