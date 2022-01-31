@@ -80,7 +80,7 @@ docker-compose down
 
 ## Configuration
 
-The application is configured using _environment variables_.
+The application is configured using _environment variables_. Make sure to prefix variables with `"FLOW_WALLET_"`
 
 If you have an existing `.env` file (or you were using `-envfile`) you can run a command with the variables loaded:
 
