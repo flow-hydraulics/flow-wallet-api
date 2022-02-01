@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
 
@@ -49,6 +50,35 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	k, err := cloudkms.KeyFromResourceID(fmt.Sprintf("%s/cryptoKeyVersions/1", gk.Name))
 	if err != nil {
 		return nil, err
+	}
+
+	keyVersion, err := c.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+		Name: k.ResourceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if keyVersion.State != kmspb.CryptoKeyVersion_ENABLED {
+		// Wait for key to be created
+		ticker := time.NewTicker(500 * time.Millisecond)
+		for {
+			select {
+			case <-ctx.Done():
+				break
+			case <-time.After(5 * time.Second):
+				break
+			case <-ticker.C:
+				keyVersion, err := c.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+					Name: k.ResourceID(),
+				})
+				if err != nil {
+					return nil, err
+				}
+				if keyVersion.State == kmspb.CryptoKeyVersion_ENABLED {
+					break
+				}
+			}
+		}
 	}
 
 	// Validate key name
