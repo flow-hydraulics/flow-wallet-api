@@ -23,7 +23,7 @@ func (*dummyStore) Jobs(datastore.ListOptions) ([]Job, error) { return nil, nil 
 func (*dummyStore) Job(id uuid.UUID) (Job, error)             { return Job{}, nil }
 func (*dummyStore) InsertJob(*Job) error                      { return nil }
 func (*dummyStore) UpdateJob(*Job) error                      { return nil }
-func (*dummyStore) IncreaseExecCount(j *Job) error {
+func (*dummyStore) AcceptJob(j *Job, acceptedGracePeriod time.Duration) error {
 	j.ExecCount = j.ExecCount + 1
 	return nil
 }
