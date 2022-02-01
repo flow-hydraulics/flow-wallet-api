@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
 
 	kms "cloud.google.com/go/kms/apiv1"
@@ -59,25 +61,9 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		return nil, err
 	}
 	if keyVersion.State != kmspb.CryptoKeyVersion_ENABLED {
-		// Wait for key to be created
-		ticker := time.NewTicker(500 * time.Millisecond)
-		for {
-			select {
-			case <-ctx.Done():
-				break
-			case <-time.After(5 * time.Second):
-				break
-			case <-ticker.C:
-				keyVersion, err := c.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
-					Name: k.ResourceID(),
-				})
-				if err != nil {
-					return nil, err
-				}
-				if keyVersion.State == kmspb.CryptoKeyVersion_ENABLED {
-					break
-				}
-			}
+		err := waitForKeyCreation(ctx, c, k.ResourceID())
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -88,4 +74,29 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	}
 
 	return &k, nil
+}
+
+func waitForKeyCreation(ctx context.Context, client *kms.KeyManagementClient, keyVersionResourceID string) error {
+	ticker := time.NewTicker(1 * time.Second)
+	timeout := time.After(10 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-timeout:
+			log.Debugf("wait for key creation timeout: %s\n", keyVersionResourceID)
+			return nil
+		case <-ticker.C:
+			keyVersion, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+				Name: keyVersionResourceID,
+			})
+			if err != nil {
+				return err
+			}
+			if keyVersion.State == kmspb.CryptoKeyVersion_ENABLED {
+				return nil
+			}
+			log.Debugf("waiting for key creation: %s %s\n", keyVersion.State, keyVersionResourceID)
+		}
+	}
 }
