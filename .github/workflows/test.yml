@@ -38,7 +38,6 @@ jobs:
           sleep 1
           cd flow && flow project deploy --network=emulator --update=true
 
-
       - name: Cache Go modules
         uses: actions/cache@v1
         with:

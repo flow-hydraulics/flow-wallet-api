@@ -1,11 +1,14 @@
 package jobs
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
+	"github.com/flow-hydraulics/flow-wallet-api/datastore/lib"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GormStore struct {
@@ -38,10 +41,38 @@ func (s *GormStore) UpdateJob(j *Job) error {
 	return s.db.Save(j).Error
 }
 
-func (s *GormStore) IncreaseExecCount(j *Job) error {
-	return s.db.Model(j).
-		Where("id = ? AND exec_count = ? AND updated_at = ?", j.ID, j.ExecCount, j.UpdatedAt).
-		Update("exec_count", j.ExecCount+1).Error
+func isAcceptable(j *Job, acceptedGracePeriod time.Duration) bool {
+	tAccepted := time.Now().Add(-1 * acceptedGracePeriod)
+	if j.State == Accepted && j.UpdatedAt.After(tAccepted) {
+		return false
+	}
+	if j.State == Complete || j.State == Failed {
+		return false
+	}
+	return true
+}
+
+func (s *GormStore) AcceptJob(j *Job, acceptedGracePeriod time.Duration) error {
+	if !isAcceptable(j, acceptedGracePeriod) {
+		return fmt.Errorf("error job is not acceptable")
+	}
+	return lib.GormTransaction(s.db, func(tx *gorm.DB) error {
+		var job Job
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&job, "id = ?", j.ID).Error
+		if err != nil {
+			return err
+		}
+		if !isAcceptable(&job, acceptedGracePeriod) {
+			return fmt.Errorf("error job is not acceptable")
+		}
+		j.State = Accepted
+		j.ExecCount = job.ExecCount + 1
+		err = tx.Save(j).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *GormStore) SchedulableJobs(acceptedGracePeriod, reSchedulableGracePeriod time.Duration, o datastore.ListOptions) (jj []Job, err error) {
