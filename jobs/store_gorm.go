@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
-	ds_gorm "github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
+	"github.com/flow-hydraulics/flow-wallet-api/datastore/lib"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -56,7 +56,7 @@ func (s *GormStore) AcceptJob(j *Job, acceptedGracePeriod time.Duration) error {
 	if !isAcceptable(j, acceptedGracePeriod) {
 		return fmt.Errorf("error job is not acceptable")
 	}
-	return ds_gorm.Transaction(s.db, func(tx *gorm.DB) error {
+	return lib.GormTransaction(s.db, func(tx *gorm.DB) error {
 		var job Job
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&job, "id = ?", j.ID).Error
 		if err != nil {
