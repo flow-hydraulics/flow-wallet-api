@@ -11,7 +11,10 @@ import (
 type Service interface {
 	GetSettings() (*Settings, error)
 	SaveSettings(settings *Settings) error
+	// Pauses the system for a configured duration
 	Pause() error
+	// Will immediately revoke the pause timer
+	Resume() error
 	IsHalted() (bool, error)
 }
 
@@ -55,6 +58,16 @@ func (svc *ServiceImpl) Pause() error {
 		return err
 	}
 	settings.PausedSince = sql.NullTime{Time: time.Now(), Valid: true}
+	return svc.SaveSettings(settings)
+}
+
+func (svc *ServiceImpl) Resume() error {
+	log.Trace("Resume system")
+	settings, err := svc.GetSettings()
+	if err != nil {
+		return err
+	}
+	settings.PausedSince = sql.NullTime{Time: time.Now(), Valid: false}
 	return svc.SaveSettings(settings)
 }
 

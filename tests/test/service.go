@@ -12,6 +12,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
@@ -31,6 +32,7 @@ type Services interface {
 
 	GetKeyManager() keys.Manager
 	GetListener() chain_events.Listener
+	GetFlowClient() flow_helpers.FlowClient
 }
 
 type svcs struct {
@@ -43,6 +45,7 @@ type svcs struct {
 
 	keyManager keys.Manager
 	listener   chain_events.Listener
+	flowClient flow_helpers.FlowClient
 }
 
 func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
@@ -88,6 +91,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
+	systemService := system.NewService(system.NewGormStore(db))
+
 	wp := jobs.NewWorkerPool(
 		jobs.NewGormStore(db),
 		cfg.WorkerQueueCapacity,
@@ -96,6 +101,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		jobs.WithDbJobPollInterval(time.Second),
 		jobs.WithAcceptedGracePeriod(1000),
 		jobs.WithReSchedulableGracePeriod(1000),
+		jobs.WithSystemService(systemService),
 	)
 
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
@@ -105,7 +111,6 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp)
 	jobService := jobs.NewService(jobs.NewGormStore(db))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
-	systemService := system.NewService(system.NewGormStore(db))
 
 	getTypes := func() ([]string, error) {
 		// Get all enabled tokens
@@ -168,6 +173,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 		keyManager: km,
 		listener:   listener,
+		flowClient: fc,
 	}
 }
 
@@ -201,4 +207,8 @@ func (s *svcs) GetListener() chain_events.Listener {
 
 func (s *svcs) GetSystem() system.Service {
 	return s.systemService
+}
+
+func (s *svcs) GetFlowClient() flow_helpers.FlowClient {
+	return s.flowClient
 }
