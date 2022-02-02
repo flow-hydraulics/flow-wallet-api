@@ -4,14 +4,66 @@ package google
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/google/uuid"
+	"github.com/jpillora/backoff"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
+	log "github.com/sirupsen/logrus"
 )
+
+func getPublicKey(ctx context.Context, c *cloudkms.Client, k *cloudkms.Key) (*crypto.PublicKey, *crypto.HashAlgorithm, *crypto.SignatureAlgorithm, error) {
+	// Get the public key (using flow-go-sdk's cloudkms.Client)
+	b := &backoff.Backoff{
+		Min:    100 * time.Millisecond,
+		Max:    time.Minute,
+		Factor: 5,
+		Jitter: true,
+	}
+
+	deadline := time.Now().Add(60 * time.Second)
+
+	var pub crypto.PublicKey
+	var h crypto.HashAlgorithm
+	var s crypto.SignatureAlgorithm
+	var err error
+
+	entry := log.WithFields(log.Fields{"keyId": k.KeyID})
+
+	entry.Trace("Getting public key for KMS key")
+
+	for {
+		pub, h, err = c.GetPublicKey(ctx, *k)
+		if pub != nil {
+			s = pub.Algorithm()
+			break
+		}
+		// non-retryable error
+		if err != nil && !strings.Contains(err.Error(), "KEY_PENDING_GENERATION") {
+			entry.WithFields(log.Fields{"err": err}).Error("failed to get public key")
+			return nil, nil, nil, err
+		}
+		// key not generated yet, retry
+		if err != nil && strings.Contains(err.Error(), "KEY_PENDING_GENERATION") {
+			entry.Trace("KMS key is pending creation, will retry")
+			continue
+		}
+
+		time.Sleep(b.Duration())
+
+		if time.Now().After(deadline) {
+			err = fmt.Errorf("timeout while trying to get public key")
+			return nil, nil, nil, err
+		}
+	}
+
+	return &pub, &h, &s, err
+}
 
 // Generate creates a new asymmetric signing & verification key in Google KMS
 // and returns the required data to use the key with the Flow blockchain
@@ -33,15 +85,17 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 		return nil, nil, err
 	}
 
-	// Get the public key (using flow-go-sdk's cloudkms.Client)
-	pub, h, err := c.GetPublicKey(ctx, *k)
+	// TODO: The private key will be created, and ONLY the "get public key" part
+	// should be retried
+	pub, h, s, err := getPublicKey(ctx, c, k)
 	if err != nil {
+		log.WithFields(log.Fields{"keyId": k.KeyID, "err": err}).Error("failed to get public key for Google KMS key")
 		return nil, nil, err
 	}
 
 	f := flow.NewAccountKey().
-		SetPublicKey(pub).
-		SetHashAlgo(h).
+		SetPublicKey(*pub).
+		SetHashAlgo(*h).
 		SetWeight(weight)
 	f.Index = keyIndex
 
@@ -49,8 +103,8 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 		Index:    keyIndex,
 		Type:     keys.AccountKeyTypeGoogleKMS,
 		Value:    k.ResourceID(),
-		SignAlgo: pub.Algorithm(),
-		HashAlgo: h,
+		SignAlgo: *s,
+		HashAlgo: *h,
 	}
 
 	return f, p, nil
