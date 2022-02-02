@@ -12,6 +12,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore/gorm"
+	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
@@ -31,6 +32,7 @@ type Services interface {
 
 	GetKeyManager() keys.Manager
 	GetListener() chain_events.Listener
+	GetFlowClient() flow_helpers.FlowClient
 }
 
 type svcs struct {
@@ -43,6 +45,7 @@ type svcs struct {
 
 	keyManager keys.Manager
 	listener   chain_events.Listener
+	flowClient flow_helpers.FlowClient
 }
 
 func GetDatabase(t *testing.T, cfg *configs.Config) *upstreamgorm.DB {
@@ -170,6 +173,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 		keyManager: km,
 		listener:   listener,
+		flowClient: fc,
 	}
 }
 
@@ -203,4 +207,8 @@ func (s *svcs) GetListener() chain_events.Listener {
 
 func (s *svcs) GetSystem() system.Service {
 	return s.systemService
+}
+
+func (s *svcs) GetFlowClient() flow_helpers.FlowClient {
+	return s.flowClient
 }
