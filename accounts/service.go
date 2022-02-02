@@ -176,7 +176,7 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	accountKey, newPrivateKey, err := s.km.GenerateDefault(ctx)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Failed to generate key")
-		return nil, "", err
+		return nil, "", fmt.Errorf("failed to generate key")
 	}
 
 	payer, err := s.km.AdminAuthorizer(ctx)

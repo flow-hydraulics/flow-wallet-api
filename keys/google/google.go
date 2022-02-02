@@ -11,6 +11,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
+	log "github.com/sirupsen/logrus"
 )
 
 // Generate creates a new asymmetric signing & verification key in Google KMS
@@ -25,17 +26,20 @@ func Generate(cfg *configs.Config, ctx context.Context, keyIndex, weight int) (*
 		fmt.Sprintf("flow-wallet-account-key-%s", u.String()),
 	)
 	if err != nil {
+		log.Errorf("Failed to create asymmetric key: %+v", err)
 		return nil, nil, err
 	}
 
 	c, err := cloudkms.NewClient(ctx)
 	if err != nil {
+		log.Errorf("Failed to new client: %+v", err)
 		return nil, nil, err
 	}
 
 	// Get the public key (using flow-go-sdk's cloudkms.Client)
 	pub, h, err := c.GetPublicKey(ctx, *k)
 	if err != nil {
+		log.Errorf("Failed to get public key: %+v", err)
 		return nil, nil, err
 	}
 

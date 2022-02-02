@@ -20,6 +20,7 @@ import (
 func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	c, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
+		log.Errorf("Failed to new kms client: %+v", err)
 		return nil, err
 	}
 
@@ -46,6 +47,7 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 
 	gk, err := c.CreateCryptoKey(ctx, r)
 	if err != nil {
+		log.Errorf("Failed to create crypto key version: %+v", err)
 		return nil, err
 	}
 
@@ -59,12 +61,13 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		Name: k.ResourceID(),
 	})
 	if err != nil {
+		log.Errorf("Failed to get crypto key version: %+v", err)
 		return nil, err
 	}
 	if keyVersion.State != kmspb.CryptoKeyVersion_ENABLED {
 		err := waitForKey(ctx, c, k.ResourceID())
 		if err != nil {
-			log.Warnf("Wait for key creation failed: %s %s\n", k.ResourceID(), err.Error())
+			log.Warnf("Wait for key creation failed: %s %+v", k.ResourceID(), err)
 		}
 	}
 
