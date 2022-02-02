@@ -62,9 +62,9 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		return nil, err
 	}
 	if keyVersion.State != kmspb.CryptoKeyVersion_ENABLED {
-		err := waitForKey(c, k.ResourceID())
+		err := waitForKey(ctx, c, k.ResourceID())
 		if err != nil {
-			return nil, err
+			log.Warnf("Wait for key creation failed: %s %s\n", k.ResourceID(), err.Error())
 		}
 	}
 
@@ -77,9 +77,9 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	return &k, nil
 }
 
-func waitForKey(client *kms.KeyManagementClient, keyVersionResourceID string) error {
-	timeout := 2 * time.Minute
-	kctx, cancel := context.WithTimeout(context.Background(), timeout)
+func waitForKey(ctx context.Context, client *kms.KeyManagementClient, keyVersionResourceID string) error {
+	timeout := 5 * time.Minute
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	b := &backoff.Backoff{
@@ -90,7 +90,7 @@ func waitForKey(client *kms.KeyManagementClient, keyVersionResourceID string) er
 	}
 
 	for {
-		keyVersion, err := client.GetCryptoKeyVersion(kctx, &kmspb.GetCryptoKeyVersionRequest{
+		keyVersion, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
 			Name: keyVersionResourceID,
 		})
 		if err != nil {
@@ -99,7 +99,7 @@ func waitForKey(client *kms.KeyManagementClient, keyVersionResourceID string) er
 		if keyVersion.State == kmspb.CryptoKeyVersion_ENABLED {
 			return nil
 		}
-		log.Debugf("waiting for key creation: %s %s\n", keyVersion.State, keyVersionResourceID)
+		log.Debugf("Waiting for key creation: %s %s\n", keyVersion.State, keyVersionResourceID)
 		time.Sleep(b.Duration())
 	}
 }
