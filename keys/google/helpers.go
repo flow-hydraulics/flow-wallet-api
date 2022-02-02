@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jpillora/backoff"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
@@ -61,7 +62,7 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		return nil, err
 	}
 	if keyVersion.State != kmspb.CryptoKeyVersion_ENABLED {
-		err := waitForKeyCreation(ctx, c, k.ResourceID())
+		err := waitForKey(ctx, c, k.ResourceID())
 		if err != nil {
 			return nil, err
 		}
@@ -76,27 +77,29 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	return &k, nil
 }
 
-func waitForKeyCreation(ctx context.Context, client *kms.KeyManagementClient, keyVersionResourceID string) error {
-	ticker := time.NewTicker(1 * time.Second)
-	timeout := time.After(10 * time.Second)
+func waitForKey(ctx context.Context, client *kms.KeyManagementClient, keyVersionResourceID string) error {
+	timeout := 2 * time.Minute
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	b := &backoff.Backoff{
+		Min:    100 * time.Millisecond,
+		Max:    time.Minute,
+		Factor: 5,
+		Jitter: true,
+	}
+
 	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-timeout:
-			log.Debugf("wait for key creation timeout: %s\n", keyVersionResourceID)
-			return nil
-		case <-ticker.C:
-			keyVersion, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
-				Name: keyVersionResourceID,
-			})
-			if err != nil {
-				return err
-			}
-			if keyVersion.State == kmspb.CryptoKeyVersion_ENABLED {
-				return nil
-			}
-			log.Debugf("waiting for key creation: %s %s\n", keyVersion.State, keyVersionResourceID)
+		keyVersion, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+			Name: keyVersionResourceID,
+		})
+		if err != nil {
+			return err
 		}
+		if keyVersion.State == kmspb.CryptoKeyVersion_ENABLED {
+			return nil
+		}
+		log.Debugf("waiting for key creation: %s %s\n", keyVersion.State, keyVersionResourceID)
+		time.Sleep(b.Duration())
 	}
 }
