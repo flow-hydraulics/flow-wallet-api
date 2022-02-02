@@ -88,6 +88,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	db := GetDatabase(t, cfg)
 	fc := NewFlowClient(t, cfg)
 
+	systemService := system.NewService(system.NewGormStore(db))
+
 	wp := jobs.NewWorkerPool(
 		jobs.NewGormStore(db),
 		cfg.WorkerQueueCapacity,
@@ -96,6 +98,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		jobs.WithDbJobPollInterval(time.Second),
 		jobs.WithAcceptedGracePeriod(1000),
 		jobs.WithReSchedulableGracePeriod(1000),
+		jobs.WithSystemService(systemService),
 	)
 
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
@@ -105,7 +108,6 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp)
 	jobService := jobs.NewService(jobs.NewGormStore(db))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
-	systemService := system.NewService(system.NewGormStore(db))
 
 	getTypes := func() ([]string, error) {
 		// Get all enabled tokens
