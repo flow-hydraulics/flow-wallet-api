@@ -45,7 +45,9 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		},
 	}
 
-	gk, err := c.CreateCryptoKey(ctx, r)
+	cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	gk, err := c.CreateCryptoKey(cctx, r)
 	if err != nil {
 		log.Errorf("Failed to create crypto key version: %+v", err)
 		return nil, err
