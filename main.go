@@ -109,6 +109,7 @@ func runServer(cfg *configs.Config) {
 	}()
 
 	txRatelimiter := ratelimit.New(cfg.TransactionMaxSendRate, ratelimit.WithoutSlack)
+	accountCreateRatelimiter := ratelimit.New(cfg.AccountCreateMaxRate, ratelimit.WithoutSlack)
 
 	// Key manager
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
@@ -117,7 +118,7 @@ func runServer(cfg *configs.Config) {
 	templateService := templates.NewService(cfg, templates.NewGormStore(db))
 	jobsService := jobs.NewService(jobs.NewGormStore(db))
 	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
-	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, accounts.WithTxRatelimiter(txRatelimiter))
+	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, accounts.WithTxRatelimiter(accountCreateRatelimiter))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
 
 	// Register a handler for account added events

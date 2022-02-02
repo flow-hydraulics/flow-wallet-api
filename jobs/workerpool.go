@@ -237,10 +237,10 @@ func (wp *WorkerPoolImpl) accept(job *Job) bool {
 		"function": "WorkerPool.accept",
 	}))
 
-	if err := wp.store.IncreaseExecCount(job); err != nil {
+	if err := wp.store.AcceptJob(job, wp.acceptedGracePeriod); err != nil {
 		entry.
 			WithFields(log.Fields{"error": err}).
-			Warn("Failed to increase job exec_count")
+			Warn("Failed to accept job")
 		return false
 	}
 
@@ -318,6 +318,7 @@ func (wp *WorkerPoolImpl) startWorkers() {
 					}))
 
 					if wallet_errors.IsChainConnectionError(err) {
+						entry.Error(err)
 						if wp.systemService != nil {
 							entry.Warn("Unable to connect to chain, pausing system")
 							// Unable to connect to chain, pause system.

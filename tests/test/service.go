@@ -94,8 +94,8 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		cfg.WorkerCount,
 		jobs.WithMaxJobErrorCount(0),
 		jobs.WithDbJobPollInterval(time.Second),
-		jobs.WithAcceptedGracePeriod(0),
-		jobs.WithReSchedulableGracePeriod(0),
+		jobs.WithAcceptedGracePeriod(1000),
+		jobs.WithReSchedulableGracePeriod(1000),
 	)
 
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)

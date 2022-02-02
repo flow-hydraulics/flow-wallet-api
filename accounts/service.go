@@ -172,6 +172,13 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	// are "fresh" when the transaction is actually sent
 	s.txRateLimiter.Take()
 
+	// Generate a new key pair
+	accountKey, newPrivateKey, err := s.km.GenerateDefault(ctx)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed to generate key")
+		return nil, "", fmt.Errorf("failed to generate key")
+	}
+
 	payer, err := s.km.AdminAuthorizer(ctx)
 	if err != nil {
 		return nil, "", err
@@ -184,12 +191,6 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 
 	// Get latest blocks blockID as reference blockID
 	referenceBlockID, err := flow_helpers.LatestBlockId(ctx, s.fc)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Generate a new key pair
-	accountKey, newPrivateKey, err := s.km.GenerateDefault(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -242,6 +243,7 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	// Send and wait for the transaction to be sealed
 	result, err := flow_helpers.SendAndWait(ctx, s.fc, *flowTx, s.cfg.TransactionTimeout)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed to send account create tx")
 		return nil, "", err
 	}
 

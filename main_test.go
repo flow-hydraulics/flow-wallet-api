@@ -1160,7 +1160,7 @@ func TestTokenHandlers(t *testing.T) {
 			method:      http.MethodGet,
 			contentType: "application/json",
 			url:         fmt.Sprintf("/%s/fungible-tokens", testAccounts[1].Address),
-			expected:    `(?m)^\[{"name":"FUSD".*"name":"FlowToken".*}\]$`,
+			expected:    `(?m)^\[({"name":"FUSD".*"name":"FlowToken".*}|{"name":"FlowToken".*"name":"FUSD".*})\]$`,
 			status:      http.StatusOK,
 		},
 	}

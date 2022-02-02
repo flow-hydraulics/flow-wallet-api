@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/jpillora/backoff"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/onflow/flow-go-sdk/crypto/cloudkms"
 
@@ -16,6 +20,7 @@ import (
 func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	c, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
+		log.Errorf("Failed to new kms client: %+v", err)
 		return nil, err
 	}
 
@@ -42,6 +47,7 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 
 	gk, err := c.CreateCryptoKey(ctx, r)
 	if err != nil {
+		log.Errorf("Failed to create crypto key version: %+v", err)
 		return nil, err
 	}
 
@@ -51,6 +57,20 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		return nil, err
 	}
 
+	keyVersion, err := c.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+		Name: k.ResourceID(),
+	})
+	if err != nil {
+		log.Errorf("Failed to get crypto key version: %+v", err)
+		return nil, err
+	}
+	if keyVersion.State != kmspb.CryptoKeyVersion_ENABLED {
+		err := waitForKey(ctx, c, k.ResourceID())
+		if err != nil {
+			log.Warnf("Wait for key creation failed: %s %+v", k.ResourceID(), err)
+		}
+	}
+
 	// Validate key name
 	if !strings.HasPrefix(k.ResourceID(), gk.Name) {
 		err := fmt.Errorf("WARNING: created Google KMS key name does not match the expected")
@@ -58,4 +78,31 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	}
 
 	return &k, nil
+}
+
+func waitForKey(ctx context.Context, client *kms.KeyManagementClient, keyVersionResourceID string) error {
+	timeout := 5 * time.Minute
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	b := &backoff.Backoff{
+		Min:    100 * time.Millisecond,
+		Max:    time.Minute,
+		Factor: 5,
+		Jitter: true,
+	}
+
+	for {
+		keyVersion, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+			Name: keyVersionResourceID,
+		})
+		if err != nil {
+			return err
+		}
+		if keyVersion.State == kmspb.CryptoKeyVersion_ENABLED {
+			return nil
+		}
+		log.Debugf("Waiting for key creation: %s %s\n", keyVersion.State, keyVersionResourceID)
+		time.Sleep(b.Duration())
+	}
 }
