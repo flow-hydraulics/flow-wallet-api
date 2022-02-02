@@ -175,6 +175,7 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	// Generate a new key pair
 	accountKey, newPrivateKey, err := s.km.GenerateDefault(ctx)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed to generate key")
 		return nil, "", err
 	}
 
@@ -242,6 +243,7 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	// Send and wait for the transaction to be sealed
 	result, err := flow_helpers.SendAndWait(ctx, s.fc, *flowTx, s.cfg.TransactionTimeout)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed to send account create tx")
 		return nil, "", err
 	}
 

@@ -318,6 +318,7 @@ func (wp *WorkerPoolImpl) startWorkers() {
 					}))
 
 					if wallet_errors.IsChainConnectionError(err) {
+						entry.Error(err)
 						if wp.systemService != nil {
 							entry.Warn("Unable to connect to chain, pausing system")
 							// Unable to connect to chain, pause system.
