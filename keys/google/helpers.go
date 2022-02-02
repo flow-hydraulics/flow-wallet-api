@@ -45,13 +45,13 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		},
 	}
 
-	cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	gk, err := c.CreateCryptoKey(cctx, r)
+	startCreate := time.Now()
+	gk, err := c.CreateCryptoKey(ctx, r)
 	if err != nil {
 		log.Errorf("Failed to create crypto key version: %+v", err)
 		return nil, err
 	}
+	log.Debugf("Create crypto key took %s", time.Since(startCreate))
 
 	// Append cryptoKeyVersions so that we can utilize the KeyFromResourceID method
 	k, err := cloudkms.KeyFromResourceID(fmt.Sprintf("%s/cryptoKeyVersions/1", gk.Name))
