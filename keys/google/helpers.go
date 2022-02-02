@@ -62,7 +62,7 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 		return nil, err
 	}
 	if keyVersion.State != kmspb.CryptoKeyVersion_ENABLED {
-		err := waitForKey(ctx, c, k.ResourceID())
+		err := waitForKey(c, k.ResourceID())
 		if err != nil {
 			return nil, err
 		}
@@ -77,9 +77,9 @@ func AsymKey(ctx context.Context, parent, id string) (*cloudkms.Key, error) {
 	return &k, nil
 }
 
-func waitForKey(ctx context.Context, client *kms.KeyManagementClient, keyVersionResourceID string) error {
+func waitForKey(client *kms.KeyManagementClient, keyVersionResourceID string) error {
 	timeout := 2 * time.Minute
-	kctx, cancel := context.WithTimeout(ctx, timeout)
+	kctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	b := &backoff.Backoff{
