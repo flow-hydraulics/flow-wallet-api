@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/datastore"
@@ -173,14 +172,12 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	// are "fresh" when the transaction is actually sent
 	s.txRateLimiter.Take()
 
-	startKeyGen := time.Now()
 	// Generate a new key pair
 	accountKey, newPrivateKey, err := s.km.GenerateDefault(ctx)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Failed to generate key")
 		return nil, "", fmt.Errorf("failed to generate key")
 	}
-	log.Debugf("Generate key took %s", time.Since(startKeyGen))
 
 	payer, err := s.km.AdminAuthorizer(ctx)
 	if err != nil {
@@ -243,14 +240,12 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 		return nil, "", err
 	}
 
-	startTx := time.Now()
 	// Send and wait for the transaction to be sealed
 	result, err := flow_helpers.SendAndWait(ctx, s.fc, *flowTx, s.cfg.TransactionTimeout)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Failed to send account create tx")
 		return nil, "", err
 	}
-	log.Debugf("Create account tx took %s", time.Since(startTx))
 
 	// Grab the new address from transaction events
 	var newAddress flow.Address
