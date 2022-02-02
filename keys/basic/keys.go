@@ -193,7 +193,7 @@ func (s *KeyManager) MakeAuthorizer(ctx context.Context, address flow.Address) (
 func (s *KeyManager) AdminProposalKey(ctx context.Context) (keys.Authorizer, error) {
 	adminAcc := flow.HexToAddress(s.cfg.AdminAddress)
 
-	index, err := s.store.ProposalKeyIndex()
+	index, err := s.store.ProposalKeyIndex(int(s.cfg.AdminProposalKeyCount))
 	if err != nil {
 		return keys.Authorizer{}, fmt.Errorf("unable to get admin proposal key: %w", err)
 	}
