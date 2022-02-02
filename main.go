@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	fwaotel "github.com/flow-hydraulics/flow-wallet-api/otel"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"net/http"
 	"os"
 	"os/signal"
@@ -72,6 +74,13 @@ func runServer(cfg *configs.Config) {
 
 	log.Info("Starting server")
 
+	tp := fwaotel.InitTracer()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
+
 	// Flow client
 	// TODO: WithInsecure()?
 	fc, err := client.New(cfg.AccessAPIHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -86,6 +95,7 @@ func runServer(cfg *configs.Config) {
 	}()
 
 	// Database
+	// TODO: instrument if bottleneck
 	db, err := gorm.New(cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -144,6 +154,7 @@ func runServer(cfg *configs.Config) {
 	tokenHandler := handlers.NewTokens(tokenService)
 
 	r := mux.NewRouter()
+	r.Use(otelmux.Middleware("flow-wallet-api-server"))
 
 	// Catch the api version
 	rv := r.PathPrefix("/{apiVersion}").Subrouter()
