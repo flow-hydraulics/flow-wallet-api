@@ -5,9 +5,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=wallet
-      - POSTGRES_USER=wallet
-      - POSTGRES_PASSWORD=wallet
+      POSTGRES_DB: wallet
+      POSTGRES_USER: wallet
+      POSTGRES_PASSWORD: wallet
 
   redis:
     image: redis:6.2-alpine
@@ -28,7 +28,7 @@ services:
 
   emulator:
     image: gcr.io/flow-container-registry/emulator:0.27.3
-    command: emulator -v --persist
+    command: emulator -b 100ms -v --persist
     ports:
       - "3569:3569"
     volumes:
@@ -36,10 +36,11 @@ services:
     env_file:
       - ./.env
     environment:
-      - FLOW_SERVICEPRIVATEKEY=${FLOW_WALLET_ADMIN_PRIVATE_KEY}
-      - FLOW_SERVICEKEYSIGALGO=ECDSA_P256
-      - FLOW_SERVICEKEYHASHALGO=SHA3_256
-      - FLOW_DBPATH=/flowdb
+      FLOW_SERVICEPRIVATEKEY: ${FLOW_WALLET_ADMIN_PRIVATE_KEY}
+      FLOW_SERVICEKEYSIGALGO: ECDSA_P256
+      FLOW_SERVICEKEYHASHALGO: SHA3_256
+      FLOW_DBPATH: /flowdb
+      FLOW_TRANSACTIONEXPIRY: 600
 
   api:
     build:

@@ -173,7 +173,6 @@ func ParseTestConfig(t *testing.T) *Config {
 	SetenvIfNotSet("FLOW_WALLET_ENCRYPTION_KEY", "faae4ed1c30f4e4555ee3a71f1044a8e")
 	SetenvIfNotSet("FLOW_WALLET_ENCRYPTION_KEY_TYPE", "local")
 	SetenvIfNotSet("FLOW_WALLET_ENABLED_TOKENS", "FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd")
-	SetenvIfNotSet("FLOW_WALLET_ADMIN_PROPOSAL_KEY_COUNT", "100")
 
 	cfg, err := Parse()
 	if err != nil {

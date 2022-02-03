@@ -46,14 +46,14 @@ func (s *GormStore) AccountKey(address string) (Storable, error) {
 	return k, err
 }
 
-func (s *GormStore) ProposalKeyIndex() (int, error) {
+func (s *GormStore) ProposalKeyIndex(limitKeyCount int) (int, error) {
 	s.proposalKeyMutex.Lock()
 	defer s.proposalKeyMutex.Unlock()
 
 	p := ProposalKey{}
 
 	err := lib.GormTransaction(s.db, func(tx *gorm.DB) error {
-		if err := tx.
+		if err := tx.Table("(?) as p", tx.Model(p).Order("id asc").Limit(limitKeyCount)).
 			// NOWAIT so this call will fail rather than use a stale value
 			Clauses(clause.Locking{Strength: "UPDATE", Options: "NOWAIT"}).
 			Order("updated_at asc").
