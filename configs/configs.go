@@ -133,6 +133,7 @@ type Config struct {
 
 	AccountCreateRateLimit float64 `env:"ACCOUNT_CREATE_RATE_LIMIT" envDefault:"1.0"`
 	AccountCreateRateBurst int     `env:"ACCOUNT_CREATE_RATE_BURST" envDefault:"10"`
+	EnableTrace            bool    `env:"ENABLE_TRACE" envDefault:"false"`
 }
 
 // Parse parses environment variables and flags to a valid Config.
