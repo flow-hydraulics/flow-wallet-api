@@ -4,12 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	fwaotel "github.com/flow-hydraulics/flow-wallet-api/otel"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	fwaotel "github.com/flow-hydraulics/flow-wallet-api/otel"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/chain_events"
@@ -75,12 +76,14 @@ func runServer(cfg *configs.Config) {
 
 	log.Info("Starting server")
 
-	tp := fwaotel.InitTracer()
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			log.Printf("Error shutting down tracer provider: %v", err)
-		}
-	}()
+	if cfg.EnableTrace {
+		tp := fwaotel.InitTracer()
+		defer func() {
+			if err := tp.Shutdown(context.Background()); err != nil {
+				log.Printf("Error shutting down tracer provider: %v", err)
+			}
+		}()
+	}
 
 	// Flow client
 	// TODO: WithInsecure()?
