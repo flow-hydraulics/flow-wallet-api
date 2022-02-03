@@ -35,6 +35,7 @@ func (s *ServiceImpl) executeTransactionJob(ctx context.Context, j *jobs.Job) er
 		return fmt.Errorf("proposal key index mismatch")
 	}
 
+	// TODO rebuild tx
 	latestSequenceNum := acc.Keys[flowTx.ProposalKey.KeyIndex].SequenceNumber
 	if flowTx.ProposalKey.SequenceNumber != latestSequenceNum {
 		tx.FlowTransaction = flowTx.
