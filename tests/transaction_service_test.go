@@ -113,8 +113,6 @@ func Test_TransactionProposalKeySequenceNumber(t *testing.T) {
 	})
 
 	t.Run("update sequence number during job run", func(t *testing.T) {
-		t.Skip("not supported currently")
-
 		cfg := test.LoadConfig(t)
 		cfg.AdminProposalKeyCount = 1
 		cfg.WorkerCount = 1

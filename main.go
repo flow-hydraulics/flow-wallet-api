@@ -127,8 +127,9 @@ func runServer(cfg *configs.Config) {
 
 	// Services
 	templateService := templates.NewService(cfg, templates.NewGormStore(db))
-	jobsService := jobs.NewService(jobs.NewGormStore(db))
-	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
+	jobsStore := jobs.NewGormStore(db)
+	jobsService := jobs.NewService(jobsStore)
+	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), jobsStore, km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, accounts.WithTxRatelimiter(accountCreateRatelimiter))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
 
