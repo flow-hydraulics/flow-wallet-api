@@ -93,8 +93,9 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	systemService := system.NewService(system.NewGormStore(db))
 
+	jobsStore := jobs.NewGormStore(db)
 	wp := jobs.NewWorkerPool(
-		jobs.NewGormStore(db),
+		jobsStore,
 		cfg.WorkerQueueCapacity,
 		cfg.WorkerCount,
 		jobs.WithMaxJobErrorCount(0),
@@ -107,7 +108,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
 	templateService := templates.NewService(cfg, templates.NewGormStore(db))
-	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp)
+	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), jobsStore, km, fc, wp)
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp)
 	jobService := jobs.NewService(jobs.NewGormStore(db))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
