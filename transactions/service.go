@@ -33,6 +33,7 @@ type Service interface {
 // ServiceImpl defines the API for transaction HTTP handlers.
 type ServiceImpl struct {
 	store         Store
+	jobStore      jobs.Store
 	km            keys.Manager
 	fc            flow_helpers.FlowClient
 	wp            jobs.WorkerPool
@@ -44,6 +45,7 @@ type ServiceImpl struct {
 func NewService(
 	cfg *configs.Config,
 	store Store,
+	jobStore jobs.Store,
 	km keys.Manager,
 	fc flow_helpers.FlowClient,
 	wp jobs.WorkerPool,
@@ -52,7 +54,7 @@ func NewService(
 	var defaultTxRatelimiter = ratelimit.NewUnlimited()
 
 	// TODO(latenssi): safeguard against nil config?
-	svc := &ServiceImpl{store, km, fc, wp, cfg, defaultTxRatelimiter}
+	svc := &ServiceImpl{store, jobStore, km, fc, wp, cfg, defaultTxRatelimiter}
 
 	for _, opt := range opts {
 		opt(svc)

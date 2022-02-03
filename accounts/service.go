@@ -14,7 +14,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
 	log "github.com/sirupsen/logrus"
-	"go.uber.org/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 const maxGasLimit = 9999
@@ -35,7 +35,7 @@ type ServiceImpl struct {
 	km            keys.Manager
 	fc            flow_helpers.FlowClient
 	wp            jobs.WorkerPool
-	txRateLimiter ratelimit.Limiter
+	txRateLimiter *rate.Limiter
 }
 
 // NewService initiates a new account service.
@@ -47,7 +47,8 @@ func NewService(
 	wp jobs.WorkerPool,
 	opts ...ServiceOption,
 ) Service {
-	var defaultTxRatelimiter = ratelimit.NewUnlimited()
+	// default allow 1rps 1burst
+	var defaultTxRatelimiter = rate.NewLimiter(1, 1)
 
 	// TODO(latenssi): safeguard against nil config?
 	svc := &ServiceImpl{cfg, store, km, fc, wp, defaultTxRatelimiter}
@@ -170,7 +171,11 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 
 	// Important to ratelimit all the way up here so the keys and reference blocks
 	// are "fresh" when the transaction is actually sent
-	s.txRateLimiter.Take()
+	err := s.txRateLimiter.Wait(ctx)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed to wait for rate limit")
+		return nil, "", err
+	}
 
 	// Generate a new key pair
 	accountKey, newPrivateKey, err := s.km.GenerateDefault(ctx)

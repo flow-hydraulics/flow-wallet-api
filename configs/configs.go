@@ -131,7 +131,8 @@ type Config struct {
 	// Max transactions per second, rate at which the service can submit transactions to Flow
 	TransactionMaxSendRate int `env:"MAX_TPS" envDefault:"10"`
 
-	AccountCreateMaxRate int `env:"MAX_ACCOUNT_CREATE_RATE" envDefault:"10"`
+	AccountCreateRateLimit float64 `env:"ACCOUNT_CREATE_RATE_LIMIT" envDefault:"1.0"`
+	AccountCreateRateBurst int     `env:"ACCOUNT_CREATE_RATE_BURST" envDefault:"10"`
 }
 
 // Parse parses environment variables and flags to a valid Config.

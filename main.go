@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -119,15 +120,16 @@ func runServer(cfg *configs.Config) {
 	}()
 
 	txRatelimiter := ratelimit.New(cfg.TransactionMaxSendRate, ratelimit.WithoutSlack)
-	accountCreateRatelimiter := ratelimit.New(cfg.AccountCreateMaxRate, ratelimit.WithoutSlack)
+	accountCreateRatelimiter := rate.NewLimiter(rate.Limit(cfg.AccountCreateRateLimit), cfg.AccountCreateRateBurst)
 
 	// Key manager
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
 	// Services
 	templateService := templates.NewService(cfg, templates.NewGormStore(db))
-	jobsService := jobs.NewService(jobs.NewGormStore(db))
-	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
+	jobsStore := jobs.NewGormStore(db)
+	jobsService := jobs.NewService(jobsStore)
+	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), jobsStore, km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, accounts.WithTxRatelimiter(accountCreateRatelimiter))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
 

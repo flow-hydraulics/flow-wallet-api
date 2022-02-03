@@ -22,6 +22,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	go.uber.org/goleak v1.1.12
 	go.uber.org/ratelimit v0.2.0
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/genproto v0.0.0-20220112215332-a9c7c0acf9f2
 	google.golang.org/grpc v1.43.0
 	google.golang.org/protobuf v1.27.1
