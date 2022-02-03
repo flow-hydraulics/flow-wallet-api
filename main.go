@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/flow-go-sdk/client"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -119,7 +120,7 @@ func runServer(cfg *configs.Config) {
 	}()
 
 	txRatelimiter := ratelimit.New(cfg.TransactionMaxSendRate, ratelimit.WithoutSlack)
-	accountCreateRatelimiter := ratelimit.New(cfg.AccountCreateMaxRate, ratelimit.WithoutSlack)
+	accountCreateRatelimiter := rate.NewLimiter(rate.Limit(cfg.AccountCreateRateLimit), cfg.AccountCreateRateBurst)
 
 	// Key manager
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
