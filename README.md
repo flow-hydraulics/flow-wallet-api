@@ -46,7 +46,7 @@ docker pull ghcr.io/flow-hydraulics/flow-wallet-api:latest
 
 ### Basic example usage
 
-**NOTE:** This setup is only for demostrative purposes, please do not run this on production
+**NOTE:** This setup is only for demonstrative purposes, please do not run this on production
 
 This setup requires [Docker](https://docs.docker.com/engine/install/), [Docker Compose](https://docs.docker.com/compose/install/) and the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
 
