@@ -46,31 +46,23 @@ docker pull ghcr.io/flow-hydraulics/flow-wallet-api:latest
 
 ### Basic example usage
 
-> This setup requires [Docker](https://docs.docker.com/engine/install/) and the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
+**NOTE:** This setup is only for demonstrative purposes, please do not run this on production
+
+This setup requires [Docker](https://docs.docker.com/engine/install/), [Docker Compose](https://docs.docker.com/compose/install/) and the [Flow CLI](https://docs.onflow.org/flow-cli/install/).
 
 Create a configuration file:
 
 ```sh
-cp .env.example .env
+cp .env.example .env # and edit
 ```
 
-Start the Wallet API, Flow Emulator and Postgres:
+Start the Wallet API, Flow Emulator, Postgres and Redis:
 
 ```sh
 docker-compose up -d
 ```
 
-Deploy the FUSD contract to the emulator:
-
-```sh
-flow project deploy -n emulator
-```
-
-You can now access the API at http://localhost:3000/v1/accounts.
-
-Next, see the [FUSD sample app](/examples/nextjs-fusd-provider)
-for an example of how to use this configuration as part of
-a complete application.
+You can now access the API at http://localhost:3000/v1.
 
 Once you're finished, run this to stop the containers:
 
@@ -318,7 +310,7 @@ with support from the Flow core contributors.
 
 ## Testing
 
-You can run a fully dockerized test suite if you have _Docker_ and _docker-compose_ installed.
+You can run a fully dockerized test suite if you have _Docker_ and _Docker Compose_ installed.
 
     # Run the test suite
     make run-test-suite
