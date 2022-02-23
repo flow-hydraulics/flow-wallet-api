@@ -1,0 +1,84 @@
+version: "3.9"
+
+networks:
+ private:
+
+volumes:
+  emulator-persist:
+
+services:
+  db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: wallet
+      POSTGRES_USER: wallet
+      POSTGRES_PASSWORD: wallet
+    networks:
+      - private
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready --username=${POSTGRES_USER:-wallet} --dbname=${POSTGRES_DB:-wallet}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:6.2-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis-config/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis-config/users.acl:/usr/local/etc/redis/users.acl
+    networks:
+      - private
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "redis-cli ping",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  emulator:
+    image: gcr.io/flow-container-registry/emulator:0.27.3
+    command: emulator --persist
+    volumes:
+      - emulator-persist:/flowdb
+    env_file:
+      - ./.env
+    environment:
+      FLOW_SERVICEPRIVATEKEY: ${FLOW_WALLET_ADMIN_PRIVATE_KEY}
+      FLOW_SERVICEKEYSIGALGO: ECDSA_P256
+      FLOW_SERVICEKEYHASHALGO: SHA3_256
+      FLOW_DBPATH: /flowdb
+    networks:
+      - private
+
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/wallet/Dockerfile
+      target: dist
+      network: host # docker build sometimes has problems fetching from alpine's CDN
+    networks:
+      - private
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env
+    environment:
+      FLOW_WALLET_DATABASE_DSN: postgresql://wallet:wallet@db:5432/wallet
+      FLOW_WALLET_DATABASE_TYPE: psql
+      FLOW_WALLET_ACCESS_API_HOST: emulator:3569
+      FLOW_WALLET_CHAIN_ID: flow-emulator
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      emulator:
+        condition: service_started
