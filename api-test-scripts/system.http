@@ -9,3 +9,13 @@ idempotency-key: {{$guid}}
 {
   "maintenanceMode":false
 }
+
+
+### Sync account key counts
+POST http://localhost:3000/v1/system/sync-account-key-count HTTP/1.1
+content-type: application/json
+idempotency-key: {{$guid}}
+
+{
+  "address": "0x01"
+}

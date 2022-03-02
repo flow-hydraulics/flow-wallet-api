@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
+	"github.com/onflow/flow-go-sdk"
 )
 
 // Accounts is a HTTP server for account management.
@@ -11,6 +12,11 @@ import (
 // It uses an account service to interface with data.
 type Accounts struct {
 	service accounts.Service
+}
+
+// SyncKeyCountRequest represents a JSON payload for a HTTP request
+type SyncKeyCountRequest struct {
+	Address flow.Address `json:"address"`
 }
 
 // NewAccounts initiates a new accounts server.
@@ -32,6 +38,10 @@ func (s *Accounts) AddNonCustodialAccount() http.Handler {
 
 func (s *Accounts) DeleteNonCustodialAccount() http.Handler {
 	return http.HandlerFunc(s.DeleteNonCustodialAccountFunc)
+}
+
+func (s *Accounts) SyncAccountKeyCount() http.Handler {
+	return http.HandlerFunc(s.SyncAccountKeyCountFunc)
 }
 
 func (s *Accounts) Details() http.Handler {

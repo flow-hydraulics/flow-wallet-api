@@ -111,3 +111,27 @@ func (s *Accounts) DeleteNonCustodialAccountFunc(rw http.ResponseWriter, r *http
 
 	rw.WriteHeader(http.StatusOK)
 }
+
+func (s *Accounts) SyncAccountKeyCountFunc(rw http.ResponseWriter, r *http.Request) {
+	// Check body is not empty
+	if err := checkNonEmptyBody(r); err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	var req SyncKeyCountRequest
+	// Try to decode the request body.
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		err = &errors.RequestError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid body")}
+		handleError(rw, r, err)
+		return
+	}
+
+	job, err := s.service.SyncAccountKeyCount(r.Context(), req.Address)
+	if err != nil {
+		handleError(rw, r, err)
+		return
+	}
+
+	handleJsonResponse(rw, http.StatusOK, job)
+}
