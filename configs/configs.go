@@ -150,6 +150,8 @@ type Config struct {
 
 	// Sleep duration in case of service isHalted
 	PauseDuration time.Duration `env:"PAUSE_DURATION" envDefault:"60s"`
+
+	GrpcMaxCallRecvMsgSize int `env:"GRPC_MAX_CALL_RECV_MSG_SIZE" envDefault:"16777216"`
 }
 
 // Parse parses environment variables and flags to a valid Config.

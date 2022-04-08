@@ -112,6 +112,8 @@ func NewWorkerPool(db Store, capacity uint, workerCount uint, opts ...WorkerPool
 	// Register asynchronous job executor.
 	pool.RegisterExecutor(SendJobStatusJobType, pool.executeSendJobStatus)
 
+	pool.logger.Debug(pool)
+
 	return pool
 }
 
@@ -320,6 +322,7 @@ func (wp *WorkerPoolImpl) startWorkers() {
 					if wallet_errors.IsChainConnectionError(err) {
 						if wp.systemService != nil {
 							entry.Warn("Unable to connect to chain, pausing system")
+							entry.Warn(err)
 							// Unable to connect to chain, pause system.
 							if err := wp.systemService.Pause(); err != nil {
 								entry.

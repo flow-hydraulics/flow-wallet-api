@@ -74,7 +74,11 @@ func runServer(cfg *configs.Config) {
 
 	// Flow client
 	// TODO: WithInsecure()?
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	fc, err := client.New(
+		cfg.AccessAPIHost,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(cfg.GrpcMaxCallRecvMsgSize)),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
