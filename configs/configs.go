@@ -130,6 +130,28 @@ type Config struct {
 
 	// Max transactions per second, rate at which the service can submit transactions to Flow
 	TransactionMaxSendRate int `env:"MAX_TPS" envDefault:"10"`
+
+	// maxJobErrorCount is the maximum number of times a Job can be tried to
+	// execute before considering it completely failed.
+	MaxJobErrorCount int `env:"MAX_JOB_ERROR_COUNT" envDefault:"10"`
+
+	// Poll DB for new schedulable jobs every 30s.
+	DBJobPollInterval time.Duration `env:"DB_JOB_POLL_INTERVAL" envDefault:"30s"`
+
+	// Grace time period before re-scheduling jobs that are in state INIT or
+	// ACCEPTED. These are jobs where the executor processing has been
+	// unexpectedly disrupted (such as bug, dead node, disconnected
+	// networking etc.).
+	AcceptedGracePeriod time.Duration `env:"ACCEPTED_GRACE_PERIOD" envDefault:"180s"`
+
+	// Grace time period before re-scheduling jobs that are up for immediate
+	// restart (such as NO_AVAILABLE_WORKERS or ERROR).
+	ReSchedulableGracePeriod time.Duration `env:"RESCHEDULABLE_GRACE_PERIOD" envDefault:"60s"`
+
+	// Sleep duration in case of service isHalted
+	PauseDuration time.Duration `env:"PAUSE_DURATION" envDefault:"60s"`
+
+	GrpcMaxCallRecvMsgSize int `env:"GRPC_MAX_CALL_RECV_MSG_SIZE" envDefault:"16777216"`
 }
 
 // Parse parses environment variables and flags to a valid Config.
