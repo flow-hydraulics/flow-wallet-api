@@ -359,11 +359,14 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 		publicKeys = append(publicKeys, &clonedAccountKey)
 	}
 
-	flowTx := flow_templates.CreateAccount(
+	flowTx, err := flow_templates.CreateAccount(
 		publicKeys,
 		nil,
 		payer.Address,
 	)
+	if err != nil {
+		return nil, "", err
+	}
 
 	flowTx.
 		SetReferenceBlockID(*referenceBlockID).

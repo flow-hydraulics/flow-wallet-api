@@ -62,7 +62,10 @@ func NewFlowAccount(t *testing.T, fc flow_helpers.FlowClient, creatorAddress flo
 		SetWeight(flow.AccountKeyWeightThreshold) // Give this key full signing weight
 
 	// Use the templates package to create a new account creation transaction
-	tx := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, creatorAddress)
+	tx, err := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, creatorAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Set the transaction payer and proposal key
 	tx.SetPayer(creatorAddress)
