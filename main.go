@@ -23,7 +23,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
-	"github.com/onflow/flow-go-sdk/client"
+	access "github.com/onflow/flow-go-sdk/access/grpc"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
 	"google.golang.org/grpc"
@@ -74,7 +74,7 @@ func runServer(cfg *configs.Config) {
 
 	// Flow client
 	// TODO: WithInsecure()?
-	fc, err := client.New(
+	fc, err := access.NewClient(
 		cfg.AccessAPIHost,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(cfg.GrpcMaxCallRecvMsgSize)),

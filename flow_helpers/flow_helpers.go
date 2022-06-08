@@ -13,7 +13,7 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
+	access "github.com/onflow/flow-go-sdk/access/grpc"
 	"google.golang.org/grpc"
 )
 
@@ -24,7 +24,7 @@ type FlowClient interface {
 	GetTransaction(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.Transaction, error)
 	GetTransactionResult(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
 	GetLatestBlockHeader(ctx context.Context, isSealed bool, opts ...grpc.CallOption) (*flow.BlockHeader, error)
-	GetEventsForHeightRange(ctx context.Context, query client.EventRangeQuery, opts ...grpc.CallOption) ([]client.BlockEvents, error)
+	GetEventsForHeightRange(ctx context.Context, query access.EventRangeQuery, opts ...grpc.CallOption) ([]flow.BlockEvents, error)
 	SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error
 }
 

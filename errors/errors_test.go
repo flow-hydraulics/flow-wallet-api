@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/flow-go-sdk/client"
+	access "github.com/onflow/flow-go-sdk/access/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,16 +24,16 @@ func TestIsChainConnectionError(t *testing.T) {
 
 		valid_errors := []error{
 			netErr,
-			client.RPCError{
+			access.RPCError{
 				GRPCErr: status.Error(codes.DeadlineExceeded, "DeadlineExceeded"),
 			},
-			client.RPCError{
+			access.RPCError{
 				GRPCErr: status.Error(codes.ResourceExhausted, "ResourceExhausted"),
 			},
-			client.RPCError{
+			access.RPCError{
 				GRPCErr: status.Error(codes.Internal, "Internal"),
 			},
-			client.RPCError{
+			access.RPCError{
 				GRPCErr: status.Error(codes.Unavailable, "Unavailable"),
 			},
 		}
@@ -56,7 +56,7 @@ func TestIsChainConnectionError(t *testing.T) {
 	})
 
 	t.Run("non existent gateway", func(t *testing.T) {
-		fc, err := client.New("non-existent-address", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		fc, err := access.NewClient("non-existent-address", grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
+	access "github.com/onflow/flow-go-sdk/access/grpc"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/onflow/flow-go-sdk/templates"
 	"google.golang.org/grpc"
@@ -25,7 +25,7 @@ var (
 )
 
 func NewFlowClient(t *testing.T, cfg *configs.Config) flow_helpers.FlowClient {
-	fc, err := client.New(cfg.AccessAPIHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	fc, err := access.NewClient(cfg.AccessAPIHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
 	}

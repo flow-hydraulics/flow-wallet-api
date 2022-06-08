@@ -5,7 +5,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
+	access "github.com/onflow/flow-go-sdk/access/grpc"
 	"google.golang.org/grpc"
 )
 
@@ -42,7 +42,7 @@ func (c *MockFlowClient) GetLatestBlockHeader(ctx context.Context, isSealed bool
 	return nil, nil
 }
 
-func (c *MockFlowClient) GetEventsForHeightRange(ctx context.Context, query client.EventRangeQuery, opts ...grpc.CallOption) ([]client.BlockEvents, error) {
+func (c *MockFlowClient) GetEventsForHeightRange(ctx context.Context, query access.EventRangeQuery, opts ...grpc.CallOption) ([]client.BlockEvents, error) {
 	return nil, nil
 }
 
