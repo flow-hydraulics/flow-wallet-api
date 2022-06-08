@@ -51,5 +51,5 @@ func Signer(ctx context.Context, key keys.Private) (crypto.Signer, error) {
 	if err != nil {
 		return crypto.InMemorySigner{}, err
 	}
-	return crypto.NewInMemorySigner(p, key.HashAlgo), nil
+	return crypto.NewInMemorySigner(p, key.HashAlgo)
 }
