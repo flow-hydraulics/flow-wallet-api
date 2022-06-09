@@ -22,7 +22,7 @@ func ArgAsCadence(a Argument) (cadence.Value, error) {
 	}
 
 	// Use cadence's own encoding library
-	c, err = c_json.Decode(j)
+	c, err = c_json.Decode(nil, j)
 	if err != nil {
 		return cadence.Void{}, err
 	}
