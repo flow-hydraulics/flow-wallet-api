@@ -17,8 +17,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/lib/pq v1.10.4
-	github.com/onflow/cadence v0.23.4
-	github.com/onflow/flow-go-sdk v0.25.0
+	github.com/onflow/cadence v0.24.0
+	github.com/onflow/flow-go-sdk v0.26.0
 	github.com/sirupsen/logrus v1.8.1
 	go.uber.org/goleak v1.1.12
 	go.uber.org/ratelimit v0.2.0
@@ -49,8 +49,8 @@ require (
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ethereum/go-ethereum v1.10.12 // indirect
-	github.com/fxamacker/cbor/v2 v2.3.1-0.20211029162100-5d5d7c3edd41 // indirect
-	github.com/fxamacker/circlehash v0.2.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.4.1-0.20220515183430-ad2eae63303f // indirect
+	github.com/fxamacker/circlehash v0.3.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-test/deep v1.0.8 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -67,22 +67,23 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.4 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/mattn/go-sqlite3 v1.14.10 // indirect
-	github.com/onflow/atree v0.2.0 // indirect
+	github.com/onflow/atree v0.3.1-0.20220531231935-525fbc26f40a // indirect
 	github.com/onflow/flow-go/crypto v0.24.3 // indirect
 	github.com/onflow/flow/protobuf/go/flow v0.2.5 // indirect
 	github.com/onflow/sdks v0.4.4 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a // indirect
 	github.com/stretchr/testify v1.7.1 // indirect
+	github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	github.com/zeebo/blake3 v0.2.2 // indirect
+	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce // indirect
-	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
