@@ -13,19 +13,17 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
-	"google.golang.org/grpc"
 )
 
 type FlowClient interface {
-	ExecuteScriptAtLatestBlock(ctx context.Context, script []byte, arguments []cadence.Value, opts ...grpc.CallOption) (cadence.Value, error)
-	GetAccount(ctx context.Context, address flow.Address, opts ...grpc.CallOption) (*flow.Account, error)
-	GetAccountAtLatestBlock(ctx context.Context, address flow.Address, opts ...grpc.CallOption) (*flow.Account, error)
-	GetTransaction(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.Transaction, error)
-	GetTransactionResult(ctx context.Context, txID flow.Identifier, opts ...grpc.CallOption) (*flow.TransactionResult, error)
-	GetLatestBlockHeader(ctx context.Context, isSealed bool, opts ...grpc.CallOption) (*flow.BlockHeader, error)
-	GetEventsForHeightRange(ctx context.Context, query client.EventRangeQuery, opts ...grpc.CallOption) ([]client.BlockEvents, error)
-	SendTransaction(ctx context.Context, tx flow.Transaction, opts ...grpc.CallOption) error
+	ExecuteScriptAtLatestBlock(ctx context.Context, script []byte, arguments []cadence.Value) (cadence.Value, error)
+	GetAccount(ctx context.Context, address flow.Address) (*flow.Account, error)
+	GetAccountAtLatestBlock(ctx context.Context, address flow.Address) (*flow.Account, error)
+	GetTransaction(ctx context.Context, txID flow.Identifier) (*flow.Transaction, error)
+	GetTransactionResult(ctx context.Context, txID flow.Identifier) (*flow.TransactionResult, error)
+	GetLatestBlockHeader(ctx context.Context, isSealed bool) (*flow.BlockHeader, error)
+	GetEventsForHeightRange(ctx context.Context, eventType string, startHeight uint64, endHeight uint64) ([]flow.BlockEvents, error)
+	SendTransaction(ctx context.Context, tx flow.Transaction) error
 }
 
 const hexPrefix = "0x"

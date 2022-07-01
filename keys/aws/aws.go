@@ -140,6 +140,7 @@ type AWSSigner struct {
 	client *kms.Client
 	keyId  string
 	hasher crypto.Hasher
+	publicKey crypto.PublicKey
 }
 
 // SignerForKey returns a new AWSSigner for the given private key
@@ -160,6 +161,7 @@ func SignerForKey(
 		return nil, err
 	}
 
+	var sigAlgo crypto.SignatureAlgorithm
 	var hashAlgo crypto.HashAlgorithm
 
 	// Check that ECDSA_SHA_256 is available
@@ -167,6 +169,7 @@ func SignerForKey(
 	for _, a := range pbkOutput.SigningAlgorithms {
 		if a == types.SigningAlgorithmSpecEcdsaSha256 {
 			hashAlgo = crypto.SHA3_256
+			sigAlgo = crypto.ECDSA_P256
 			break
 		}
 	}
@@ -180,11 +183,17 @@ func SignerForKey(
 		return nil, fmt.Errorf("keys/aws: failed to instantiate hasher: %w", err)
 	}
 
+	decodedPublicKey, _ := crypto.DecodePublicKey(
+		sigAlgo,
+		pbkOutput.PublicKey,
+	)
+
 	return &AWSSigner{
 		ctx:    ctx,
 		client: client,
 		keyId:  key.Value,
 		hasher: hasher,
+		publicKey: decodedPublicKey,
 	}, nil
 }
 
@@ -211,6 +220,10 @@ func (s *AWSSigner) Sign(message []byte) ([]byte, error) {
 	}
 
 	return sig, nil
+}
+
+func (s *AWSSigner) PublicKey() crypto.PublicKey {
+	return s.publicKey
 }
 
 func createKMSClient(ctx context.Context) *kms.Client {

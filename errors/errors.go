@@ -4,7 +4,7 @@ package errors
 import (
 	"net"
 
-	"github.com/onflow/flow-go-sdk/client"
+	"github.com/onflow/flow-go-sdk/access/grpc"
 	"google.golang.org/grpc/codes"
 )
 
@@ -29,7 +29,7 @@ func IsChainConnectionError(err error) bool {
 		return true
 	}
 
-	if err, ok := err.(client.RPCError); ok {
+	if err, ok := err.(grpc.RPCError); ok {
 		// Check for Flow Access API connection errors
 		for _, code := range accessAPIConnectionErrors {
 			if err.GRPCStatus().Code() == code {
