@@ -13,6 +13,7 @@ import (
 type Service interface {
 	AddToken(t *Token) error
 	ListTokens(tType TokenType) (*[]BasicToken, error)
+	ListTokensFull(tType TokenType) ([]Token, error)
 	GetTokenById(id uint64) (*Token, error)
 	GetTokenByName(name string) (*Token, error)
 	RemoveToken(id uint64) error
@@ -29,10 +30,18 @@ func parseEnabledTokens(envEnabledTokens []string) map[string]Token {
 	for _, s := range envEnabledTokens {
 		ss := strings.Split(s, ":")
 		token := Token{Name: ss[0], Address: ss[1]}
-		if len(ss) > 2 {
+		if len(ss) == 3 {
+			// Deprecated
 			token.NameLowerCase = ss[2]
+			token.ReceiverPublicPath = fmt.Sprintf("%sReceiver", token.NameLowerCase)
+			token.BalancePublicPath = fmt.Sprintf("%sBalance", token.NameLowerCase)
+			token.VaultStoragePath = fmt.Sprintf("%sVault", token.NameLowerCase)
+		} else if len(ss) == 5 {
+			token.ReceiverPublicPath = ss[2]
+			token.BalancePublicPath = ss[3]
+			token.VaultStoragePath = ss[4]
 		}
-		// Use all lowercase as the key so we can do case insenstive matchig in URLs
+		// Use all lowercase as the key so we can do case-insensitive matching in URLs
 		key := strings.ToLower(ss[0])
 		enabledTokens[key] = token
 	}
@@ -94,6 +103,10 @@ func (s *ServiceImpl) AddToken(t *Token) error {
 
 func (s *ServiceImpl) ListTokens(tType TokenType) (*[]BasicToken, error) {
 	return s.store.List(tType)
+}
+
+func (s *ServiceImpl) ListTokensFull(tType TokenType) ([]Token, error) {
+	return s.store.ListFull(tType)
 }
 
 func (s *ServiceImpl) GetTokenById(id uint64) (*Token, error) {

@@ -10,14 +10,17 @@ import (
 )
 
 type Token struct {
-	ID            uint64    `json:"id,omitempty"`
-	Name          string    `json:"name" gorm:"uniqueIndex;not null"` // Declaration name
-	NameLowerCase string    `json:"nameLowerCase,omitempty"`          // For generic fungible token transaction templates
-	Address       string    `json:"address" gorm:"not null"`
-	Setup         string    `json:"setup,omitempty"`    // Setup cadence code
-	Transfer      string    `json:"transfer,omitempty"` // Transfer cadence code
-	Balance       string    `json:"balance,omitempty"`  // Balance cadence code
-	Type          TokenType `json:"type"`
+	ID                 uint64    `json:"id,omitempty"`
+	Name               string    `json:"name" gorm:"uniqueIndex;not null"` // Declaration name
+	NameLowerCase      string    `json:"nameLowerCase,omitempty"`          // (deprecated) For generic fungible token transaction templates
+	ReceiverPublicPath string    `json:"receiverPublicPath,omitempty"`
+	BalancePublicPath  string    `json:"balancePublicPath,omitempty"`
+	VaultStoragePath   string    `json:"vaultStoragePath,omitempty"`
+	Address            string    `json:"address" gorm:"not null"`
+	Setup              string    `json:"setup,omitempty"`    // Setup cadence code
+	Transfer           string    `json:"transfer,omitempty"` // Transfer cadence code
+	Balance            string    `json:"balance,omitempty"`  // Balance cadence code
+	Type               TokenType `json:"type"`
 }
 
 // BasicToken is a simplifed representation of a Token used in listings
@@ -78,12 +81,23 @@ func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
 		fmt.Sprintf("%s.cdc", token.Name), "TOKEN_ADDRESS",
 	)
 
+	tokenVault := token.VaultStoragePath
+	tokenReceiver := token.ReceiverPublicPath
+	tokenBalance := token.BalancePublicPath
+
+	if tokenVault == "" || tokenReceiver == "" || tokenBalance == "" {
+		// Deprecated
+		tokenVault = fmt.Sprintf("%sVault", token.NameLowerCase)
+		tokenReceiver = fmt.Sprintf("%sReceiver", token.NameLowerCase)
+		tokenBalance = fmt.Sprintf("%sBalance", token.NameLowerCase)
+	}
+
 	templateReplacer := strings.NewReplacer(
 		"TOKEN_DECLARATION_NAME", token.Name,
 		"TOKEN_ADDRESS", token.Address,
-		"TOKEN_VAULT", fmt.Sprintf("%sVault", token.NameLowerCase),
-		"TOKEN_RECEIVER", fmt.Sprintf("%sReceiver", token.NameLowerCase),
-		"TOKEN_BALANCE", fmt.Sprintf("%sBalance", token.NameLowerCase),
+		"TOKEN_VAULT", tokenVault,
+		"TOKEN_RECEIVER", tokenReceiver,
+		"TOKEN_BALANCE", tokenBalance,
 	)
 
 	knownAddressesReplacer := knownAddressesReplacers[chainId]

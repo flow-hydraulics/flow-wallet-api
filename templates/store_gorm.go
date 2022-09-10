@@ -21,16 +21,28 @@ func (s *GormStore) Insert(q *Token) error {
 }
 
 func (s *GormStore) List(tType TokenType) (*[]BasicToken, error) {
-	var err error
+	listFull, err := s.ListFull(tType)
+	if err != nil {
+		return nil, err
+	}
 
-	fromTemp := make([]BasicToken, 0, len(s.tempStore))
+	result := make([]BasicToken, 0, len(listFull))
+	for _, t := range listFull {
+		result = append(result, t.BasicToken())
+	}
+
+	return &result, nil
+}
+
+func (s *GormStore) ListFull(tType TokenType) ([]Token, error) {
+	fromTemp := make([]Token, 0, len(s.tempStore))
 	for _, t := range s.tempStore {
 		if tType == NotSpecified || t.Type == tType {
-			fromTemp = append(fromTemp, t.BasicToken())
+			fromTemp = append(fromTemp, *t)
 		}
 	}
 
-	fromDB := []BasicToken{}
+	fromDB := []Token{}
 
 	q := s.db.Model(&Token{})
 
@@ -39,15 +51,14 @@ func (s *GormStore) List(tType TokenType) (*[]BasicToken, error) {
 		q = q.Where(&Token{Type: tType})
 	}
 
-	err = q.Find(&fromDB).Error
-
+	err := q.Find(&fromDB).Error
 	if err != nil {
 		return nil, err
 	}
 
 	result := append(fromDB, fromTemp...)
 
-	return &result, nil
+	return result, nil
 }
 
 func (s *GormStore) GetById(id uint64) (*Token, error) {

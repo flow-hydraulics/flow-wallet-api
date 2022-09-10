@@ -13,9 +13,11 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go-sdk"
 	flow_crypto "github.com/onflow/flow-go-sdk/crypto"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -43,6 +45,7 @@ type ServiceImpl struct {
 	fc            flow_helpers.FlowClient
 	wp            jobs.WorkerPool
 	txs           transactions.Service
+	temps         templates.Service
 	txRateLimiter ratelimit.Limiter
 }
 
@@ -54,12 +57,13 @@ func NewService(
 	fc flow_helpers.FlowClient,
 	wp jobs.WorkerPool,
 	txs transactions.Service,
+	temps templates.Service,
 	opts ...ServiceOption,
 ) Service {
 	var defaultTxRatelimiter = ratelimit.NewUnlimited()
 
 	// TODO(latenssi): safeguard against nil config?
-	svc := &ServiceImpl{cfg, store, km, fc, wp, txs, defaultTxRatelimiter}
+	svc := &ServiceImpl{cfg, store, km, fc, wp, txs, temps, defaultTxRatelimiter}
 
 	for _, opt := range opts {
 		opt(svc)
@@ -359,16 +363,46 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 		publicKeys = append(publicKeys, &clonedAccountKey)
 	}
 
-	flowTx, err := flow_templates.CreateAccount(
-		publicKeys,
-		nil,
-		payer.Address,
-	)
+	// Initialize enabled fungible token vaults on new account
+	tokens, err := s.temps.ListTokensFull(templates.FT)
 	if err != nil {
 		return nil, "", err
 	}
 
-	flowTx.
+	tokensInfo := make([]template_strings.FungibleTokenInfo, 0, len(tokens)-1)
+	for _, t := range tokens {
+		if t.Name != "FlowToken" {
+			tokensInfo = append(tokensInfo, template_strings.FungibleTokenInfo{
+				ContractName:       t.Name,
+				Address:            t.Address,
+				VaultStoragePath:   t.VaultStoragePath,
+				ReceiverPublicPath: t.ReceiverPublicPath,
+				BalancePublicPath:  t.BalancePublicPath,
+			})
+		}
+	}
+
+	txScript, err := template_strings.CreateAccountAndSetupTransaction(tokensInfo)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Encode public key list
+	keyList := make([]cadence.Value, len(publicKeys))
+
+	for i, key := range publicKeys {
+		keyList[i], err = flow_templates.AccountKeyToCadenceCryptoKey(key)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	cadencePublicKeys := cadence.NewArray(keyList)
+
+	flowTx := flow.NewTransaction().
+		SetScript([]byte(txScript)).
+		AddAuthorizer(payer.Address).
+		AddRawArgument(jsoncdc.MustEncode(cadencePublicKeys)).
 		SetReferenceBlockID(*referenceBlockID).
 		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
 		SetPayer(payer.Address).
