@@ -363,46 +363,62 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 		publicKeys = append(publicKeys, &clonedAccountKey)
 	}
 
-	// Initialize enabled fungible token vaults on new account
-	tokens, err := s.temps.ListTokensFull(templates.FT)
-	if err != nil {
-		return nil, "", err
-	}
+	var flowTx *flow.Transaction
+	if s.cfg.InitFungibleVaultsOnAccountCreation {
+		// Create custom cadence script to create account and init enabled fungible tokens vaults
 
-	tokensInfo := make([]template_strings.FungibleTokenInfo, 0, len(tokens)-1)
-	for _, t := range tokens {
-		if t.Name != "FlowToken" {
-			tokensInfo = append(tokensInfo, template_strings.FungibleTokenInfo{
-				ContractName:       t.Name,
-				Address:            t.Address,
-				VaultStoragePath:   t.VaultStoragePath,
-				ReceiverPublicPath: t.ReceiverPublicPath,
-				BalancePublicPath:  t.BalancePublicPath,
-			})
-		}
-	}
-
-	txScript, err := template_strings.CreateAccountAndSetupTransaction(tokensInfo)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Encode public key list
-	keyList := make([]cadence.Value, len(publicKeys))
-
-	for i, key := range publicKeys {
-		keyList[i], err = flow_templates.AccountKeyToCadenceCryptoKey(key)
+		tokens, err := s.temps.ListTokensFull(templates.FT)
 		if err != nil {
 			return nil, "", err
 		}
+
+		tokensInfo := make([]template_strings.FungibleTokenInfo, 0, len(tokens)-1)
+		for _, t := range tokens {
+			if t.Name != "FlowToken" {
+				tokensInfo = append(tokensInfo, template_strings.FungibleTokenInfo{
+					ContractName:       t.Name,
+					Address:            t.Address,
+					VaultStoragePath:   t.VaultStoragePath,
+					ReceiverPublicPath: t.ReceiverPublicPath,
+					BalancePublicPath:  t.BalancePublicPath,
+				})
+			}
+		}
+
+		txScript, err := template_strings.CreateAccountAndSetupTransaction(tokensInfo)
+		if err != nil {
+			return nil, "", err
+		}
+
+		// Encode public key list
+		keyList := make([]cadence.Value, len(publicKeys))
+		for i, key := range publicKeys {
+			keyList[i], err = flow_templates.AccountKeyToCadenceCryptoKey(key)
+			if err != nil {
+				return nil, "", err
+			}
+		}
+		cadencePublicKeys := cadence.NewArray(keyList)
+
+		flowTx = flow.NewTransaction().
+			SetScript([]byte(txScript)).
+			AddAuthorizer(payer.Address).
+			AddRawArgument(jsoncdc.MustEncode(cadencePublicKeys))
+
+	} else {
+
+		flowTx, err = flow_templates.CreateAccount(
+			publicKeys,
+			nil,
+			payer.Address,
+		)
+		if err != nil {
+			return nil, "", err
+		}
+
 	}
 
-	cadencePublicKeys := cadence.NewArray(keyList)
-
-	flowTx := flow.NewTransaction().
-		SetScript([]byte(txScript)).
-		AddAuthorizer(payer.Address).
-		AddRawArgument(jsoncdc.MustEncode(cadencePublicKeys)).
+	flowTx.
 		SetReferenceBlockID(*referenceBlockID).
 		SetProposalKey(proposer.Address, proposer.Key.Index, proposer.Key.SequenceNumber).
 		SetPayer(payer.Address).

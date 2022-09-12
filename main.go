@@ -17,6 +17,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
+	"github.com/flow-hydraulics/flow-wallet-api/ops"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
@@ -130,6 +131,7 @@ func runServer(cfg *configs.Config) {
 	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, templateService, accounts.WithTxRatelimiter(txRatelimiter))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
+	opsService := ops.NewService(ops.NewGormStore(db))
 
 	// Register a handler for account added events
 	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{
@@ -152,6 +154,7 @@ func runServer(cfg *configs.Config) {
 	accountHandler := handlers.NewAccounts(accountService)
 	transactionHandler := handlers.NewTransactions(transactionService)
 	tokenHandler := handlers.NewTokens(tokenService)
+	opsHandler := handlers.NewOps(opsService)
 
 	r := mux.NewRouter()
 
@@ -240,6 +243,10 @@ func runServer(cfg *configs.Config) {
 	} else {
 		log.Info("non-fungible tokens disabled")
 	}
+
+	// Ops
+	rv.Handle("/ops/missing-fungible-token-vaults/start", opsHandler.InitMissingFungibleVaults()).Methods(http.MethodGet) // start retroactive init job
+	rv.Handle("/ops/missing-fungible-token-vaults/stats", opsHandler.GetMissingFungibleVaults()).Methods(http.MethodGet)  // get number of accounts with missing fungible token vaults
 
 	h := http.TimeoutHandler(r, cfg.ServerRequestTimeout, "request timed out")
 	h = handlers.UseCors(h)
