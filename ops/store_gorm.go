@@ -16,18 +16,19 @@ func NewGormStore(db *gorm.DB) Store {
 }
 
 // ListAccountsWithMissingVault lists accounts that are not initialized for the given token name
-func (s *GormStore) ListAccountsWithMissingVault(token string) (res []*accounts.Account, err error) {
+func (s *GormStore) ListAccountsWithMissingVault(token string) (res *[]accounts.Account, err error) {
 
 	// https://www.db-fiddle.com/f/hHoZ5P4FDDj3sVkRRiRMc2/0
 	err = s.db.
 		Where(
 			"not exists (?)",
 			s.db.
+				Model(&tokens.AccountToken{}).
 				Where(&tokens.AccountToken{
 					TokenName: token,
 					TokenType: templates.FT,
 				}).
-				Where("account_address=(?)", "address")).
+				Where("account_address=address")).
 		Find(&res).Error
 
 	return
