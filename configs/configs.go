@@ -78,7 +78,7 @@ type Config struct {
 
 	EnabledTokens                       []string `env:"ENABLED_TOKENS" envSeparator:","`
 	ScriptPathCreateAccount             string   `env:"SCRIPT_PATH_CREATE_ACCOUNT" envDefault:""`
-	InitFungibleVaultsOnAccountCreation bool     `env:"INIT_FUNGIBLE_VAULTS_ON_ACCOUNT_CREATION" envDefault:"true"`
+	InitFungibleVaultsOnAccountCreation bool     `env:"INIT_FUNGIBLE_VAULTS_ON_ACCOUNT_CREATION" envDefault:"false"`
 
 	// -- Workerpool --
 
