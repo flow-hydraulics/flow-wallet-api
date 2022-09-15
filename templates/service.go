@@ -33,9 +33,9 @@ func parseEnabledTokens(envEnabledTokens []string) map[string]Token {
 		if len(ss) == 3 {
 			// Deprecated
 			token.NameLowerCase = ss[2]
-			token.ReceiverPublicPath = fmt.Sprintf("%sReceiver", token.NameLowerCase)
-			token.BalancePublicPath = fmt.Sprintf("%sBalance", token.NameLowerCase)
-			token.VaultStoragePath = fmt.Sprintf("%sVault", token.NameLowerCase)
+			token.ReceiverPublicPath = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
+			token.BalancePublicPath = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
+			token.VaultStoragePath = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
 		} else if len(ss) == 5 {
 			token.ReceiverPublicPath = ss[2]
 			token.BalancePublicPath = ss[3]

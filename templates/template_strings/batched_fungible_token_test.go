@@ -5,20 +5,23 @@ import (
 	"testing"
 )
 
-var tokens = []FungibleTokenInfo{
-	{
-		ContractName:       "FiatToken",
-		Address:            "0x123",
-		VaultStoragePath:   "FiatToken.VaultStoragePath",
-		ReceiverPublicPath: "FiatToken.VaultReceiverPubPath",
-		BalancePublicPath:  "FiatToken.VaultBalancePubPath",
-	},
-	{
-		ContractName:       "FiatToken",
-		Address:            "0x123",
-		VaultStoragePath:   "FiatToken.VaultStoragePath",
-		ReceiverPublicPath: "FiatToken.VaultReceiverPubPath",
-		BalancePublicPath:  "FiatToken.VaultBalancePubPath",
+var tokens = BatchedFungibleOpsInfo{
+	FungibleTokenAddress: "0xFUN",
+	Tokens: []FungibleTokenInfo{
+		{
+			ContractName:       "FiatToken",
+			Address:            "0x123",
+			VaultStoragePath:   "FiatToken.VaultStoragePath",
+			ReceiverPublicPath: "FiatToken.VaultReceiverPubPath",
+			BalancePublicPath:  "FiatToken.VaultBalancePubPath",
+		},
+		{
+			ContractName:       "FiatToken",
+			Address:            "0x123",
+			VaultStoragePath:   "FiatToken.VaultStoragePath",
+			ReceiverPublicPath: "FiatToken.VaultReceiverPubPath",
+			BalancePublicPath:  "FiatToken.VaultBalancePubPath",
+		},
 	},
 }
 

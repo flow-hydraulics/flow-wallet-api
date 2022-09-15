@@ -1,12 +1,14 @@
 package accounts
 
 import (
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/onflow/flow-go-sdk"
 	log "github.com/sirupsen/logrus"
 )
 
 type AccountAddedPayload struct {
-	Address flow.Address
+	Address                   flow.Address
+	InitializedFungibleTokens []templates.Token
 }
 
 type accountAddedHandler interface {

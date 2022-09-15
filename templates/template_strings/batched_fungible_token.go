@@ -5,6 +5,11 @@ import (
 	"text/template"
 )
 
+type BatchedFungibleOpsInfo struct {
+	FungibleTokenAddress string
+	Tokens               []FungibleTokenInfo
+}
+
 type FungibleTokenInfo struct {
 	ContractName       string
 	Address            string
@@ -13,17 +18,18 @@ type FungibleTokenInfo struct {
 	BalancePublicPath  string
 }
 
-func AddFungibleTokenVaultBatchTransaction(tokens []FungibleTokenInfo) (string, error) {
-	return executeTemplate("AddFungibleTokens", AddFungibleTokenVaultBatchTransactionTemplate, tokens)
+func AddFungibleTokenVaultBatchTransaction(i BatchedFungibleOpsInfo) (string, error) {
+	return executeTemplate("AddFungibleTokens", AddFungibleTokenVaultBatchTransactionTemplate, i)
 }
 
-func CreateAccountAndSetupTransaction(tokens []FungibleTokenInfo) (string, error) {
-	return executeTemplate("CreateAccount", CreateAccountAndSetupTransactionTemplate, tokens)
+func CreateAccountAndSetupTransaction(i BatchedFungibleOpsInfo) (string, error) {
+	return executeTemplate("CreateAccount", CreateAccountAndSetupTransactionTemplate, i)
 }
 
 const CreateAccountAndSetupTransactionTemplate = `
 import Crypto
-{{ range . }}
+import FungibleToken from {{ .FungibleTokenAddress }}
+{{ range .Tokens }}
 import {{ .ContractName }} from {{ .Address }}
 {{ end }}
 
@@ -36,7 +42,7 @@ transaction(publicKeys: [Crypto.KeyListEntry]) {
 			account.keys.add(publicKey: key.publicKey, hashAlgorithm: key.hashAlgorithm, weight: key.weight)
 		}
 
-		{{ range . }}
+		{{ range .Tokens }}
 		// initializing vault for {{ .ContractName }}
 		account.save(<-{{ .ContractName }}.createEmptyVault(), to: {{ .VaultStoragePath }})
 		account.link<&{{ .ContractName }}.Vault{FungibleToken.Receiver}>(
@@ -53,13 +59,14 @@ transaction(publicKeys: [Crypto.KeyListEntry]) {
 `
 
 const AddFungibleTokenVaultBatchTransactionTemplate = `
-{{ range . }}
+import FungibleToken from {{ .FungibleTokenAddress }}
+{{ range .Tokens }}
 import {{ .ContractName }} from {{ .Address }}
 {{ end }}
 
 transaction() {
 	prepare(account: AuthAccount) {
-		{{ range . }}
+		{{ range .Tokens }}
 		// initializing vault for {{ .ContractName }}
 		account.save(<-{{ .ContractName }}.createEmptyVault(), to: {{ .VaultStoragePath }})
 		account.link<&{{ .ContractName }}.Vault{FungibleToken.Receiver}>(
@@ -75,7 +82,7 @@ transaction() {
 }
 `
 
-func executeTemplate(name string, temp string, tokens []FungibleTokenInfo) (string, error) {
+func executeTemplate(name string, temp string, i BatchedFungibleOpsInfo) (string, error) {
 	template, err := template.
 		New(name).
 		Parse(temp)
@@ -84,7 +91,7 @@ func executeTemplate(name string, temp string, tokens []FungibleTokenInfo) (stri
 	}
 
 	buf := new(bytes.Buffer)
-	err = template.Execute(buf, tokens)
+	err = template.Execute(buf, i)
 	if err != nil {
 		return "", nil
 	}

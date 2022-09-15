@@ -29,7 +29,7 @@ transaction(amount: UFix64, recipient: Address) {
 
   prepare(signer: AuthAccount) {
     let vaultRef = signer
-      .borrow<&TOKEN_DECLARATION_NAME.Vault>(from: /storage/TOKEN_VAULT)
+      .borrow<&TOKEN_DECLARATION_NAME.Vault>(from: TOKEN_VAULT)
       ?? panic("failed to borrow reference to sender vault")
 
     self.sentVault <- vaultRef.withdraw(amount: amount)
@@ -37,7 +37,7 @@ transaction(amount: UFix64, recipient: Address) {
 
   execute {
     let receiverRef = getAccount(recipient)
-      .getCapability(/public/TOKEN_RECEIVER)
+      .getCapability(TOKEN_RECEIVER)
       .borrow<&{FungibleToken.Receiver}>()
       ?? panic("failed to borrow reference to recipient vault")
 
@@ -53,22 +53,22 @@ import TOKEN_DECLARATION_NAME from TOKEN_ADDRESS
 transaction {
   prepare(signer: AuthAccount) {
 
-    let existingVault = signer.borrow<&TOKEN_DECLARATION_NAME.Vault>(from: /storage/TOKEN_VAULT)
+    let existingVault = signer.borrow<&TOKEN_DECLARATION_NAME.Vault>(from: TOKEN_VAULT)
 
     if (existingVault != nil) {
         panic("vault exists")
     }
 
-    signer.save(<-TOKEN_DECLARATION_NAME.createEmptyVault(), to: /storage/TOKEN_VAULT)
+    signer.save(<-TOKEN_DECLARATION_NAME.createEmptyVault(), to: TOKEN_VAULT)
 
     signer.link<&TOKEN_DECLARATION_NAME.Vault{FungibleToken.Receiver}>(
-      /public/TOKEN_RECEIVER,
-      target: /storage/TOKEN_VAULT
+      TOKEN_RECEIVER,
+      target: TOKEN_VAULT
     )
 
     signer.link<&TOKEN_DECLARATION_NAME.Vault{FungibleToken.Balance}>(
-      /public/TOKEN_BALANCE,
-      target: /storage/TOKEN_VAULT
+      TOKEN_BALANCE,
+      target: TOKEN_VAULT
     )
   }
 }

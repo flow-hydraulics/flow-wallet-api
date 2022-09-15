@@ -87,9 +87,9 @@ func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
 
 	if tokenVault == "" || tokenReceiver == "" || tokenBalance == "" {
 		// Deprecated
-		tokenVault = fmt.Sprintf("%sVault", token.NameLowerCase)
-		tokenReceiver = fmt.Sprintf("%sReceiver", token.NameLowerCase)
-		tokenBalance = fmt.Sprintf("%sBalance", token.NameLowerCase)
+		tokenVault = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
+		tokenReceiver = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
+		tokenBalance = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
 	}
 
 	templateReplacer := strings.NewReplacer(
@@ -123,4 +123,18 @@ func FungibleSetupCode(chainId flow.ChainID, token *Token) string {
 
 func FungibleBalanceCode(chainId flow.ChainID, token *Token) string {
 	return TokenCode(chainId, token, template_strings.GenericFungibleBalance)
+}
+
+func AddFungibleTokenVaultBatchCode(chainId flow.ChainID, tokens []template_strings.FungibleTokenInfo) (string, error) {
+	return template_strings.AddFungibleTokenVaultBatchTransaction(template_strings.BatchedFungibleOpsInfo{
+		FungibleTokenAddress: KnownAddresses["FungibleToken.cdc"][chainId],
+		Tokens:               tokens,
+	})
+}
+
+func CreateAccountAndSetupBatchCode(chainId flow.ChainID, tokens []template_strings.FungibleTokenInfo) (string, error) {
+	return template_strings.CreateAccountAndSetupTransaction(template_strings.BatchedFungibleOpsInfo{
+		FungibleTokenAddress: KnownAddresses["FungibleToken.cdc"][chainId],
+		Tokens:               tokens,
+	})
 }

@@ -52,6 +52,8 @@ services:
       - emulator-persist:/flowdb
     env_file:
       - ./.env
+    ports:
+      - "3569:3569"
     environment:
       FLOW_SERVICEPRIVATEKEY: ${FLOW_WALLET_ADMIN_PRIVATE_KEY}
       FLOW_SERVICEKEYSIGALGO: ECDSA_P256

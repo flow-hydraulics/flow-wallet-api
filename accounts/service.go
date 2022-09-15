@@ -364,6 +364,7 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	}
 
 	var flowTx *flow.Transaction
+	var initializedFungibleTokens []templates.Token
 	if s.cfg.InitFungibleVaultsOnAccountCreation {
 		// Create custom cadence script to create account and init enabled fungible tokens vaults
 
@@ -382,10 +383,12 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 					ReceiverPublicPath: t.ReceiverPublicPath,
 					BalancePublicPath:  t.BalancePublicPath,
 				})
+
+				initializedFungibleTokens = append(initializedFungibleTokens, t)
 			}
 		}
 
-		txScript, err := template_strings.CreateAccountAndSetupTransaction(tokensInfo)
+		txScript, err := templates.CreateAccountAndSetupBatchCode(s.cfg.ChainID, tokensInfo)
 		if err != nil {
 			return nil, "", err
 		}
@@ -491,10 +494,11 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	}
 
 	AccountAdded.Trigger(AccountAddedPayload{
-		Address: flow.HexToAddress(account.Address),
+		Address:                   flow.HexToAddress(account.Address),
+		InitializedFungibleTokens: initializedFungibleTokens,
 	})
 
-	log.WithFields(log.Fields{"address": account.Address}).Debug("Account created")
+	log.WithFields(log.Fields{"address": account.Address, "initialized-fungible-tokens": initializedFungibleTokens}).Debug("Account created")
 
 	return account, flowTx.ID().String(), nil
 }
