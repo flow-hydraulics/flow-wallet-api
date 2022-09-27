@@ -1,6 +1,10 @@
 package ops
 
-import "github.com/flow-hydraulics/flow-wallet-api/templates"
+import (
+	"github.com/flow-hydraulics/flow-wallet-api/configs"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/transactions"
+)
 
 // Service lists all functionality provided by ops service
 type Service interface {
@@ -16,14 +20,18 @@ type TokenCount struct {
 
 // ServiceImpl implements the ops Service
 type ServiceImpl struct {
+	cfg   *configs.Config
 	store Store
 	temps templates.Service
+	txs   transactions.Service
 }
 
 // NewService initiates a new ops service.
 func NewService(
+	cfg *configs.Config,
 	store Store,
 	temps templates.Service,
+	txs transactions.Service,
 ) Service {
-	return &ServiceImpl{store, temps}
+	return &ServiceImpl{cfg, store, temps, txs}
 }

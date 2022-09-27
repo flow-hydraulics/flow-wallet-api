@@ -68,15 +68,17 @@ transaction() {
 	prepare(account: AuthAccount) {
 		{{ range .Tokens }}
 		// initializing vault for {{ .ContractName }}
-		account.save(<-{{ .ContractName }}.createEmptyVault(), to: {{ .VaultStoragePath }})
-		account.link<&{{ .ContractName }}.Vault{FungibleToken.Receiver}>(
-			{{ .ReceiverPublicPath }},
-			target: {{ .VaultStoragePath }}
-		)
-		account.link<&{{ .ContractName }}.Vault{FungibleToken.Balance}>(
-			{{ .BalancePublicPath }},
-			target: {{ .VaultStoragePath }}
-		)
+		if account.borrow<&{{ .ContractName }}.Vault>(from: {{ .VaultStoragePath }}) == nil {
+			account.save(<-{{ .ContractName }}.createEmptyVault(), to: {{ .VaultStoragePath }})
+			account.link<&{{ .ContractName }}.Vault{FungibleToken.Receiver}>(
+				{{ .ReceiverPublicPath }},
+				target: {{ .VaultStoragePath }}
+			)
+			account.link<&{{ .ContractName }}.Vault{FungibleToken.Balance}>(
+				{{ .BalancePublicPath }},
+				target: {{ .VaultStoragePath }}
+			)
+		}
 		{{ end }}
 	}
 }

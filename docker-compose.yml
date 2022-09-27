@@ -29,7 +29,7 @@ services:
 
   redis:
     image: redis:6.2-alpine
-    command: redis-server /usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf --loglevel warning
     volumes:
       - ./redis-config/redis.conf:/usr/local/etc/redis/redis.conf
       - ./redis-config/users.acl:/usr/local/etc/redis/users.acl
