@@ -129,7 +129,7 @@ type Config struct {
 	// For more info: https://pkg.go.dev/time#ParseDuration
 	ChainListenerInterval time.Duration `env:"EVENTS_INTERVAL" envDefault:"10s"`
 
-	// Max transactions per second, rate at which the service can submit transactions to Flow
+	// Max transactions per second, rate at which the service can submit transactions to Flow (excluding ops)
 	TransactionMaxSendRate int `env:"MAX_TPS" envDefault:"10"`
 
 	// maxJobErrorCount is the maximum number of times a Job can be tried to
@@ -153,6 +153,12 @@ type Config struct {
 	PauseDuration time.Duration `env:"PAUSE_DURATION" envDefault:"60s"`
 
 	GrpcMaxCallRecvMsgSize int `env:"GRPC_MAX_CALL_RECV_MSG_SIZE" envDefault:"16777216"`
+
+	// -- ops ---
+	// Wait time between executing async job transactions
+	OpsBurstInterval time.Duration `env:"OPS_BURST_INTERVAL" envDefault:"0.2s"`
+	// WorkerCount for system jobs, max number of in-flight transactions
+	OpsWorkerCount uint `env:"OPS_WORKER_COUNT" envDefault:"200"`
 }
 
 // Parse parses environment variables and flags to a valid Config.

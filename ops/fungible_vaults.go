@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
@@ -74,13 +75,25 @@ func (s ServiceImpl) InitMissingFungibleTokenVaults() (bool, error) {
 			return false, err
 		}
 
-		job, _, err := s.txs.Create(ctx, false, address, txScript, nil, transactions.FtSetup)
-		if err != nil {
-			return false, err
-		}
+		s.wp.AddJob(func() error {
+			_, tx, err := s.txs.Create(ctx, true, address, txScript, nil, transactions.FtSetup)
+			if err != nil {
+				return err
+			}
 
-		log.Debug(job)
+			for _, t := range tokenList {
+				err := s.tokens.AddAccountToken(t, address)
+				if err != nil {
+					log.Debug("Error adding AccountToken to store", err)
+				}
+			}
 
+			log.Debug("ops transaction sent", tx.TransactionId)
+
+			return nil
+		})
+
+		time.Sleep(s.cfg.OpsBurstInterval)
 	}
 
 	return false, nil

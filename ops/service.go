@@ -3,6 +3,7 @@ package ops
 import (
 	"github.com/flow-hydraulics/flow-wallet-api/configs"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
+	"github.com/flow-hydraulics/flow-wallet-api/tokens"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 )
 
@@ -20,10 +21,12 @@ type TokenCount struct {
 
 // ServiceImpl implements the ops Service
 type ServiceImpl struct {
-	cfg   *configs.Config
-	store Store
-	temps templates.Service
-	txs   transactions.Service
+	cfg    *configs.Config
+	store  Store
+	temps  templates.Service
+	txs    transactions.Service
+	tokens tokens.Service
+	wp     OpsWorkerPoolService
 }
 
 // NewService initiates a new ops service.
@@ -32,6 +35,11 @@ func NewService(
 	store Store,
 	temps templates.Service,
 	txs transactions.Service,
+	tokens tokens.Service,
 ) Service {
-	return &ServiceImpl{cfg, store, temps, txs}
+
+	wp := NewWorkerPool(cfg.OpsWorkerCount)
+	wp.Start()
+
+	return &ServiceImpl{cfg, store, temps, txs, tokens, wp}
 }

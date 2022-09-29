@@ -131,7 +131,7 @@ func runServer(cfg *configs.Config) {
 	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, templateService, accounts.WithTxRatelimiter(txRatelimiter))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
-	opsService := ops.NewService(cfg, ops.NewGormStore(db), templateService, transactionService)
+	opsService := ops.NewService(cfg, ops.NewGormStore(db), templateService, transactionService, tokenService)
 
 	// Register a handler for account added events
 	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{
