@@ -1,5 +1,7 @@
 # Flow Wallet API
 
+**NOTE: This repository is currently not maintained.**
+
 The Flow Wallet API is a REST HTTP service that allows a developer to integrate wallet functionality into a larger Flow application infrastructure.
 This service can be used by an application that needs to manage Flow user accounts and the assets inside them.
 
