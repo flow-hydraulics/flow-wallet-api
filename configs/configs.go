@@ -156,7 +156,7 @@ type Config struct {
 
 	// -- ops ---
 	// Wait time between executing async job transactions
-	OpsBurstInterval time.Duration `env:"OPS_BURST_INTERVAL" envDefault:"0.2s"`
+	OpsBurstInterval time.Duration `env:"OPS_BURST_INTERVAL" envDefault:"0.1s"`
 	// WorkerCount for system jobs, max number of in-flight transactions
 	OpsWorkerCount uint `env:"OPS_WORKER_COUNT" envDefault:"200"`
 }

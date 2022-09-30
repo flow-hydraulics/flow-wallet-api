@@ -27,6 +27,8 @@ type ServiceImpl struct {
 	txs    transactions.Service
 	tokens tokens.Service
 	wp     OpsWorkerPoolService
+
+	initFungibleJobRunning bool
 }
 
 // NewService initiates a new ops service.
@@ -41,5 +43,5 @@ func NewService(
 	wp := NewWorkerPool(cfg.OpsWorkerCount)
 	wp.Start()
 
-	return &ServiceImpl{cfg, store, temps, txs, tokens, wp}
+	return &ServiceImpl{cfg, store, temps, txs, tokens, wp, false}
 }

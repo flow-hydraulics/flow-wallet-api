@@ -6,28 +6,33 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type OpsJob func() error
+type OpsInitFungibleVaultsJobFunc func(address string, tokenList []string) error
+type OpsInitFungibleVaultsJob struct {
+	Func      OpsInitFungibleVaultsJobFunc
+	Address   string
+	TokenList []string
+}
 
 type OpsWorkerPoolService interface {
 	Start()
 	Stop()
-	AddJob(job OpsJob)
+	AddFungibleInitJob(job OpsInitFungibleVaultsJob)
 }
 
 type workerPoolImpl struct {
 	numWorkers uint
 
-	jobChan chan OpsJob
-	wg      *sync.WaitGroup
+	fungibleInitJobChan chan OpsInitFungibleVaultsJob
+	wg                  *sync.WaitGroup
 }
 
 func NewWorkerPool(
 	numWorkers uint,
 ) OpsWorkerPoolService {
 	return &workerPoolImpl{
-		numWorkers: numWorkers,
-		jobChan:    make(chan OpsJob),
-		wg:         &sync.WaitGroup{},
+		numWorkers:          numWorkers,
+		fungibleInitJobChan: make(chan OpsInitFungibleVaultsJob),
+		wg:                  &sync.WaitGroup{},
 	}
 }
 
@@ -36,12 +41,12 @@ func (p *workerPoolImpl) Start() {
 		p.wg.Add(1)
 		go func() {
 			defer p.wg.Done()
-			for job := range p.jobChan {
-				if job == nil {
+			for job := range p.fungibleInitJobChan {
+				if job.Func == nil {
 					break
 				}
 
-				if err := job(); err != nil {
+				if err := job.Func(job.Address, job.TokenList); err != nil {
 					log.Warnf("Error running ops job: %s", err)
 				}
 			}
@@ -50,10 +55,10 @@ func (p *workerPoolImpl) Start() {
 }
 
 func (p *workerPoolImpl) Stop() {
-	close(p.jobChan)
+	close(p.fungibleInitJobChan)
 	p.wg.Wait()
 }
 
-func (p *workerPoolImpl) AddJob(job OpsJob) {
-	p.jobChan <- job
+func (p *workerPoolImpl) AddFungibleInitJob(job OpsInitFungibleVaultsJob) {
+	p.fungibleInitJobChan <- job
 }
