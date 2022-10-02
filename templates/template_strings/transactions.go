@@ -91,6 +91,9 @@ transaction(adminKeyIndex: Int, numProposalKeys: UInt16) {
 }
 `
 
+// TODO(sirius): need to have a workaround to offset `SignatureAlgorithm(rawValue: signAlgo - 1)` because
+// https://github.com/onflow/flow-go-sdk/blob/7c53dc1/crypto/crypto.go#L45 `crypto.StringToSignatureAlgorithm("ECDSA_P256")`
+// is giving us 2 instead of 1 as the result. https://github.com/onflow/flow-go/pull/3318
 // TODO: add pre-&post-conditions
 const AddAccountKeysTransaction = `
 transaction(publicKeys: [String], hashAlgo: UInt8, signAlgo: UInt8) {
@@ -98,7 +101,7 @@ transaction(publicKeys: [String], hashAlgo: UInt8, signAlgo: UInt8) {
     for pbk in publicKeys {
       let key = PublicKey(
         publicKey: pbk.decodeHex(),
-        signatureAlgorithm: SignatureAlgorithm(rawValue: signAlgo) ?? SignatureAlgorithm.ECDSA_P256
+        signatureAlgorithm: SignatureAlgorithm(rawValue: signAlgo - 1) ?? SignatureAlgorithm.ECDSA_P256
       )
 
       signer.keys.add(
