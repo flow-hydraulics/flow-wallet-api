@@ -283,8 +283,12 @@ func (s *ServiceImpl) syncAccountKeyCount(ctx context.Context, address flow.Addr
 		}
 
 		// Prepare transaction arguments
+		hashAlgo := flow_crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo)
+		signAlgo := flow_crypto.StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo)
 		x := cadence.NewArray(pbks)
-		args := []transactions.Argument{x}
+		y := cadence.NewUInt8(uint8(hashAlgo))
+		z := cadence.NewUInt8(uint8(signAlgo))
+		args := []transactions.Argument{x, y, z}
 
 		entry.WithFields(log.Fields{"args": args}).Debug("args prepared")
 
