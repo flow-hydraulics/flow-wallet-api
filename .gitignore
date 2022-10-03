@@ -138,3 +138,6 @@ tmp/
 main
 
 flow/flowdb
+
+# OSX
+.DS_Store
