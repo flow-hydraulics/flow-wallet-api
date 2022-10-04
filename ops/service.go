@@ -11,12 +11,7 @@ import (
 type Service interface {
 	// Retroactive fungible token vault initialization
 	GetMissingFungibleTokenVaults() ([]TokenCount, error)
-	InitMissingFungibleTokenVaults() (bool, error)
-}
-
-type TokenCount struct {
-	TokenName string `json:"token"`
-	Count     uint   `json:"count"`
+	InitMissingFungibleTokenVaults() (string, error)
 }
 
 // ServiceImpl implements the ops Service

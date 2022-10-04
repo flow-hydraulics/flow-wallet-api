@@ -108,15 +108,24 @@ When making `sync` requests it's sometimes required to adjust the server's reque
 
 ### Enabled fungible tokens
 
-A comma separated list of _fungible tokens_ and their corresponding addresses enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined.
+A comma separated list of _fungible tokens_ and their corresponding addresses and paths enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD etc.). Include at least FlowToken as functionality without it is undetermined. Format is comma separated list of:
 
-**NOTE:** It is necessary to add a 3rd parameter "lowercamelcase" name for each token. For FlowToken this would be "flowToken" and for FUSD "fusd". This is used to construct the vault name, receiver name and balance name in generic transaction templates. Consult the contract code for each token to derive the proper name (search for `.*Vault`, `.*Receiver`, `.*Balance`)
+```
+TokenName:ContractAddress:ReceiverPublicPath:BalancePublicPath:VaultStoragePath
+```
 
-**NOTE:** Non-fungible tokens can _not_ be enabled using environment variables. Use the API endpoints for that.
+Example (mainnet):
+```
+USDC:0xb19436aae4d94622:FiatToken.VaultReceiverPubPath:FiatToken.VaultBalancePubPath:FiatToken.VaultStoragePath
+```
+
+**DEPRECATION NOTICE:** You can optionally config each token with 3 parameters: a 3rd parameter "lowercamelcase" name for each token. For FlowToken this would be "flowToken" and for FUSD "fusd". This is used to construct the vault name, receiver name and balance name in generic transaction templates. Consult the contract code for each token to derive the proper name (search for `.*Vault`, `.*Receiver`, `.*Balance`).**THIS IS NOW DEPRECATED** It's best to grab paths from the token contract and config them explicitly instead of generating them based on lower case token name. The old format still works to maintain backwards compatibility.
 
 Examples:
 
     FLOW_WALLET_ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd
+
+**NOTE:** Non-fungible tokens can _not_ be enabled using environment variables. Use the API endpoints for that.
 
 ### Database
 

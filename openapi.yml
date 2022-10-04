@@ -34,6 +34,8 @@ tags:
     description: View the status of asynchronous tasks being completed by the Wallet API.
   - name: Watchlist
     description: View info for non-custodial accounts of interest.
+  - name: Ops
+    description: System operations and admin jobs.
 paths:
   /debug:
     get:
@@ -898,6 +900,37 @@ paths:
       responses:
         '200':
           description: OK
+  '/ops/missing-fungible-token-vaults/stats':
+    get:
+      summary: Returns number of uninitialized accounts per enabled fungible token.
+      description: Returns number of uninitialized accounts per enabled fungible token based on the database. You can also use this endpoint to check the init job progress.
+      operationId: getMissingFungibleTokenVaults
+      tags:
+        - Ops
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/tokenCount'
+  '/ops/missing-fungible-token-vaults/start':
+    get:
+      summary: Starts the fungible token vault initialization job.
+      description: Starts the fungible token vault initialization job. The job is singleton.
+      operationId: initMissingFungibleTokenVaults
+      tags:
+        - Ops
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+
 components:
   schemas:
     jobState:
@@ -1179,6 +1212,16 @@ components:
         nameLowerCase:
           type: string
           example: fusd
+          deprecated: true
+        receiverPublicPath:
+          type: string
+          example: /public/fusdReceiver
+        balancePublicPath:
+          type: string
+          example: /public/fusdBalance
+        vaultStoragePath:
+          type: string
+          example: /storage/fusdVault
         address:
           type: string
           example: '0xf8d6e0586b0a20c7'
@@ -1460,6 +1503,14 @@ components:
         - google_kms
       example: local
       minLength: 1
+    tokenCount:
+      type: object
+      properties:
+        token:
+          type: string
+          example: FUSD
+        count:
+          type: integer
   parameters:
     limit:
       name: limit

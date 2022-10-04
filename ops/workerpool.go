@@ -17,6 +17,7 @@ type OpsWorkerPoolService interface {
 	Start()
 	Stop()
 	AddFungibleInitJob(job OpsInitFungibleVaultsJob)
+	NumWorkers() uint
 }
 
 type workerPoolImpl struct {
@@ -61,4 +62,8 @@ func (p *workerPoolImpl) Stop() {
 
 func (p *workerPoolImpl) AddFungibleInitJob(job OpsInitFungibleVaultsJob) {
 	p.fungibleInitJobChan <- job
+}
+
+func (p *workerPoolImpl) NumWorkers() uint {
+	return p.numWorkers
 }

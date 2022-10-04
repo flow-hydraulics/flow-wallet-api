@@ -7,6 +7,7 @@ import (
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/onflow/flow-go-sdk"
+	log "github.com/sirupsen/logrus"
 )
 
 type Token struct {
@@ -87,9 +88,12 @@ func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
 
 	if tokenVault == "" || tokenReceiver == "" || tokenBalance == "" {
 		// Deprecated
-		tokenVault = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
-		tokenReceiver = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
-		tokenBalance = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
+		log.Warnf("%s token is using deprecated config format", token.Name)
+		if len(token.NameLowerCase) > 0 {
+			tokenVault = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
+			tokenReceiver = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
+			tokenBalance = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
+		}
 	}
 
 	templateReplacer := strings.NewReplacer(
