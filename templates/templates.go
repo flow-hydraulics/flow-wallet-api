@@ -129,16 +129,16 @@ func FungibleBalanceCode(chainId flow.ChainID, token *Token) string {
 	return TokenCode(chainId, token, template_strings.GenericFungibleBalance)
 }
 
-func AddFungibleTokenVaultBatchCode(chainId flow.ChainID, tokens []template_strings.FungibleTokenInfo) (string, error) {
+func InitFungibleTokenVaultsCode(chainId flow.ChainID, tokens []template_strings.FungibleTokenInfo) (string, error) {
 	return template_strings.AddFungibleTokenVaultBatchTransaction(template_strings.BatchedFungibleOpsInfo{
-		FungibleTokenAddress: KnownAddresses["FungibleToken.cdc"][chainId],
-		Tokens:               tokens,
+		FungibleTokenContractAddress: KnownAddresses["FungibleToken.cdc"][chainId],
+		Tokens:                       tokens,
 	})
 }
 
-func CreateAccountAndSetupBatchCode(chainId flow.ChainID, tokens []template_strings.FungibleTokenInfo) (string, error) {
+func CreateAccountAndInitFungibleTokenVaultsCode(chainId flow.ChainID, tokens []template_strings.FungibleTokenInfo) (string, error) {
 	return template_strings.CreateAccountAndSetupTransaction(template_strings.BatchedFungibleOpsInfo{
-		FungibleTokenAddress: KnownAddresses["FungibleToken.cdc"][chainId],
-		Tokens:               tokens,
+		FungibleTokenContractAddress: KnownAddresses["FungibleToken.cdc"][chainId],
+		Tokens:                       tokens,
 	})
 }

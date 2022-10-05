@@ -6,7 +6,7 @@ import (
 )
 
 var tokens = BatchedFungibleOpsInfo{
-	FungibleTokenAddress: "0xFUN",
+	FungibleTokenContractAddress: "0xFUN",
 	Tokens: []FungibleTokenInfo{
 		{
 			ContractName:       "FiatToken",
@@ -25,20 +25,20 @@ var tokens = BatchedFungibleOpsInfo{
 	},
 }
 
-func TestFungibleToken(t *testing.T) {
+func TestAccountCreation(t *testing.T) {
 	result, err := CreateAccountAndSetupTransaction(tokens)
 	fmt.Println(result)
-	if err == nil {
+	if err != nil {
 		t.Error(err)
 	}
 
 	// TODO test result
 }
 
-func TestAddFungibleToken(t *testing.T) {
+func TestAddFungibleTokens(t *testing.T) {
 	result, err := AddFungibleTokenVaultBatchTransaction(tokens)
 	fmt.Println(result)
-	if err == nil {
+	if err != nil {
 		t.Error(err)
 	}
 

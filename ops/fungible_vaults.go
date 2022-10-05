@@ -17,6 +17,7 @@ type TokenCount struct {
 	Count     uint   `json:"count"`
 }
 
+// GetMissingFungibleTokenVaults returns number of accounts that are missing a configured fungible token vault.
 func (s *ServiceImpl) GetMissingFungibleTokenVaults() ([]TokenCount, error) {
 
 	tokens, err := s.temps.ListTokensFull(templates.FT)
@@ -41,6 +42,7 @@ func (s *ServiceImpl) GetMissingFungibleTokenVaults() ([]TokenCount, error) {
 	return result, nil
 }
 
+// InitMissingFungibleTokenVaults starts job to init missing fungible token vaults.
 func (s *ServiceImpl) InitMissingFungibleTokenVaults() (string, error) {
 	if s.initFungibleJobRunning {
 		return "Job is already running", nil
@@ -61,13 +63,7 @@ func (s *ServiceImpl) InitMissingFungibleTokenVaults() (string, error) {
 	tokenInfoMap := make(map[string]template_strings.FungibleTokenInfo)
 	for _, t := range tokens {
 		if t.Name != "FlowToken" {
-			tokenInfoMap[t.Name] = template_strings.FungibleTokenInfo{
-				ContractName:       t.Name,
-				Address:            t.Address,
-				VaultStoragePath:   t.VaultStoragePath,
-				ReceiverPublicPath: t.ReceiverPublicPath,
-				BalancePublicPath:  t.BalancePublicPath,
-			}
+			tokenInfoMap[t.Name] = templates.NewFungibleTokenInfo(t)
 
 			accounts, err := s.store.ListAccountsWithMissingVault(t.Name)
 			if err != nil {
@@ -101,7 +97,7 @@ func (s *ServiceImpl) InitMissingFungibleTokenVaults() (string, error) {
 						tList = append(tList, tokenInfoMap[t])
 					}
 
-					txScript, err := templates.AddFungibleTokenVaultBatchCode(s.cfg.ChainID, tList)
+					txScript, err := templates.InitFungibleTokenVaultsCode(s.cfg.ChainID, tList)
 					if err != nil {
 						return err
 					}

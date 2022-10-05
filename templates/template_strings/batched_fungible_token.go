@@ -6,8 +6,8 @@ import (
 )
 
 type BatchedFungibleOpsInfo struct {
-	FungibleTokenAddress string
-	Tokens               []FungibleTokenInfo
+	FungibleTokenContractAddress string
+	Tokens                       []FungibleTokenInfo
 }
 
 type FungibleTokenInfo struct {
@@ -28,7 +28,7 @@ func CreateAccountAndSetupTransaction(i BatchedFungibleOpsInfo) (string, error) 
 
 const CreateAccountAndSetupTransactionTemplate = `
 import Crypto
-import FungibleToken from {{ .FungibleTokenAddress }}
+import FungibleToken from {{ .FungibleTokenContractAddress }}
 {{ range .Tokens }}
 import {{ .ContractName }} from {{ .Address }}
 {{ end }}
@@ -59,7 +59,7 @@ transaction(publicKeys: [Crypto.KeyListEntry]) {
 `
 
 const AddFungibleTokenVaultBatchTransactionTemplate = `
-import FungibleToken from {{ .FungibleTokenAddress }}
+import FungibleToken from {{ .FungibleTokenContractAddress }}
 {{ range .Tokens }}
 import {{ .ContractName }} from {{ .Address }}
 {{ end }}

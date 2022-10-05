@@ -155,7 +155,7 @@ type Config struct {
 	GrpcMaxCallRecvMsgSize int `env:"GRPC_MAX_CALL_RECV_MSG_SIZE" envDefault:"16777216"`
 
 	// -- ops ---
-	// Wait time between executing async job transactions
+	// Interval between adding new jobs to the ops queue
 	OpsBurstInterval time.Duration `env:"OPS_BURST_INTERVAL" envDefault:"0.1s"`
 	// WorkerCount for system jobs, max number of in-flight transactions
 	OpsWorkerCount uint `env:"OPS_WORKER_COUNT" envDefault:"200"`

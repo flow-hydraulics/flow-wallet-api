@@ -6,5 +6,5 @@ import (
 
 // Store defines what ops needs from the database
 type Store interface {
-	ListAccountsWithMissingVault(token string) (*[]accounts.Account, error)
+	ListAccountsWithMissingVault(tokenName string) (*[]accounts.Account, error)
 }

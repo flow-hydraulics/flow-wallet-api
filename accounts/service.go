@@ -366,29 +366,22 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	var flowTx *flow.Transaction
 	var initializedFungibleTokens []templates.Token
 	if s.cfg.InitFungibleVaultsOnAccountCreation {
-		// Create custom cadence script to create account and init enabled fungible tokens vaults
 
+		// Create custom cadence script to create account and init enabled fungible tokens vaults
 		tokens, err := s.temps.ListTokensFull(templates.FT)
 		if err != nil {
 			return nil, "", err
 		}
 
-		tokensInfo := make([]template_strings.FungibleTokenInfo, 0, len(tokens)-1)
+		tokensInfo := []template_strings.FungibleTokenInfo{}
 		for _, t := range tokens {
 			if t.Name != "FlowToken" {
-				tokensInfo = append(tokensInfo, template_strings.FungibleTokenInfo{
-					ContractName:       t.Name,
-					Address:            t.Address,
-					VaultStoragePath:   t.VaultStoragePath,
-					ReceiverPublicPath: t.ReceiverPublicPath,
-					BalancePublicPath:  t.BalancePublicPath,
-				})
-
+				tokensInfo = append(tokensInfo, templates.NewFungibleTokenInfo(t))
 				initializedFungibleTokens = append(initializedFungibleTokens, t)
 			}
 		}
 
-		txScript, err := templates.CreateAccountAndSetupBatchCode(s.cfg.ChainID, tokensInfo)
+		txScript, err := templates.CreateAccountAndInitFungibleTokenVaultsCode(s.cfg.ChainID, tokensInfo)
 		if err != nil {
 			return nil, "", err
 		}

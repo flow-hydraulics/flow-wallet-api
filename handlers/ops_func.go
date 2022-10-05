@@ -19,11 +19,11 @@ func (s *Ops) InitMissingFungibleVaultsFunc(rw http.ResponseWriter, r *http.Requ
 // GetMissingFungibleVaultsFunc returns number of accounts with missing fungible token vaults.
 func (s *Ops) GetMissingFungibleVaultsFunc(rw http.ResponseWriter, r *http.Request) {
 
-	res, err := s.service.GetMissingFungibleTokenVaults()
+	result, err := s.service.GetMissingFungibleTokenVaults()
 	if err != nil {
 		handleError(rw, r, err)
 		return
 	}
 
-	handleJsonResponse(rw, http.StatusOK, res)
+	handleJsonResponse(rw, http.StatusOK, result)
 }
