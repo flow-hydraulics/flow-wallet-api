@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"sort"
 
 	"net/http"
@@ -214,7 +214,7 @@ func TestAccountServices(t *testing.T) {
 		fatal(t, err)
 
 		if len(acc.Keys) != int(cfg2.DefaultAccountKeyCount) {
-			t.Fatalf("incorrect number of keys for new account, expected %d, got %d", len(acc.Keys), cfg2.DefaultAccountKeyCount)
+			t.Fatalf("incorrect number of keys for new account, expected %d, got %d", cfg2.DefaultAccountKeyCount, len(acc.Keys))
 		}
 
 		// Keys should be clones w/ a running Index
@@ -972,16 +972,16 @@ func TestTokenHandlers(t *testing.T) {
 
 	// ExampleNFT
 
-	setupBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "setup_exampleNFT.cdc"))
+	setupBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "setup_exampleNFT.cdc"))
 	fatal(t, err)
 
-	transferBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "transfer_exampleNFT.cdc"))
+	transferBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "transfer_exampleNFT.cdc"))
 	fatal(t, err)
 
-	balanceBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "balance_exampleNFT.cdc"))
+	balanceBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "balance_exampleNFT.cdc"))
 	fatal(t, err)
 
-	mintBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "mint_exampleNFT.cdc"))
+	mintBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "mint_exampleNFT.cdc"))
 	fatal(t, err)
 
 	exampleNft := templates.Token{
