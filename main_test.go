@@ -920,6 +920,46 @@ func TestTokenServices(t *testing.T) {
 			t.Fatal("expected an error")
 		}
 	})
+
+	t.Run("init fungible token vaults on account creation", func(t *testing.T) {
+		cfg := test.LoadConfig(t)
+		cfg.InitFungibleVaultsOnAccountCreation = true
+		app := test.GetServices(t, cfg)
+
+		svc := app.GetTokens()
+		accountSvc := app.GetAccounts()
+
+		ctx := context.Background()
+
+		// Make sure FUSD is deployed
+		err := svc.DeployTokenContractForAccount(ctx, true, "FUSD", cfg.AdminAddress)
+		if err != nil {
+			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
+				t.Fatal(err)
+			}
+		}
+
+		// Create an account
+		_, account, err := accountSvc.Create(ctx, true)
+		fatal(t, err)
+
+		// Create a withdrawal
+		_, _, err = svc.CreateWithdrawal(
+			ctx,
+			true,
+			cfg.AdminAddress,
+			tokens.WithdrawalRequest{
+				TokenName: "FUSD",
+				Recipient: account.Address,
+				FtAmount:  "1.0",
+			},
+		)
+		if err != nil {
+			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
+				t.Fatal(err)
+			}
+		}
+	})
 }
 
 func TestTokenHandlers(t *testing.T) {

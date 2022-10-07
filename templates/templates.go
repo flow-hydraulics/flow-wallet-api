@@ -88,7 +88,9 @@ func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
 
 	if tokenVault == "" || tokenReceiver == "" || tokenBalance == "" {
 		// Deprecated
-		log.Warnf("%s token is using deprecated config format", token.Name)
+		if token.Name != "FlowToken" && token.Name != "FUSD" {
+			log.Warnf("%s token is using deprecated config format", token.Name)
+		}
 		if len(token.NameLowerCase) > 0 {
 			tokenVault = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
 			tokenReceiver = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)

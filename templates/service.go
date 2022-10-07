@@ -32,7 +32,9 @@ func parseEnabledTokens(envEnabledTokens []string) map[string]Token {
 		token := Token{Name: ss[0], Address: ss[1]}
 		if len(ss) == 3 {
 			// Deprecated
-			log.Warnf("ENABLED_TOKENS.%s is using deprecated config format: %s", ss[0], s)
+			if token.Name != "FlowToken" && token.Name != "FUSD" {
+				log.Warnf("ENABLED_TOKENS.%s is using deprecated config format: %s", ss[0], s)
+			}
 			token.NameLowerCase = ss[2]
 			token.ReceiverPublicPath = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
 			token.BalancePublicPath = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
