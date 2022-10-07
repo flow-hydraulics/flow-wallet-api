@@ -16,6 +16,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
+	"github.com/flow-hydraulics/flow-wallet-api/ops"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
@@ -29,6 +30,7 @@ type Services interface {
 	GetTokens() tokens.Service
 	GetTransactions() transactions.Service
 	GetSystem() system.Service
+	GetOps() ops.Service
 
 	GetKeyManager() keys.Manager
 	GetListener() chain_events.Listener
@@ -42,6 +44,7 @@ type svcs struct {
 	tokenService       tokens.Service
 	transactionService transactions.Service
 	systemService      system.Service
+	opsService         ops.Service
 
 	keyManager keys.Manager
 	listener   chain_events.Listener
@@ -83,6 +86,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 			goleak.IgnoreTopFunction("google.golang.org/grpc.(*ccBalancerWrapper).watcher"),
 			goleak.IgnoreTopFunction("google.golang.org/grpc/internal/transport.(*controlBuffer).get"),
 			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPoolImpl).startWorkers.func1"),
+			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/ops.(*workerPoolImpl).Start.func1"),
 			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/jobs.(*WorkerPoolImpl).startDBJobScheduler.func1"),
 			goleak.IgnoreTopFunction("github.com/flow-hydraulics/flow-wallet-api/chain_events.(*ListenerImpl).Start.func1"),
 		)
@@ -111,6 +115,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, templateService)
 	jobService := jobs.NewService(jobs.NewGormStore(db))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
+	opsService := ops.NewService(cfg, ops.NewGormStore(db), templateService, transactionService, tokenService)
 
 	getTypes := func() ([]string, error) {
 		// Get all enabled tokens
@@ -157,6 +162,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	t.Cleanup(func() {
 		wp.Stop(false)
+		opsService.GetWorkerPool().Stop()
 		listener.Stop()
 	})
 
@@ -170,6 +176,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		tokenService:       tokenService,
 		transactionService: transactionService,
 		systemService:      systemService,
+		opsService:         opsService,
 
 		keyManager: km,
 		listener:   listener,
@@ -195,6 +202,10 @@ func (s *svcs) GetTokens() tokens.Service {
 
 func (s *svcs) GetTransactions() transactions.Service {
 	return s.transactionService
+}
+
+func (s *svcs) GetOps() ops.Service {
+	return s.opsService
 }
 
 func (s *svcs) GetKeyManager() keys.Manager {

@@ -12,6 +12,7 @@ type Service interface {
 	// Retroactive fungible token vault initialization
 	GetMissingFungibleTokenVaults() ([]TokenCount, error)
 	InitMissingFungibleTokenVaults() (string, error)
+	GetWorkerPool() OpsWorkerPoolService
 }
 
 // ServiceImpl implements the ops Service
@@ -39,4 +40,8 @@ func NewService(
 	wp.Start()
 
 	return &ServiceImpl{cfg, store, temps, txs, tokens, wp, false}
+}
+
+func (s *ServiceImpl) GetWorkerPool() OpsWorkerPoolService {
+	return s.wp
 }

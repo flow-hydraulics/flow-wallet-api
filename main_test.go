@@ -1691,3 +1691,67 @@ func TestTemplateService(t *testing.T) {
 	})
 
 }
+
+func TestOpsServices(t *testing.T) {
+	cfg := test.LoadConfig(t)
+	app := test.GetServices(t, cfg)
+
+	svc := app.GetOps()
+	accountSvc := app.GetAccounts()
+
+	// Create an account
+	_, _, err := accountSvc.Create(context.Background(), true)
+	fatal(t, err)
+
+	// Create another account
+	_, _, err = accountSvc.Create(context.Background(), true)
+	fatal(t, err)
+
+	t.Run("get number of accounts with missing fungible vaults", func(t *testing.T) {
+		// Get missing vault count
+		result, err := svc.GetMissingFungibleTokenVaults()
+		fatal(t, err)
+
+		if len(result) != 1 {
+			t.Errorf("GetMissingFungibleTokenVaults returns incorrect count: %d", len(result))
+		}
+
+		// 3 accounts with missing FUSD vault -> admin, account1, account2
+		if result[0].TokenName != "FUSD" || result[0].Count != 3 {
+			t.Errorf("invalid GetMissingFungibleTokenVaults results: %+v", result)
+		}
+	})
+
+	t.Run("init missing fungible vaults job", func(t *testing.T) {
+		// Get missing vault count
+		result, err := svc.GetMissingFungibleTokenVaults()
+		fatal(t, err)
+
+		if len(result) != 1 {
+			t.Errorf("GetMissingFungibleTokenVaults returns incorrect count: %d", len(result))
+		}
+
+		if result[0].TokenName != "FUSD" || result[0].Count == 0 {
+			t.Errorf("invalid GetMissingFungibleTokenVaults results: %+v", result)
+		}
+
+		_, err = svc.InitMissingFungibleTokenVaults()
+		fatal(t, err)
+
+		// wait for job to complete
+		time.Sleep(1 * time.Second)
+
+		// Get missing vault count
+		result, err = svc.GetMissingFungibleTokenVaults()
+		fatal(t, err)
+
+		if len(result) != 1 {
+			t.Errorf("GetMissingFungibleTokenVaults returns incorrect count: %d", len(result))
+		}
+
+		if result[0].TokenName != "FUSD" || result[0].Count != 0 {
+			t.Errorf("invalid GetMissingFungibleTokenVaults results: %+v", result)
+		}
+
+	})
+}
