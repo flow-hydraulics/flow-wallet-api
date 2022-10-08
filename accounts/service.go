@@ -16,6 +16,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/flow-go-sdk"
 	flow_crypto "github.com/onflow/flow-go-sdk/crypto"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -283,11 +284,11 @@ func (s *ServiceImpl) syncAccountKeyCount(ctx context.Context, address flow.Addr
 		}
 
 		// Prepare transaction arguments
-		hashAlgo := flow_crypto.StringToHashAlgorithm(s.cfg.DefaultHashAlgo)
-		signAlgo := flow_crypto.StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo)
+		hashAlgo := StringToHashAlgorithm(s.cfg.DefaultHashAlgo)
+		signAlgo := StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo)
 		x := cadence.NewArray(pbks)
-		y := cadence.NewUInt8(uint8(hashAlgo))
-		z := cadence.NewUInt8(uint8(signAlgo))
+		y := cadence.NewUInt8(hashAlgo.RawValue())
+		z := cadence.NewUInt8(signAlgo.RawValue())
 		args := []transactions.Argument{x, y, z}
 
 		entry.WithFields(log.Fields{"args": args}).Debug("args prepared")
@@ -451,4 +452,38 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	log.WithFields(log.Fields{"address": account.Address}).Debug("Account created")
 
 	return account, flowTx.ID().String(), nil
+}
+
+// TODO(sirius): move to github.com/onflow/cadence/runtime/sema
+func StringToHashAlgorithm(s string) sema.HashAlgorithm {
+	switch s {
+	case sema.HashAlgorithmSHA2_256.Name():
+		return sema.HashAlgorithmSHA2_256
+	case sema.HashAlgorithmSHA2_384.Name():
+		return sema.HashAlgorithmSHA2_384
+	case sema.HashAlgorithmSHA3_256.Name():
+		return sema.HashAlgorithmSHA3_256
+	case sema.HashAlgorithmSHA3_384.Name():
+		return sema.HashAlgorithmSHA3_384
+	case sema.HashAlgorithmKMAC128_BLS_BLS12_381.Name():
+		return sema.HashAlgorithmKMAC128_BLS_BLS12_381
+	case sema.HashAlgorithmKECCAK_256.Name():
+		return sema.HashAlgorithmKECCAK_256
+	default:
+		return sema.HashAlgorithmUnknown
+	}
+}
+
+// TODO(sirius): move to github.com/onflow/cadence/runtime/sema
+func StringToSignatureAlgorithm(s string) sema.SignatureAlgorithm {
+	switch s {
+	case sema.SignatureAlgorithmECDSA_P256.Name():
+		return sema.SignatureAlgorithmECDSA_P256
+	case sema.SignatureAlgorithmECDSA_secp256k1.Name():
+		return sema.SignatureAlgorithmECDSA_secp256k1
+	case sema.SignatureAlgorithmBLS_BLS12_381.Name():
+		return sema.SignatureAlgorithmBLS_BLS12_381
+	default:
+		return sema.SignatureAlgorithmUnknown
+	}
 }
