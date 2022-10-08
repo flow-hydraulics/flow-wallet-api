@@ -16,7 +16,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/flow-go-sdk"
 	flow_crypto "github.com/onflow/flow-go-sdk/crypto"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -454,36 +454,36 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	return account, flowTx.ID().String(), nil
 }
 
-// TODO(sirius): move to github.com/onflow/cadence/runtime/sema
-func StringToHashAlgorithm(s string) sema.HashAlgorithm {
+// TODO(sirius): move to github.com/onflow/cadence/runtime
+func StringToHashAlgorithm(s string) runtime.HashAlgorithm {
 	switch s {
-	case sema.HashAlgorithmSHA2_256.Name():
-		return sema.HashAlgorithmSHA2_256
-	case sema.HashAlgorithmSHA2_384.Name():
-		return sema.HashAlgorithmSHA2_384
-	case sema.HashAlgorithmSHA3_256.Name():
-		return sema.HashAlgorithmSHA3_256
-	case sema.HashAlgorithmSHA3_384.Name():
-		return sema.HashAlgorithmSHA3_384
-	case sema.HashAlgorithmKMAC128_BLS_BLS12_381.Name():
-		return sema.HashAlgorithmKMAC128_BLS_BLS12_381
-	case sema.HashAlgorithmKECCAK_256.Name():
-		return sema.HashAlgorithmKECCAK_256
+	case runtime.HashAlgorithmSHA2_256.Name():
+		return runtime.HashAlgorithmSHA2_256
+	case runtime.HashAlgorithmSHA2_384.Name():
+		return runtime.HashAlgorithmSHA2_384
+	case runtime.HashAlgorithmSHA3_256.Name():
+		return runtime.HashAlgorithmSHA3_256
+	case runtime.HashAlgorithmSHA3_384.Name():
+		return runtime.HashAlgorithmSHA3_384
+	case runtime.HashAlgorithmKMAC128_BLS_BLS12_381.Name():
+		return runtime.HashAlgorithmKMAC128_BLS_BLS12_381
+	case runtime.HashAlgorithmKECCAK_256.Name():
+		return runtime.HashAlgorithmKECCAK_256
 	default:
-		return sema.HashAlgorithmUnknown
+		return runtime.HashAlgorithmUnknown
 	}
 }
 
-// TODO(sirius): move to github.com/onflow/cadence/runtime/sema
-func StringToSignatureAlgorithm(s string) sema.SignatureAlgorithm {
+// TODO(sirius): move to github.com/onflow/cadence/runtime/runtime
+func StringToSignatureAlgorithm(s string) runtime.SignatureAlgorithm {
 	switch s {
-	case sema.SignatureAlgorithmECDSA_P256.Name():
-		return sema.SignatureAlgorithmECDSA_P256
-	case sema.SignatureAlgorithmECDSA_secp256k1.Name():
-		return sema.SignatureAlgorithmECDSA_secp256k1
-	case sema.SignatureAlgorithmBLS_BLS12_381.Name():
-		return sema.SignatureAlgorithmBLS_BLS12_381
+	case runtime.SignatureAlgorithmECDSA_P256.Name():
+		return runtime.SignatureAlgorithmECDSA_P256
+	case runtime.SignatureAlgorithmECDSA_secp256k1.Name():
+		return runtime.SignatureAlgorithmECDSA_secp256k1
+	case runtime.SignatureAlgorithmBLS_BLS12_381.Name():
+		return runtime.SignatureAlgorithmBLS_BLS12_381
 	default:
-		return sema.SignatureAlgorithmUnknown
+		return runtime.SignatureAlgorithmUnknown
 	}
 }
