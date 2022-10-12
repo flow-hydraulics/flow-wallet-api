@@ -36,7 +36,10 @@ func NewService(
 	tokens tokens.Service,
 ) Service {
 
-	wp := NewWorkerPool(cfg.OpsWorkerCount)
+	wp := NewWorkerPool(
+		cfg.OpsWorkerCount,
+		cfg.OpsWorkerQueueCapacity,
+	)
 	wp.Start()
 
 	return &ServiceImpl{cfg, store, temps, txs, tokens, wp, false}

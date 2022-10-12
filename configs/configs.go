@@ -88,7 +88,7 @@ type Config struct {
 	// Number of concurrent workers handling incoming jobs.
 	// You can increase the number of workers if you're sending
 	// too many transactions and find that the queue is often backlogged.
-	WorkerCount uint `env:"WORKER_COUNT" envDefault:"10"`
+	WorkerCount uint `env:"WORKER_COUNT" envDefault:"1"`
 	// Webhook endpoint to receive job status updates
 	JobStatusWebhookUrl string `env:"JOB_STATUS_WEBHOOK" envDefault:""`
 	// Duration for which to wait for a response, if 0 wait indefinitely. Default: 30s.
@@ -155,10 +155,10 @@ type Config struct {
 	GrpcMaxCallRecvMsgSize int `env:"GRPC_MAX_CALL_RECV_MSG_SIZE" envDefault:"16777216"`
 
 	// -- ops ---
-	// Interval between adding new jobs to the ops queue
-	OpsBurstInterval time.Duration `env:"OPS_BURST_INTERVAL" envDefault:"0.1s"`
 	// WorkerCount for system jobs, max number of in-flight transactions
 	OpsWorkerCount uint `env:"OPS_WORKER_COUNT" envDefault:"200"`
+	// Capacity of buffered jobs queues for system jobs.
+	OpsWorkerQueueCapacity uint `env:"OPS_WORKER_QUEUE_CAPACITY" envDefault:"300000"`
 }
 
 // Parse parses environment variables and flags to a valid Config.

@@ -22,6 +22,7 @@ type OpsWorkerPoolService interface {
 
 type workerPoolImpl struct {
 	numWorkers uint
+	capacity   uint
 
 	fungibleInitJobChan chan OpsInitFungibleVaultsJob
 	wg                  *sync.WaitGroup
@@ -29,10 +30,12 @@ type workerPoolImpl struct {
 
 func NewWorkerPool(
 	numWorkers uint,
+	capacity uint,
 ) OpsWorkerPoolService {
 	return &workerPoolImpl{
 		numWorkers:          numWorkers,
-		fungibleInitJobChan: make(chan OpsInitFungibleVaultsJob),
+		capacity:            capacity,
+		fungibleInitJobChan: make(chan OpsInitFungibleVaultsJob, capacity),
 		wg:                  &sync.WaitGroup{},
 	}
 }

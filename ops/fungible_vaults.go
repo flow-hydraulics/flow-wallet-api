@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
@@ -75,7 +74,7 @@ func (s *ServiceImpl) InitMissingFungibleTokenVaults() (string, error) {
 		}
 	}
 
-	log.Debugf("Number of accounts for vault init job: %d", len(accountsMap))
+	log.Infof("Number of accounts for vault init job: %d", len(accountsMap))
 
 	var txWg sync.WaitGroup
 
@@ -115,14 +114,18 @@ func (s *ServiceImpl) InitMissingFungibleTokenVaults() (string, error) {
 						}
 					}
 
-					log.Debugf("InitMissingFungibleTokenVaults transaction sent: %s", tx.TransactionId)
+					log.
+						WithFields(log.Fields{
+							"account": address,
+							"txId":    tx.TransactionId,
+							"tokens":  tokenList,
+						}).
+						Info("Fungible token vaults initialized.")
 
 					return nil
 				},
 			},
 		)
-
-		time.Sleep(s.cfg.OpsBurstInterval)
 	}
 
 	// unlock after all transactions are sealed
