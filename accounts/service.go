@@ -491,7 +491,9 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 		InitializedFungibleTokens: initializedFungibleTokens,
 	})
 
-	log.WithFields(log.Fields{"address": account.Address, "initialized-fungible-tokens": initializedFungibleTokens}).Debug("Account created")
+	log.
+		WithFields(log.Fields{"address": account.Address, "initialized-fungible-tokens": initializedFungibleTokens}).
+		Info("Account created")
 
 	return account, flowTx.ID().String(), nil
 }

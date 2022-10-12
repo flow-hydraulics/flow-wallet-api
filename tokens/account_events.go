@@ -24,6 +24,6 @@ func (h *AccountAddedHandler) addToken(name string, address string) {
 	if err := h.TokenService.AddAccountToken(name, address); err != nil {
 		log.
 			WithFields(log.Fields{"error": err}).
-			Warn("Error while adding token to new account")
+			Warnf("Error while adding %s token to new account", name)
 	}
 }

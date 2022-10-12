@@ -88,7 +88,7 @@ type Config struct {
 	// Number of concurrent workers handling incoming jobs.
 	// You can increase the number of workers if you're sending
 	// too many transactions and find that the queue is often backlogged.
-	WorkerCount uint `env:"WORKER_COUNT" envDefault:"1"`
+	WorkerCount uint `env:"WORKER_COUNT" envDefault:"10"`
 	// Webhook endpoint to receive job status updates
 	JobStatusWebhookUrl string `env:"JOB_STATUS_WEBHOOK" envDefault:""`
 	// Duration for which to wait for a response, if 0 wait indefinitely. Default: 30s.

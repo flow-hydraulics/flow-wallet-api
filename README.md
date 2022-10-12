@@ -116,7 +116,7 @@ TokenName:ContractAddress:ReceiverPublicPath:BalancePublicPath:VaultStoragePath
 
 Example (mainnet):
 ```
-USDC:0xb19436aae4d94622:FiatToken.VaultReceiverPubPath:FiatToken.VaultBalancePubPath:FiatToken.VaultStoragePath
+FiatToken:0xb19436aae4d94622:FiatToken.VaultReceiverPubPath:FiatToken.VaultBalancePubPath:FiatToken.VaultStoragePath
 ```
 
 **DEPRECATION NOTICE:** You can optionally config each token with 3 parameters: a 3rd parameter "lowercamelcase" name for each token. For FlowToken this would be "flowToken" and for FUSD "fusd". This is used to construct the vault name, receiver name and balance name in generic transaction templates. Consult the contract code for each token to derive the proper name (search for `.*Vault`, `.*Receiver`, `.*Balance`).**THIS IS NOW DEPRECATED** It's best to grab paths from the token contract and set them explicitly here instead of generating them based on lowercase token name. The old format still works to maintain backward compatibility.
