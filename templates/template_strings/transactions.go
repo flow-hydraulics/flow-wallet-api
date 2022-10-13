@@ -91,19 +91,19 @@ transaction(adminKeyIndex: Int, numProposalKeys: UInt16) {
 }
 `
 
-// TODO: sigAlgo & hashAlgo as params, add pre-&post-conditions
+// TODO: add pre-&post-conditions
 const AddAccountKeysTransaction = `
-transaction(publicKeys: [String]) {
+transaction(publicKeys: [String], hashAlgo: UInt8, signAlgo: UInt8) {
   prepare(signer: AuthAccount) {
     for pbk in publicKeys {
       let key = PublicKey(
         publicKey: pbk.decodeHex(),
-        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+        signatureAlgorithm: SignatureAlgorithm(rawValue: signAlgo) ?? SignatureAlgorithm.ECDSA_P256
       )
 
       signer.keys.add(
         publicKey: key,
-        hashAlgorithm: HashAlgorithm.SHA3_256,
+        hashAlgorithm: HashAlgorithm(rawValue: hashAlgo) ?? HashAlgorithm.SHA3_256,
         weight: 1000.0
       )
     }

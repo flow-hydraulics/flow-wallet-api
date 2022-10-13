@@ -16,6 +16,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/flow-go-sdk"
 	flow_crypto "github.com/onflow/flow-go-sdk/crypto"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -283,8 +284,12 @@ func (s *ServiceImpl) syncAccountKeyCount(ctx context.Context, address flow.Addr
 		}
 
 		// Prepare transaction arguments
+		hashAlgo := StringToHashAlgorithm(s.cfg.DefaultHashAlgo)
+		signAlgo := StringToSignatureAlgorithm(s.cfg.DefaultSignAlgo)
 		x := cadence.NewArray(pbks)
-		args := []transactions.Argument{x}
+		y := cadence.NewUInt8(hashAlgo.RawValue())
+		z := cadence.NewUInt8(signAlgo.RawValue())
+		args := []transactions.Argument{x, y, z}
 
 		entry.WithFields(log.Fields{"args": args}).Debug("args prepared")
 
@@ -447,4 +452,38 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	log.WithFields(log.Fields{"address": account.Address}).Debug("Account created")
 
 	return account, flowTx.ID().String(), nil
+}
+
+// TODO(sirius): move to github.com/onflow/cadence/runtime
+func StringToHashAlgorithm(s string) runtime.HashAlgorithm {
+	switch s {
+	case runtime.HashAlgorithmSHA2_256.Name():
+		return runtime.HashAlgorithmSHA2_256
+	case runtime.HashAlgorithmSHA2_384.Name():
+		return runtime.HashAlgorithmSHA2_384
+	case runtime.HashAlgorithmSHA3_256.Name():
+		return runtime.HashAlgorithmSHA3_256
+	case runtime.HashAlgorithmSHA3_384.Name():
+		return runtime.HashAlgorithmSHA3_384
+	case runtime.HashAlgorithmKMAC128_BLS_BLS12_381.Name():
+		return runtime.HashAlgorithmKMAC128_BLS_BLS12_381
+	case runtime.HashAlgorithmKECCAK_256.Name():
+		return runtime.HashAlgorithmKECCAK_256
+	default:
+		return runtime.HashAlgorithmUnknown
+	}
+}
+
+// TODO(sirius): move to github.com/onflow/cadence/runtime/runtime
+func StringToSignatureAlgorithm(s string) runtime.SignatureAlgorithm {
+	switch s {
+	case runtime.SignatureAlgorithmECDSA_P256.Name():
+		return runtime.SignatureAlgorithmECDSA_P256
+	case runtime.SignatureAlgorithmECDSA_secp256k1.Name():
+		return runtime.SignatureAlgorithmECDSA_secp256k1
+	case runtime.SignatureAlgorithmBLS_BLS12_381.Name():
+		return runtime.SignatureAlgorithmBLS_BLS12_381
+	default:
+		return runtime.SignatureAlgorithmUnknown
+	}
 }
