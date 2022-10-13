@@ -31,6 +31,9 @@ func (h *ChainEventHandler) handleDeposit(ctx context.Context, event flow.Event)
 	// as we could not even listen to events for them
 	token, err := h.TemplateService.TokenFromEvent(event)
 	if err != nil {
+		log.
+			WithFields(log.Fields{"error": err}).
+			Warn("Failed to extract token from event")
 		return
 	}
 
@@ -49,4 +52,12 @@ func (h *ChainEventHandler) handleDeposit(ctx context.Context, event flow.Event)
 			Warn("Error while registering a deposit")
 		return
 	}
+
+	log.
+		WithFields(log.Fields{
+			"token":         token.Name,
+			"account":       accountAddress,
+			"amountOrNftID": amountOrNftID,
+		}).
+		Debug("New deposit")
 }
