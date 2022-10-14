@@ -48,7 +48,7 @@ type Config struct {
 	// the service will use flow.AccountKeyWeightThreshold from the Flow SDK.
 	DefaultKeyWeight int    `env:"DEFAULT_KEY_WEIGHT" envDefault:"-1"`
 	DefaultSignAlgo  string `env:"DEFAULT_SIGN_ALGO" envDefault:"ECDSA_P256"`
-	DefaultHashAlgo  string `env:"DEFAULT_HASH_ALGO" envDefault:"SHA2_256"`
+	DefaultHashAlgo  string `env:"DEFAULT_HASH_ALGO" envDefault:"SHA3_256"`
 	// This symmetrical key is used to encrypt private keys
 	// that are stored in the database. Values per type:
 	// - local: 32 bytes long encryption key
