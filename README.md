@@ -108,7 +108,7 @@ When making `sync` requests it's sometimes required to adjust the server's reque
 
 ### Enabled fungible tokens
 
-A comma separated list of _fungible tokens_ and their corresponding addresses and paths enabled for this instance. Make sure to name each token exactly as it is in the corresponding cadence code (FlowToken, FUSD, etc). Include at least FlowToken as functionality without it is undetermined. Format is comma separated list of:
+A comma separated list of _fungible tokens_ and their corresponding addresses and paths enabled for this instance. Make sure to name each token exactly as it is in the corresponding Cadence code (FlowToken, FUSD, etc). Include at least FlowToken as functionality without it is undetermined. Format is comma separated list of:
 
 ```
 TokenName:ContractAddress:ReceiverPublicPath:BalancePublicPath:VaultStoragePath
