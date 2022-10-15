@@ -125,7 +125,7 @@ Examples:
 
     FLOW_WALLET_ENABLED_TOKENS=FlowToken:0x0ae53cb6e3f42a79:flowToken,FUSD:0xf8d6e0586b0a20c7:fusd
 
-**NOTE:** Non-fungible tokens can _not_ be enabled using environment variables. Use the API endpoints for that.
+**NOTE:** Non-fungible tokens _cannot_ be enabled using environment variables. Use the API endpoints for that.
 
 ### Database
 
