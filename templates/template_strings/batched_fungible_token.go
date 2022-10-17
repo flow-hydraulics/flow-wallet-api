@@ -89,13 +89,13 @@ func executeTemplate(name string, temp string, i BatchedFungibleOpsInfo) (string
 		New(name).
 		Parse(temp)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	buf := new(bytes.Buffer)
 	err = template.Execute(buf, i)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return buf.String(), nil
