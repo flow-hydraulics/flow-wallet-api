@@ -923,7 +923,7 @@ func TestTokenServices(t *testing.T) {
 
 	t.Run("init fungible token vaults on account creation", func(t *testing.T) {
 		cfg := test.LoadConfig(t)
-		cfg.InitFungibleVaultsOnAccountCreation = true
+		cfg.InitFungibleTokenVaultsOnAccountCreation = true
 		app := test.GetServices(t, cfg)
 
 		svc := app.GetTokens()

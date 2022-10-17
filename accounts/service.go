@@ -365,7 +365,7 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 
 	var flowTx *flow.Transaction
 	var initializedFungibleTokens []templates.Token
-	if s.cfg.InitFungibleVaultsOnAccountCreation {
+	if s.cfg.InitFungibleTokenVaultsOnAccountCreation {
 
 		flowTx, initializedFungibleTokens, err = s.generateCreateAccountTransactionWithEnabledFungibleTokenVaults(
 			publicKeys,
