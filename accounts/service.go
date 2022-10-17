@@ -367,39 +367,13 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	var initializedFungibleTokens []templates.Token
 	if s.cfg.InitFungibleVaultsOnAccountCreation {
 
-		// Create custom cadence script to create account and init enabled fungible tokens vaults
-		tokens, err := s.temps.ListTokensFull(templates.FT)
+		flowTx, initializedFungibleTokens, err = s.generateCreateAccountTransactionWithEnabledFungibleTokenVaults(
+			publicKeys,
+			payer.Address,
+		)
 		if err != nil {
 			return nil, "", err
 		}
-
-		tokensInfo := []template_strings.FungibleTokenInfo{}
-		for _, t := range tokens {
-			if t.Name != "FlowToken" {
-				tokensInfo = append(tokensInfo, templates.NewFungibleTokenInfo(t))
-				initializedFungibleTokens = append(initializedFungibleTokens, t)
-			}
-		}
-
-		txScript, err := templates.CreateAccountAndInitFungibleTokenVaultsCode(s.cfg.ChainID, tokensInfo)
-		if err != nil {
-			return nil, "", err
-		}
-
-		// Encode public key list
-		keyList := make([]cadence.Value, len(publicKeys))
-		for i, key := range publicKeys {
-			keyList[i], err = flow_templates.AccountKeyToCadenceCryptoKey(key)
-			if err != nil {
-				return nil, "", err
-			}
-		}
-		cadencePublicKeys := cadence.NewArray(keyList)
-
-		flowTx = flow.NewTransaction().
-			SetScript([]byte(txScript)).
-			AddAuthorizer(payer.Address).
-			AddRawArgument(jsoncdc.MustEncode(cadencePublicKeys))
 
 	} else {
 
@@ -496,4 +470,52 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 		Info("Account created")
 
 	return account, flowTx.ID().String(), nil
+}
+
+// generateCreateAccountTransactionWithEnabledFungibleTokenVaults is a helper function that generates a templated
+// account creation transaction that initializes all enabled fungible tokens.
+func (s *ServiceImpl) generateCreateAccountTransactionWithEnabledFungibleTokenVaults(
+	publicKeys []*flow.AccountKey,
+	payerAddress flow.Address,
+) (
+	*flow.Transaction,
+	[]templates.Token,
+	error,
+) {
+	// Create custom cadence script to create account and init enabled fungible tokens vaults
+	tokens, err := s.temps.ListTokensFull(templates.FT)
+	if err != nil {
+		return nil, []templates.Token{}, nil
+	}
+
+	var initializedTokens []templates.Token
+	tokensInfo := []template_strings.FungibleTokenInfo{}
+	for _, t := range tokens {
+		if t.Name != "FlowToken" {
+			tokensInfo = append(tokensInfo, templates.NewFungibleTokenInfo(t))
+			initializedTokens = append(initializedTokens, t)
+		}
+	}
+
+	txScript, err := templates.CreateAccountAndInitFungibleTokenVaultsCode(s.cfg.ChainID, tokensInfo)
+	if err != nil {
+		return nil, []templates.Token{}, err
+	}
+
+	// Encode public key list
+	keyList := make([]cadence.Value, len(publicKeys))
+	for i, key := range publicKeys {
+		keyList[i], err = flow_templates.AccountKeyToCadenceCryptoKey(key)
+		if err != nil {
+			return nil, []templates.Token{}, err
+		}
+	}
+	cadencePublicKeys := cadence.NewArray(keyList)
+
+	flowTx := flow.NewTransaction().
+		SetScript([]byte(txScript)).
+		AddAuthorizer(payerAddress).
+		AddRawArgument(jsoncdc.MustEncode(cadencePublicKeys))
+
+	return flowTx, initializedTokens, nil
 }
