@@ -25,7 +25,7 @@ type workerPoolImpl struct {
 	capacity   uint
 
 	fungibleInitJobChan chan OpsInitFungibleVaultsJob
-	wg                  *sync.WaitGroup
+	workersWaitGroup    *sync.WaitGroup
 }
 
 func NewWorkerPool(
@@ -36,15 +36,15 @@ func NewWorkerPool(
 		numWorkers:          numWorkers,
 		capacity:            capacity,
 		fungibleInitJobChan: make(chan OpsInitFungibleVaultsJob, capacity),
-		wg:                  &sync.WaitGroup{},
+		workersWaitGroup:    &sync.WaitGroup{},
 	}
 }
 
 func (p *workerPoolImpl) Start() {
 	for i := uint(0); i < p.numWorkers; i++ {
-		p.wg.Add(1)
+		p.workersWaitGroup.Add(1)
 		go func() {
-			defer p.wg.Done()
+			defer p.workersWaitGroup.Done()
 			for job := range p.fungibleInitJobChan {
 				if job.Func == nil {
 					break
@@ -60,7 +60,7 @@ func (p *workerPoolImpl) Start() {
 
 func (p *workerPoolImpl) Stop() {
 	close(p.fungibleInitJobChan)
-	p.wg.Wait()
+	p.workersWaitGroup.Wait()
 }
 
 func (p *workerPoolImpl) AddFungibleInitJob(job OpsInitFungibleVaultsJob) {
