@@ -12,7 +12,7 @@ import (
 
 type Service interface {
 	AddToken(t *Token) error
-	ListTokens(tType TokenType) (*[]BasicToken, error)
+	ListTokens(tType TokenType) ([]BasicToken, error)
 	ListTokensFull(tType TokenType) ([]Token, error)
 	GetTokenById(id uint64) (*Token, error)
 	GetTokenByName(name string) (*Token, error)
@@ -129,7 +129,7 @@ func (s *ServiceImpl) AddToken(t *Token) error {
 	return s.store.Insert(t)
 }
 
-func (s *ServiceImpl) ListTokens(tType TokenType) (*[]BasicToken, error) {
+func (s *ServiceImpl) ListTokens(tType TokenType) ([]BasicToken, error) {
 	return s.store.List(tType)
 }
 

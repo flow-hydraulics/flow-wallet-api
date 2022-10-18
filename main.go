@@ -332,11 +332,11 @@ func runServer(cfg *configs.Config) {
 				return nil, err
 			}
 
-			token_count := len(*tt)
+			token_count := len(tt)
 			event_types := make([]string, token_count)
 
 			// Listen for enabled tokens deposit events
-			for i, token := range *tt {
+			for i, token := range tt {
 				event_types[i] = templates.DepositEventTypeFromToken(token)
 			}
 

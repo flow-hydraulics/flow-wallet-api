@@ -3,7 +3,7 @@ package templates
 // Store manages data regarding templates.
 type Store interface {
 	Insert(*Token) error
-	List(TokenType) (*[]BasicToken, error)
+	List(TokenType) ([]BasicToken, error)
 	ListFull(TokenType) ([]Token, error)
 	GetById(id uint64) (*Token, error)
 	GetByName(name string) (*Token, error)

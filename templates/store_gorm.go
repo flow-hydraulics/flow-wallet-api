@@ -20,7 +20,7 @@ func (s *GormStore) Insert(q *Token) error {
 	return s.db.Omit("ID").Create(q).Error
 }
 
-func (s *GormStore) List(tType TokenType) (*[]BasicToken, error) {
+func (s *GormStore) List(tType TokenType) ([]BasicToken, error) {
 	listFull, err := s.ListFull(tType)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func (s *GormStore) List(tType TokenType) (*[]BasicToken, error) {
 		result = append(result, t.BasicToken())
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (s *GormStore) ListFull(tType TokenType) ([]Token, error) {
