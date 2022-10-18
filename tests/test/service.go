@@ -110,7 +110,10 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
-	templateService := templates.NewService(cfg, templates.NewGormStore(db))
+	templateService, err := templates.NewService(cfg, templates.NewGormStore(db))
+	if err != nil {
+		t.Fatal(err)
+	}
 	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp)
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, templateService)
 	jobService := jobs.NewService(jobs.NewGormStore(db))
@@ -150,7 +153,7 @@ func GetServices(t *testing.T, cfg *configs.Config) Services {
 		TokenService:    tokenService,
 	})
 
-	err := accountService.InitAdminAccount(context.Background())
+	err = accountService.InitAdminAccount(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -65,7 +65,7 @@ func (token Token) BasicToken() BasicToken {
 	}
 }
 
-func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
+func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) (string, error) {
 
 	// Regex that matches all references to cadence source files
 	// For example:
@@ -82,20 +82,12 @@ func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
 		fmt.Sprintf("%s.cdc", token.Name), "TOKEN_ADDRESS",
 	)
 
-	tokenVault := token.VaultStoragePath
-	tokenReceiver := token.ReceiverPublicPath
-	tokenBalance := token.BalancePublicPath
+	tokenVault, tokenReceiver, tokenBalance, err := GetTokenPaths(token)
+	if err != nil && (strings.Contains(tmplStr, "TOKEN_VAULT") ||
+		strings.Contains(tmplStr, "TOKEN_RECEIVER") ||
+		strings.Contains(tmplStr, "TOKEN_BALANCE")) {
 
-	if tokenVault == "" || tokenReceiver == "" || tokenBalance == "" {
-		// Deprecated
-		if token.Name != "FlowToken" && token.Name != "FUSD" {
-			log.Warnf("%s token is using deprecated config format", token.Name)
-		}
-		if len(token.NameLowerCase) > 0 {
-			tokenVault = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
-			tokenReceiver = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
-			tokenBalance = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
-		}
+		return "", err
 	}
 
 	templateReplacer := strings.NewReplacer(
@@ -116,18 +108,64 @@ func TokenCode(chainId flow.ChainID, token *Token, tmplStr string) string {
 	code = templateReplacer.Replace(code)
 	code = knownAddressesReplacer.Replace(code)
 
-	return code
+	return code, nil
 }
 
-func FungibleTransferCode(chainId flow.ChainID, token *Token) string {
+func GetTokenPaths(
+	token *Token,
+) (
+	vaultPath string,
+	receiverPath string,
+	balancePath string,
+	err error,
+) {
+
+	if token.VaultStoragePath != "" &&
+		token.ReceiverPublicPath != "" &&
+		token.BalancePublicPath != "" {
+
+		// All three paths are set explicitly.
+
+		vaultPath = token.VaultStoragePath
+		receiverPath = token.ReceiverPublicPath
+		balancePath = token.BalancePublicPath
+
+	} else if token.NameLowerCase != "" &&
+		token.VaultStoragePath == "" &&
+		token.ReceiverPublicPath == "" &&
+		token.BalancePublicPath == "" {
+
+		// Deprecated config format: None of the paths are set.
+		// Use token.NameLowerCase to generate paths.
+
+		if token.Name != "FlowToken" && token.Name != "FUSD" {
+			log.Warnf("%s token is using deprecated config format", token.Name)
+		}
+
+		vaultPath = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
+		receiverPath = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
+		balancePath = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
+
+	} else {
+
+		// Configuration error in paths
+
+		err = fmt.Errorf("invalid path configuration for token %s", token.Name)
+		return
+	}
+
+	return
+}
+
+func FungibleTransferCode(chainId flow.ChainID, token *Token) (string, error) {
 	return TokenCode(chainId, token, template_strings.GenericFungibleTransfer)
 }
 
-func FungibleSetupCode(chainId flow.ChainID, token *Token) string {
+func FungibleSetupCode(chainId flow.ChainID, token *Token) (string, error) {
 	return TokenCode(chainId, token, template_strings.GenericFungibleSetup)
 }
 
-func FungibleBalanceCode(chainId flow.ChainID, token *Token) string {
+func FungibleBalanceCode(chainId flow.ChainID, token *Token) (string, error) {
 	return TokenCode(chainId, token, template_strings.GenericFungibleBalance)
 }
 

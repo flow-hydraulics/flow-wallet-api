@@ -51,7 +51,7 @@ func parseEnabledTokens(envEnabledTokens []string) map[string]Token {
 	return enabledTokens
 }
 
-func NewService(cfg *configs.Config, store Store) Service {
+func NewService(cfg *configs.Config, store Store) (Service, error) {
 	// TODO(latenssi): safeguard against nil config?
 
 	// Add all enabled tokens from config as fungible tokens
@@ -65,22 +65,36 @@ func NewService(cfg *configs.Config, store Store) Service {
 		} else {
 			if !strings.Contains(err.Error(), "record not found") {
 				// We got an error that is not "record not found"
-				panic(err)
+				return nil, err
 			}
 		}
 
 		// Copy the value so we get an individual pointer, this is important
 		token := t
 		token.Type = FT // We only allow fungible tokens through env variables config
-		token.Setup = FungibleSetupCode(cfg.ChainID, &token)
-		token.Transfer = FungibleTransferCode(cfg.ChainID, &token)
-		token.Balance = FungibleBalanceCode(cfg.ChainID, &token)
+
+		var err error
+
+		token.Setup, err = FungibleSetupCode(cfg.ChainID, &token)
+		if err != nil {
+			return nil, err
+		}
+
+		token.Transfer, err = FungibleTransferCode(cfg.ChainID, &token)
+		if err != nil {
+			return nil, err
+		}
+
+		token.Balance, err = FungibleBalanceCode(cfg.ChainID, &token)
+		if err != nil {
+			return nil, err
+		}
 
 		// Write to temp storage (memory), instead of database
 		store.InsertTemp(&token)
 	}
 
-	return &ServiceImpl{store, cfg}
+	return &ServiceImpl{store, cfg}, nil
 }
 
 func (s *ServiceImpl) AddToken(t *Token) error {
@@ -97,9 +111,20 @@ func (s *ServiceImpl) AddToken(t *Token) error {
 	}
 
 	// Received code templates may have values that need replacing
-	t.Setup = TokenCode(s.cfg.ChainID, t, t.Setup)
-	t.Transfer = TokenCode(s.cfg.ChainID, t, t.Transfer)
-	t.Balance = TokenCode(s.cfg.ChainID, t, t.Balance)
+	t.Setup, err = TokenCode(s.cfg.ChainID, t, t.Setup)
+	if err != nil {
+		return err
+	}
+
+	t.Transfer, err = TokenCode(s.cfg.ChainID, t, t.Transfer)
+	if err != nil {
+		return err
+	}
+
+	t.Balance, err = TokenCode(s.cfg.ChainID, t, t.Balance)
+	if err != nil {
+		return err
+	}
 
 	return s.store.Insert(t)
 }

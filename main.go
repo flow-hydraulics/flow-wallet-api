@@ -126,7 +126,10 @@ func runServer(cfg *configs.Config) {
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
 	// Services
-	templateService := templates.NewService(cfg, templates.NewGormStore(db))
+	templateService, err := templates.NewService(cfg, templates.NewGormStore(db))
+	if err != nil {
+		log.Fatal(err)
+	}
 	jobsService := jobs.NewService(jobs.NewGormStore(db))
 	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
 	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, templateService, accounts.WithTxRatelimiter(txRatelimiter))

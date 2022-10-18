@@ -30,7 +30,10 @@ func (s *ServiceImpl) DeployTokenContractForAccount(ctx context.Context, runSync
 		return err
 	}
 
-	src := templates.TokenCode(s.cfg.ChainID, token, tmplStr)
+	src, err := templates.TokenCode(s.cfg.ChainID, token, tmplStr)
+	if err != nil {
+		return err
+	}
 
 	c := flow_templates.Contract{Name: n, Source: src}
 

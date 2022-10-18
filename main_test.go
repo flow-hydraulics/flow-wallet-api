@@ -369,7 +369,8 @@ func TestAccountTransactionHandlers(t *testing.T) {
 	token, err := templateSvc.GetTokenByName("FlowToken")
 	fatal(t, err)
 
-	tFlow := templates.FungibleTransferCode(cfg.ChainID, token)
+	tFlow, err := templates.FungibleTransferCode(cfg.ChainID, token)
+	fatal(t, err)
 	tFlowBytes, err := json.Marshal(tFlow)
 	fatal(t, err)
 
@@ -608,7 +609,8 @@ func TestTransactionHandlers(t *testing.T) {
 	token, err := templateSvc.GetTokenByName("FlowToken")
 	fatal(t, err)
 
-	transferFlow := templates.FungibleTransferCode(cfg.ChainID, token)
+	transferFlow, err := templates.FungibleTransferCode(cfg.ChainID, token)
+	fatal(t, err)
 
 	_, transaction1, err := svc.Create(
 		context.Background(),
@@ -1132,7 +1134,8 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Mint ExampleNFTs for account 0
-	mintCode := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
+	mintCode, err := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
+	fatal(t, err)
 	for i := 0; i < 3; i++ {
 		_, _, err := transactionSvc.Create(context.Background(), true, cfg.AdminAddress, mintCode,
 			[]transactions.Argument{cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address))},
