@@ -1718,20 +1718,16 @@ func TestOpsServices(t *testing.T) {
 		_, err = svc.InitMissingFungibleTokenVaults()
 		fatal(t, err)
 
-		// wait for job to complete
-		time.Sleep(1 * time.Second)
+		// Check count until 0
+		for {
+			time.Sleep(1 * time.Second)
 
-		// Get missing vault count
-		result, err = svc.GetMissingFungibleTokenVaults()
-		fatal(t, err)
+			result, err = svc.GetMissingFungibleTokenVaults()
+			fatal(t, err)
 
-		if len(result) != 1 {
-			t.Errorf("GetMissingFungibleTokenVaults returns incorrect count: %d", len(result))
+			if result[0].TokenName == "FUSD" && result[0].Count == 0 {
+				break
+			}
 		}
-
-		if result[0].TokenName != "FUSD" || result[0].Count != 0 {
-			t.Errorf("invalid GetMissingFungibleTokenVaults results: %+v", result)
-		}
-
 	})
 }
