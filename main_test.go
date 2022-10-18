@@ -886,7 +886,7 @@ func TestTokenServices(t *testing.T) {
 			t.Errorf("expected %s but got %s", transactions.FtSetup, setupTx.TransactionType)
 		}
 
-		// Create a withdrawal, should error as we can not mint FUSD right now
+		// Create a withdrawal
 		_, _, err = svc.CreateWithdrawal(
 			ctx,
 			true,
@@ -897,12 +897,7 @@ func TestTokenServices(t *testing.T) {
 				FtAmount:  "1.0",
 			},
 		)
-		if err != nil {
-			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
-				t.Fatal(err)
-			}
-		}
-
+		fatal(t, err)
 	})
 
 	t.Run(("try to setup a non-existent token"), func(t *testing.T) {
@@ -952,11 +947,7 @@ func TestTokenServices(t *testing.T) {
 				FtAmount:  "1.0",
 			},
 		)
-		if err != nil {
-			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
-				t.Fatal(err)
-			}
-		}
+		fatal(t, err)
 	})
 }
 
