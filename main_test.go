@@ -863,9 +863,7 @@ func TestTokenServices(t *testing.T) {
 		// Make sure FUSD is deployed
 		err := svc.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
-			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-				t.Fatal(err)
-			}
+			t.Fatal(err)
 		}
 
 		// Setup the admin account to be able to handle FUSD
@@ -936,9 +934,7 @@ func TestTokenServices(t *testing.T) {
 		// Make sure FUSD is deployed
 		err := svc.DeployTokenContractForAccount(ctx, true, "FUSD", cfg.AdminAddress)
 		if err != nil {
-			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-				t.Fatal(err)
-			}
+			t.Fatal(err)
 		}
 
 		// Create an account
@@ -1006,11 +1002,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	// Make sure FUSD is deployed
 	err = svc.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
-	if err != nil {
-		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			fatal(t, err)
-		}
-	}
+	fatal(t, err)
 
 	// ExampleNFT
 
@@ -1041,11 +1033,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	// Make sure ExampleNFT is deployed
 	err = svc.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
-	if err != nil {
-		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			fatal(t, err)
-		}
-	}
+	fatal(t, err)
 
 	// Create a few accounts
 	testAccounts := make([]*accounts.Account, 2)
@@ -1468,9 +1456,7 @@ func TestNFTDeployment(t *testing.T) {
 
 	err := svc.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
-		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			t.Fatal(err)
-		}
+		t.Fatal(err)
 	}
 }
 
