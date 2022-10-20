@@ -13,9 +13,11 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
+	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/templates/template_strings"
 	"github.com/flow-hydraulics/flow-wallet-api/transactions"
 	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/flow-go-sdk"
 	flow_crypto "github.com/onflow/flow-go-sdk/crypto"
 	flow_templates "github.com/onflow/flow-go-sdk/templates"
@@ -43,6 +45,7 @@ type ServiceImpl struct {
 	fc            flow_helpers.FlowClient
 	wp            jobs.WorkerPool
 	txs           transactions.Service
+	temps         templates.Service
 	txRateLimiter ratelimit.Limiter
 }
 
@@ -54,12 +57,13 @@ func NewService(
 	fc flow_helpers.FlowClient,
 	wp jobs.WorkerPool,
 	txs transactions.Service,
+	temps templates.Service,
 	opts ...ServiceOption,
 ) Service {
 	var defaultTxRatelimiter = ratelimit.NewUnlimited()
 
 	// TODO(latenssi): safeguard against nil config?
-	svc := &ServiceImpl{cfg, store, km, fc, wp, txs, defaultTxRatelimiter}
+	svc := &ServiceImpl{cfg, store, km, fc, wp, txs, temps, defaultTxRatelimiter}
 
 	for _, opt := range opts {
 		opt(svc)
@@ -359,13 +363,29 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 		publicKeys = append(publicKeys, &clonedAccountKey)
 	}
 
-	flowTx, err := flow_templates.CreateAccount(
-		publicKeys,
-		nil,
-		payer.Address,
-	)
-	if err != nil {
-		return nil, "", err
+	var flowTx *flow.Transaction
+	var initializedFungibleTokens []templates.Token
+	if s.cfg.InitFungibleTokenVaultsOnAccountCreation {
+
+		flowTx, initializedFungibleTokens, err = s.generateCreateAccountTransactionWithEnabledFungibleTokenVaults(
+			publicKeys,
+			payer.Address,
+		)
+		if err != nil {
+			return nil, "", err
+		}
+
+	} else {
+
+		flowTx, err = flow_templates.CreateAccount(
+			publicKeys,
+			nil,
+			payer.Address,
+		)
+		if err != nil {
+			return nil, "", err
+		}
+
 	}
 
 	flowTx.
@@ -441,10 +461,61 @@ func (s *ServiceImpl) createAccount(ctx context.Context) (*Account, string, erro
 	}
 
 	AccountAdded.Trigger(AccountAddedPayload{
-		Address: flow.HexToAddress(account.Address),
+		Address:                   flow.HexToAddress(account.Address),
+		InitializedFungibleTokens: initializedFungibleTokens,
 	})
 
-	log.WithFields(log.Fields{"address": account.Address}).Debug("Account created")
+	log.
+		WithFields(log.Fields{"address": account.Address, "initialized-fungible-tokens": initializedFungibleTokens}).
+		Info("Account created")
 
 	return account, flowTx.ID().String(), nil
+}
+
+// generateCreateAccountTransactionWithEnabledFungibleTokenVaults is a helper function that generates a templated
+// account creation transaction that initializes all enabled fungible tokens.
+func (s *ServiceImpl) generateCreateAccountTransactionWithEnabledFungibleTokenVaults(
+	publicKeys []*flow.AccountKey,
+	payerAddress flow.Address,
+) (
+	*flow.Transaction,
+	[]templates.Token,
+	error,
+) {
+	// Create custom cadence script to create account and init enabled fungible tokens vaults
+	tokens, err := s.temps.ListTokensFull(templates.FT)
+	if err != nil {
+		return nil, []templates.Token{}, nil
+	}
+
+	var initializedTokens []templates.Token
+	tokensInfo := []template_strings.FungibleTokenInfo{}
+	for _, t := range tokens {
+		if t.Name != "FlowToken" {
+			tokensInfo = append(tokensInfo, templates.NewFungibleTokenInfo(t))
+			initializedTokens = append(initializedTokens, t)
+		}
+	}
+
+	txScript, err := templates.CreateAccountAndInitFungibleTokenVaultsCode(s.cfg.ChainID, tokensInfo)
+	if err != nil {
+		return nil, []templates.Token{}, err
+	}
+
+	// Encode public key list
+	keyList := make([]cadence.Value, len(publicKeys))
+	for i, key := range publicKeys {
+		keyList[i], err = flow_templates.AccountKeyToCadenceCryptoKey(key)
+		if err != nil {
+			return nil, []templates.Token{}, err
+		}
+	}
+	cadencePublicKeys := cadence.NewArray(keyList)
+
+	flowTx := flow.NewTransaction().
+		SetScript([]byte(txScript)).
+		AddAuthorizer(payerAddress).
+		AddRawArgument(jsoncdc.MustEncode(cadencePublicKeys))
+
+	return flowTx, initializedTokens, nil
 }

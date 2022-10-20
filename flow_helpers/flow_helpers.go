@@ -50,7 +50,7 @@ func WaitForSeal(ctx context.Context, flowClient FlowClient, id flow.Identifier,
 
 	b := &backoff.Backoff{
 		Min:    100 * time.Millisecond,
-		Max:    time.Minute,
+		Max:    time.Second,
 		Factor: 5,
 		Jitter: true,
 	}

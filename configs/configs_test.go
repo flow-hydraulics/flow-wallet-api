@@ -11,6 +11,7 @@ func TestParseConfig(t *testing.T) {
 	t.Setenv("FLOW_WALLET_ENCRYPTION_KEY", "encryption-key")
 	t.Setenv("FLOW_WALLET_ENCRYPTION_KEY_TYPE", "local")
 	t.Setenv("FLOW_WALLET_ACCESS_API_HOST", "access-api-host")
+	t.Setenv("FLOW_WALLET_WORKER_COUNT", "1")
 
 	cfg, err := Parse()
 

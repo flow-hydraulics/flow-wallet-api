@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"sort"
 
 	"net/http"
@@ -214,7 +214,7 @@ func TestAccountServices(t *testing.T) {
 		fatal(t, err)
 
 		if len(acc.Keys) != int(cfg2.DefaultAccountKeyCount) {
-			t.Fatalf("incorrect number of keys for new account, expected %d, got %d", len(acc.Keys), cfg2.DefaultAccountKeyCount)
+			t.Fatalf("incorrect number of keys for new account, expected %d, got %d", cfg2.DefaultAccountKeyCount, len(acc.Keys))
 		}
 
 		// Keys should be clones w/ a running Index
@@ -369,7 +369,8 @@ func TestAccountTransactionHandlers(t *testing.T) {
 	token, err := templateSvc.GetTokenByName("FlowToken")
 	fatal(t, err)
 
-	tFlow := templates.FungibleTransferCode(cfg.ChainID, token)
+	tFlow, err := templates.FungibleTransferCode(cfg.ChainID, token)
+	fatal(t, err)
 	tFlowBytes, err := json.Marshal(tFlow)
 	fatal(t, err)
 
@@ -608,7 +609,8 @@ func TestTransactionHandlers(t *testing.T) {
 	token, err := templateSvc.GetTokenByName("FlowToken")
 	fatal(t, err)
 
-	transferFlow := templates.FungibleTransferCode(cfg.ChainID, token)
+	transferFlow, err := templates.FungibleTransferCode(cfg.ChainID, token)
+	fatal(t, err)
 
 	_, transaction1, err := svc.Create(
 		context.Background(),
@@ -861,9 +863,7 @@ func TestTokenServices(t *testing.T) {
 		// Make sure FUSD is deployed
 		err := svc.DeployTokenContractForAccount(ctx, true, tokenName, cfg.AdminAddress)
 		if err != nil {
-			if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-				t.Fatal(err)
-			}
+			t.Fatal(err)
 		}
 
 		// Setup the admin account to be able to handle FUSD
@@ -886,7 +886,7 @@ func TestTokenServices(t *testing.T) {
 			t.Errorf("expected %s but got %s", transactions.FtSetup, setupTx.TransactionType)
 		}
 
-		// Create a withdrawal, should error as we can not mint FUSD right now
+		// Create a withdrawal
 		_, _, err = svc.CreateWithdrawal(
 			ctx,
 			true,
@@ -897,12 +897,7 @@ func TestTokenServices(t *testing.T) {
 				FtAmount:  "1.0",
 			},
 		)
-		if err != nil {
-			if !strings.Contains(err.Error(), "Amount withdrawn must be less than or equal than the balance of the Vault") {
-				t.Fatal(err)
-			}
-		}
-
+		fatal(t, err)
 	})
 
 	t.Run(("try to setup a non-existent token"), func(t *testing.T) {
@@ -919,6 +914,40 @@ func TestTokenServices(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected an error")
 		}
+	})
+
+	t.Run("init fungible token vaults on account creation", func(t *testing.T) {
+		cfg := test.LoadConfig(t)
+		cfg.InitFungibleTokenVaultsOnAccountCreation = true
+		app := test.GetServices(t, cfg)
+
+		svc := app.GetTokens()
+		accountSvc := app.GetAccounts()
+
+		ctx := context.Background()
+
+		// Make sure FUSD is deployed
+		err := svc.DeployTokenContractForAccount(ctx, true, "FUSD", cfg.AdminAddress)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create an account
+		_, account, err := accountSvc.Create(ctx, true)
+		fatal(t, err)
+
+		// Create a withdrawal
+		_, _, err = svc.CreateWithdrawal(
+			ctx,
+			true,
+			cfg.AdminAddress,
+			tokens.WithdrawalRequest{
+				TokenName: "FUSD",
+				Recipient: account.Address,
+				FtAmount:  "1.0",
+			},
+		)
+		fatal(t, err)
 	})
 }
 
@@ -964,24 +993,20 @@ func TestTokenHandlers(t *testing.T) {
 
 	// Make sure FUSD is deployed
 	err = svc.DeployTokenContractForAccount(context.Background(), true, fusd.Name, fusd.Address)
-	if err != nil {
-		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			fatal(t, err)
-		}
-	}
+	fatal(t, err)
 
 	// ExampleNFT
 
-	setupBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "setup_exampleNFT.cdc"))
+	setupBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "setup_exampleNFT.cdc"))
 	fatal(t, err)
 
-	transferBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "transfer_exampleNFT.cdc"))
+	transferBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "transfer_exampleNFT.cdc"))
 	fatal(t, err)
 
-	balanceBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "balance_exampleNFT.cdc"))
+	balanceBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "balance_exampleNFT.cdc"))
 	fatal(t, err)
 
-	mintBytes, err := ioutil.ReadFile(filepath.Join(testCadenceTxBasePath, "mint_exampleNFT.cdc"))
+	mintBytes, err := os.ReadFile(filepath.Join(testCadenceTxBasePath, "mint_exampleNFT.cdc"))
 	fatal(t, err)
 
 	exampleNft := templates.Token{
@@ -999,11 +1024,7 @@ func TestTokenHandlers(t *testing.T) {
 
 	// Make sure ExampleNFT is deployed
 	err = svc.DeployTokenContractForAccount(context.Background(), true, exampleNft.Name, exampleNft.Address)
-	if err != nil {
-		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			fatal(t, err)
-		}
-	}
+	fatal(t, err)
 
 	// Create a few accounts
 	testAccounts := make([]*accounts.Account, 2)
@@ -1092,7 +1113,8 @@ func TestTokenHandlers(t *testing.T) {
 	}
 
 	// Mint ExampleNFTs for account 0
-	mintCode := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
+	mintCode, err := templates.TokenCode(cfg.ChainID, &exampleNft, string(mintBytes))
+	fatal(t, err)
 	for i := 0; i < 3; i++ {
 		_, _, err := transactionSvc.Create(context.Background(), true, cfg.AdminAddress, mintCode,
 			[]transactions.Argument{cadence.NewAddress(flow.HexToAddress(testAccounts[0].Address))},
@@ -1425,9 +1447,7 @@ func TestNFTDeployment(t *testing.T) {
 
 	err := svc.DeployTokenContractForAccount(context.Background(), true, "ExampleNFT", cfg.AdminAddress)
 	if err != nil {
-		if !strings.Contains(err.Error(), "cannot overwrite existing contract") {
-			t.Fatal(err)
-		}
+		t.Fatal(err)
 	}
 }
 
@@ -1650,4 +1670,64 @@ func TestTemplateService(t *testing.T) {
 		}
 	})
 
+}
+
+func TestOpsServices(t *testing.T) {
+	cfg := test.LoadConfig(t)
+	app := test.GetServices(t, cfg)
+
+	svc := app.GetOps()
+	accountSvc := app.GetAccounts()
+
+	// Create an account
+	_, _, err := accountSvc.Create(context.Background(), true)
+	fatal(t, err)
+
+	// Create another account
+	_, _, err = accountSvc.Create(context.Background(), true)
+	fatal(t, err)
+
+	t.Run("get number of accounts with missing fungible vaults", func(t *testing.T) {
+		// Get missing vault count
+		result, err := svc.GetMissingFungibleTokenVaults()
+		fatal(t, err)
+
+		if len(result) != 1 {
+			t.Errorf("GetMissingFungibleTokenVaults returns incorrect count: %d", len(result))
+		}
+
+		// 3 accounts with missing FUSD vault -> admin, account1, account2
+		if result[0].TokenName != "FUSD" || result[0].Count != 3 {
+			t.Errorf("invalid GetMissingFungibleTokenVaults results: %+v", result)
+		}
+	})
+
+	t.Run("init missing fungible vaults job", func(t *testing.T) {
+		// Get missing vault count
+		result, err := svc.GetMissingFungibleTokenVaults()
+		fatal(t, err)
+
+		if len(result) != 1 {
+			t.Errorf("GetMissingFungibleTokenVaults returns incorrect count: %d", len(result))
+		}
+
+		if result[0].TokenName != "FUSD" || result[0].Count == 0 {
+			t.Errorf("invalid GetMissingFungibleTokenVaults results: %+v", result)
+		}
+
+		_, err = svc.InitMissingFungibleTokenVaults()
+		fatal(t, err)
+
+		// Check count until 0
+		for {
+			time.Sleep(1 * time.Second)
+
+			result, err = svc.GetMissingFungibleTokenVaults()
+			fatal(t, err)
+
+			if result[0].TokenName == "FUSD" && result[0].Count == 0 {
+				break
+			}
+		}
+	})
 }

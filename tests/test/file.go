@@ -1,14 +1,14 @@
 package test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
 func ReadFile(t *testing.T, path string) []byte {
 	t.Helper()
 
-	bs, err := ioutil.ReadFile(path)
+	bs, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("error file reading file %q: %#v", path, err)
 	}

@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"context"
+	"strings"
 
 	"github.com/flow-hydraulics/flow-wallet-api/accounts"
 	"github.com/flow-hydraulics/flow-wallet-api/flow_helpers"
@@ -30,12 +31,15 @@ func (s *ServiceImpl) DeployTokenContractForAccount(ctx context.Context, runSync
 		return err
 	}
 
-	src := templates.TokenCode(s.cfg.ChainID, token, tmplStr)
+	src, err := templates.TokenCode(s.cfg.ChainID, token, tmplStr)
+	if err != nil {
+		return err
+	}
 
 	c := flow_templates.Contract{Name: n, Source: src}
 
 	err = accounts.AddContract(ctx, s.fc, s.km, address, c, s.cfg.TransactionTimeout)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "cannot overwrite existing contract") {
 		return err
 	}
 

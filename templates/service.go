@@ -12,7 +12,8 @@ import (
 
 type Service interface {
 	AddToken(t *Token) error
-	ListTokens(tType TokenType) (*[]BasicToken, error)
+	ListTokens(tType TokenType) ([]BasicToken, error)
+	ListTokensFull(tType TokenType) ([]Token, error)
 	GetTokenById(id uint64) (*Token, error)
 	GetTokenByName(name string) (*Token, error)
 	RemoveToken(id uint64) error
@@ -29,17 +30,28 @@ func parseEnabledTokens(envEnabledTokens []string) map[string]Token {
 	for _, s := range envEnabledTokens {
 		ss := strings.Split(s, ":")
 		token := Token{Name: ss[0], Address: ss[1]}
-		if len(ss) > 2 {
+		if len(ss) == 3 {
+			// Deprecated
+			if token.Name != "FlowToken" && token.Name != "FUSD" {
+				log.Warnf("ENABLED_TOKENS.%s is using deprecated config format: %s", ss[0], s)
+			}
 			token.NameLowerCase = ss[2]
+			token.ReceiverPublicPath = fmt.Sprintf("/public/%sReceiver", token.NameLowerCase)
+			token.BalancePublicPath = fmt.Sprintf("/public/%sBalance", token.NameLowerCase)
+			token.VaultStoragePath = fmt.Sprintf("/storage/%sVault", token.NameLowerCase)
+		} else if len(ss) == 5 {
+			token.ReceiverPublicPath = ss[2]
+			token.BalancePublicPath = ss[3]
+			token.VaultStoragePath = ss[4]
 		}
-		// Use all lowercase as the key so we can do case insenstive matchig in URLs
+		// Use all lowercase as the key so we can do case-insensitive matching in URLs
 		key := strings.ToLower(ss[0])
 		enabledTokens[key] = token
 	}
 	return enabledTokens
 }
 
-func NewService(cfg *configs.Config, store Store) Service {
+func NewService(cfg *configs.Config, store Store) (Service, error) {
 	// TODO(latenssi): safeguard against nil config?
 
 	// Add all enabled tokens from config as fungible tokens
@@ -53,22 +65,36 @@ func NewService(cfg *configs.Config, store Store) Service {
 		} else {
 			if !strings.Contains(err.Error(), "record not found") {
 				// We got an error that is not "record not found"
-				panic(err)
+				return nil, err
 			}
 		}
 
 		// Copy the value so we get an individual pointer, this is important
 		token := t
 		token.Type = FT // We only allow fungible tokens through env variables config
-		token.Setup = FungibleSetupCode(cfg.ChainID, &token)
-		token.Transfer = FungibleTransferCode(cfg.ChainID, &token)
-		token.Balance = FungibleBalanceCode(cfg.ChainID, &token)
+
+		var err error
+
+		token.Setup, err = FungibleSetupCode(cfg.ChainID, &token)
+		if err != nil {
+			return nil, err
+		}
+
+		token.Transfer, err = FungibleTransferCode(cfg.ChainID, &token)
+		if err != nil {
+			return nil, err
+		}
+
+		token.Balance, err = FungibleBalanceCode(cfg.ChainID, &token)
+		if err != nil {
+			return nil, err
+		}
 
 		// Write to temp storage (memory), instead of database
 		store.InsertTemp(&token)
 	}
 
-	return &ServiceImpl{store, cfg}
+	return &ServiceImpl{store, cfg}, nil
 }
 
 func (s *ServiceImpl) AddToken(t *Token) error {
@@ -85,15 +111,30 @@ func (s *ServiceImpl) AddToken(t *Token) error {
 	}
 
 	// Received code templates may have values that need replacing
-	t.Setup = TokenCode(s.cfg.ChainID, t, t.Setup)
-	t.Transfer = TokenCode(s.cfg.ChainID, t, t.Transfer)
-	t.Balance = TokenCode(s.cfg.ChainID, t, t.Balance)
+	t.Setup, err = TokenCode(s.cfg.ChainID, t, t.Setup)
+	if err != nil {
+		return err
+	}
+
+	t.Transfer, err = TokenCode(s.cfg.ChainID, t, t.Transfer)
+	if err != nil {
+		return err
+	}
+
+	t.Balance, err = TokenCode(s.cfg.ChainID, t, t.Balance)
+	if err != nil {
+		return err
+	}
 
 	return s.store.Insert(t)
 }
 
-func (s *ServiceImpl) ListTokens(tType TokenType) (*[]BasicToken, error) {
+func (s *ServiceImpl) ListTokens(tType TokenType) ([]BasicToken, error) {
 	return s.store.List(tType)
+}
+
+func (s *ServiceImpl) ListTokensFull(tType TokenType) ([]Token, error) {
+	return s.store.ListFull(tType)
 }
 
 func (s *ServiceImpl) GetTokenById(id uint64) (*Token, error) {
