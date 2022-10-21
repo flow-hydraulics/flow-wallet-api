@@ -88,9 +88,19 @@ func (l *ListenerImpl) run(ctx context.Context, start, end uint64) error {
 		if err != nil {
 			return err
 		}
+		count := 0
 		for _, b := range r {
+			count += len(b.Events)
 			events = append(events, b.Events...)
 		}
+		log.
+			WithFields(log.Fields{
+				"type":        t,
+				"startHeight": start,
+				"endHeight":   end,
+				"resultCount": count,
+			}).
+			Debug("Fetching events")
 	}
 
 	for _, event := range events {

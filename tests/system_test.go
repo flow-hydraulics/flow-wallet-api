@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -58,7 +57,7 @@ func TestSettingsE2E(t *testing.T) {
 	for _, tt := range steps {
 		res := send(router, tt.method, tt.path, tt.body)
 		assertStatusCode(t, res, tt.expectedStatus)
-		if bs, err := ioutil.ReadAll(res.Body); err != nil || strings.TrimSpace(string(bs)) != tt.expectedBody {
+		if bs, err := io.ReadAll(res.Body); err != nil || strings.TrimSpace(string(bs)) != tt.expectedBody {
 			if err != nil {
 				t.Error(err)
 			} else {

@@ -55,6 +55,8 @@ func (s *ServiceImpl) InitAdminAccount(ctx context.Context) error {
 				if _, err := s.km.InitAdminProposalKeys(ctx); err != nil {
 					return err
 				}
+
+				log.Info("New admin account proposal keys created successfully")
 			}
 		} else {
 			return err

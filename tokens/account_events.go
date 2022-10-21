@@ -14,13 +14,16 @@ type AccountAddedHandler struct {
 
 func (h *AccountAddedHandler) Handle(payload accounts.AccountAddedPayload) {
 	address := flow_helpers.FormatAddress(payload.Address)
-	h.addFlowToken(address)
+	h.addToken("FlowToken", address)
+	for _, t := range payload.InitializedFungibleTokens {
+		h.addToken(t.Name, address)
+	}
 }
 
-func (h *AccountAddedHandler) addFlowToken(address string) {
-	if err := h.TokenService.AddAccountToken("FlowToken", address); err != nil {
+func (h *AccountAddedHandler) addToken(name string, address string) {
+	if err := h.TokenService.AddAccountToken(name, address); err != nil {
 		log.
 			WithFields(log.Fields{"error": err}).
-			Warn("Error while adding FlowToken to new account")
+			Warnf("Error while adding %s token to new account", name)
 	}
 }

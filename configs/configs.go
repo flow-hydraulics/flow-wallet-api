@@ -76,8 +76,9 @@ type Config struct {
 
 	// -- Templates --
 
-	EnabledTokens           []string `env:"ENABLED_TOKENS" envSeparator:","`
-	ScriptPathCreateAccount string   `env:"SCRIPT_PATH_CREATE_ACCOUNT" envDefault:""`
+	EnabledTokens                            []string `env:"ENABLED_TOKENS" envSeparator:","`
+	ScriptPathCreateAccount                  string   `env:"SCRIPT_PATH_CREATE_ACCOUNT" envDefault:""`
+	InitFungibleTokenVaultsOnAccountCreation bool     `env:"INIT_FUNGIBLE_TOKEN_VAULTS_ON_ACCOUNT_CREATION" envDefault:"false"`
 
 	// -- Workerpool --
 
@@ -128,7 +129,7 @@ type Config struct {
 	// For more info: https://pkg.go.dev/time#ParseDuration
 	ChainListenerInterval time.Duration `env:"EVENTS_INTERVAL" envDefault:"10s"`
 
-	// Max transactions per second, rate at which the service can submit transactions to Flow
+	// Max transactions per second, rate at which the service can submit transactions to Flow (excluding ops)
 	TransactionMaxSendRate int `env:"MAX_TPS" envDefault:"10"`
 
 	// maxJobErrorCount is the maximum number of times a Job can be tried to
@@ -152,6 +153,12 @@ type Config struct {
 	PauseDuration time.Duration `env:"PAUSE_DURATION" envDefault:"60s"`
 
 	GrpcMaxCallRecvMsgSize int `env:"GRPC_MAX_CALL_RECV_MSG_SIZE" envDefault:"16777216"`
+
+	// -- ops ---
+	// WorkerCount for system jobs, max number of in-flight transactions
+	OpsWorkerCount uint `env:"OPS_WORKER_COUNT" envDefault:"200"`
+	// Capacity of buffered jobs queues for system jobs.
+	OpsWorkerQueueCapacity uint `env:"OPS_WORKER_QUEUE_CAPACITY" envDefault:"300000"`
 }
 
 // Parse parses environment variables and flags to a valid Config.

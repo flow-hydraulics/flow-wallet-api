@@ -2,6 +2,8 @@ version: "3.9"
 services:
   db:
     image: postgres:13-alpine
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: wallet_test
       POSTGRES_USER: wallet_test

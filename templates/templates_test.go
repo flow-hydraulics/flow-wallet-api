@@ -11,7 +11,10 @@ import (
 func TestParsing(t *testing.T) {
 	t.Run("FlowToken", func(t *testing.T) {
 		token := &Token{Name: "FlowToken", Address: "test-address", NameLowerCase: "flowToken"}
-		c := FungibleTransferCode(flow.Emulator, token)
+		c, err := FungibleTransferCode(flow.Emulator, token)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if strings.Contains(c, ".cdc") {
 			t.Error("expected all cadence file references to have been replaced")
 		}
@@ -22,7 +25,10 @@ func TestParsing(t *testing.T) {
 
 	t.Run("FUSD", func(t *testing.T) {
 		token := &Token{Name: "FUSD", Address: "test-address", NameLowerCase: "fusd"}
-		c := FungibleTransferCode(flow.Emulator, token)
+		c, err := FungibleTransferCode(flow.Emulator, token)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if strings.Contains(c, ".cdc") {
 			t.Error("expected all cadence file references to have been replaced")
 		}
@@ -33,7 +39,7 @@ func TestParsing(t *testing.T) {
 
 	t.Run("ExampleNFT", func(t *testing.T) {
 		token := &Token{Name: "ExampleNFT", Address: "test-address"}
-		c := TokenCode(
+		c, err := TokenCode(
 			flow.Emulator,
 			token,
 			`
@@ -59,6 +65,9 @@ func TestParsing(t *testing.T) {
 						}
 				}
 			`)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if strings.Contains(c, ".cdc") {
 			t.Error("expected all cadence file references to have been replaced")
 		}

@@ -17,6 +17,7 @@ import (
 	"github.com/flow-hydraulics/flow-wallet-api/jobs"
 	"github.com/flow-hydraulics/flow-wallet-api/keys"
 	"github.com/flow-hydraulics/flow-wallet-api/keys/basic"
+	"github.com/flow-hydraulics/flow-wallet-api/ops"
 	"github.com/flow-hydraulics/flow-wallet-api/system"
 	"github.com/flow-hydraulics/flow-wallet-api/templates"
 	"github.com/flow-hydraulics/flow-wallet-api/tokens"
@@ -125,11 +126,15 @@ func runServer(cfg *configs.Config) {
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
 	// Services
-	templateService := templates.NewService(cfg, templates.NewGormStore(db))
+	templateService, err := templates.NewService(cfg, templates.NewGormStore(db))
+	if err != nil {
+		log.Fatal(err)
+	}
 	jobsService := jobs.NewService(jobs.NewGormStore(db))
 	transactionService := transactions.NewService(cfg, transactions.NewGormStore(db), km, fc, wp, transactions.WithTxRatelimiter(txRatelimiter))
-	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, accounts.WithTxRatelimiter(txRatelimiter))
+	accountService := accounts.NewService(cfg, accounts.NewGormStore(db), km, fc, wp, transactionService, templateService, accounts.WithTxRatelimiter(txRatelimiter))
 	tokenService := tokens.NewService(cfg, tokens.NewGormStore(db), km, fc, wp, transactionService, templateService, accountService)
+	opsService := ops.NewService(cfg, ops.NewGormStore(db), templateService, transactionService, tokenService)
 
 	// Register a handler for account added events
 	accounts.AccountAdded.Register(&tokens.AccountAddedHandler{
@@ -152,6 +157,7 @@ func runServer(cfg *configs.Config) {
 	accountHandler := handlers.NewAccounts(accountService)
 	transactionHandler := handlers.NewTransactions(transactionService)
 	tokenHandler := handlers.NewTokens(tokenService)
+	opsHandler := handlers.NewOps(opsService)
 
 	r := mux.NewRouter()
 
@@ -241,6 +247,10 @@ func runServer(cfg *configs.Config) {
 		log.Info("non-fungible tokens disabled")
 	}
 
+	// Ops
+	rv.Handle("/ops/missing-fungible-token-vaults/start", opsHandler.InitMissingFungibleVaults()).Methods(http.MethodGet) // start retroactive init job
+	rv.Handle("/ops/missing-fungible-token-vaults/stats", opsHandler.GetMissingFungibleVaults()).Methods(http.MethodGet)  // get number of accounts with missing fungible token vaults
+
 	h := http.TimeoutHandler(r, cfg.ServerRequestTimeout, "request timed out")
 	h = handlers.UseCors(h)
 	h = handlers.UseLogging(h)
@@ -322,11 +332,11 @@ func runServer(cfg *configs.Config) {
 				return nil, err
 			}
 
-			token_count := len(*tt)
+			token_count := len(tt)
 			event_types := make([]string, token_count)
 
 			// Listen for enabled tokens deposit events
-			for i, token := range *tt {
+			for i, token := range tt {
 				event_types[i] = templates.DepositEventTypeFromToken(token)
 			}
 

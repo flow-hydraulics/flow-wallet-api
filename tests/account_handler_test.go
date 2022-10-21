@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -143,7 +142,7 @@ func TestWatchlistAccountManagement(t *testing.T) {
 func assertStatusCode(t *testing.T, res *http.Response, expected int) {
 	t.Helper()
 	if res.StatusCode != expected {
-		bs, err := ioutil.ReadAll(res.Body)
+		bs, err := io.ReadAll(res.Body)
 		if err != nil {
 			panic(err)
 		}
@@ -165,7 +164,7 @@ func asJson(v interface{}) []byte {
 func fromJsonBody(t *testing.T, res *http.Response, v interface{}) {
 	t.Helper()
 
-	bs, err := ioutil.ReadAll(res.Body)
+	bs, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
