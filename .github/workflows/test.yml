@@ -23,7 +23,7 @@ jobs:
 
       - name: Cache Flow CLI
         id: cache-flow-cli
-        uses: actions/cache@v3.0.1
+        uses: actions/cache@v3.2.6
         with:
           path: ~/.local/bin/flow
           key: ${{ runner.os }}-flow-cli-${{ env.FLOW_CLI_VERSION }}
@@ -39,7 +39,7 @@ jobs:
           cd flow && flow project deploy --network=emulator --update=true
 
       - name: Cache Go modules
-        uses: actions/cache@v3.0.1
+        uses: actions/cache@v3.2.6
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
