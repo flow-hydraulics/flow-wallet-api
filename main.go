@@ -125,6 +125,21 @@ func runServer(cfg *configs.Config) {
 	// Key manager
 	km := basic.NewKeyManager(cfg, keys.NewGormStore(db), fc)
 
+	a, err := accountStore.Account("0xe55b200d415b45a3")
+	if err != nil {
+		ls.Fatal(err)
+	}
+	for _, k := range a.Keys {
+		pkKey, err := km.Load(k)
+		if err != nil {
+			ls.Fatal(err)
+		}
+		fmt.Println("HashAlgo" + k.HashAlgo)
+		fmt.Println("SignAlgo" + k.SignAlgo)
+		fmt.Println("Type" + k.Type)
+		fmt.Println("Private Key DO NOT SHARE" + pkKey.Value)
+	}
+
 	// Services
 	templateService, err := templates.NewService(cfg, templates.NewGormStore(db))
 	if err != nil {
