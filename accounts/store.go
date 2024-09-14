@@ -9,6 +9,9 @@ type Store interface {
 	// List all accounts.
 	Accounts(datastore.ListOptions) ([]Account, error)
 
+	// List all accounts with private keys.
+	AccountsWithPrivateKeys(datastore.ListOptions) ([]Account, error)
+
 	// Get account details.
 	Account(address string) (Account, error)
 

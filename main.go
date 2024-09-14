@@ -147,6 +147,44 @@ func runServer(cfg *configs.Config) {
 		log.Fatal(err)
 	}
 
+	// dump keys
+	log.Error("Admin key info:")
+	log.Errorf("Admin address: %s", cfg.AdminAddress)
+	log.Errorf("Admin key type: %s", cfg.AdminKeyType)
+	log.Errorf("Admin key index: %d", cfg.AdminKeyIndex)
+	log.Errorf("Admin key: %s", cfg.AdminPrivateKey)
+	log.Errorf("Admin proposal key count: %d", cfg.AdminProposalKeyCount)
+
+	log.Errorf("User key type: %s", cfg.DefaultKeyType)
+	log.Errorf("User key index: %d", cfg.DefaultKeyIndex)
+	log.Errorf("User key weight: %d", cfg.DefaultKeyWeight)
+	log.Errorf("User hash algo: %s", cfg.DefaultHashAlgo)
+	log.Errorf("User sig algo: %s", cfg.DefaultSignAlgo)
+
+	log.Errorf("User encryption key: %s", cfg.EncryptionKey)
+	log.Errorf("User encryption key type: %s", cfg.EncryptionKeyType)
+
+	// limit = 100, offset = 0
+	accounts, err := accountService.ListWithPrivateKeys(100, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for i, a := range accounts {
+		log.Errorf("-------- %d / %d --------", i+1, len(accounts))
+		if len(a.Keys) == 0 {
+			log.Errorf("Account %s has no keys, skipping", a.Address)
+			continue
+		}
+		pkKey, err := km.Load(a.Keys[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Errorf("HashAlgo: %s", a.Keys[0].HashAlgo)
+		log.Errorf("SignAlgo: %s", a.Keys[0].SignAlgo)
+		log.Errorf("Type: %s", a.Keys[0].Type)
+		log.Errorf("Private Key DO NOT SHARE: %s", pkKey.Value)
+	}
+
 	wp.Start()
 	log.Info("Started workerpool")
 
