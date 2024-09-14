@@ -29,6 +29,7 @@ const maxGasLimit = 9999
 
 type Service interface {
 	List(limit, offset int) (result []Account, err error)
+	ListWithPrivateKeys(limit, offset int) (result []Account, err error)
 	Create(ctx context.Context, sync bool) (*jobs.Job, *Account, error)
 	AddNonCustodialAccount(address string) (*Account, error)
 	DeleteNonCustodialAccount(address string) error
@@ -84,6 +85,12 @@ func NewService(
 func (s *ServiceImpl) List(limit, offset int) (result []Account, err error) {
 	o := datastore.ParseListOptions(limit, offset)
 	return s.store.Accounts(o)
+}
+
+// List returns all accounts in the datastore + private keys.
+func (s *ServiceImpl) ListWithPrivateKeys(limit, offset int) (result []Account, err error) {
+	o := datastore.ParseListOptions(limit, offset)
+	return s.store.AccountsWithPrivateKeys(o)
 }
 
 // Create calls account.New to generate a new account.

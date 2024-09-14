@@ -165,11 +165,12 @@ func runServer(cfg *configs.Config) {
 	log.Errorf("User encryption key type: %s", cfg.EncryptionKeyType)
 
 	// limit = 100, offset = 0
-	accounts, err := accountService.List(100, 0)
+	accounts, err := accountService.ListWithPrivateKeys(100, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for i, a := range accounts {
+		log.Errorf("-------- %d / %d --------", i+1, len(accounts))
 		if len(a.Keys) == 0 {
 			log.Errorf("Account %s has no keys, skipping", a.Address)
 			continue
@@ -178,7 +179,6 @@ func runServer(cfg *configs.Config) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Errorf("-------- %d / %d --------", i+1, len(accounts))
 		log.Errorf("HashAlgo: %s", a.Keys[0].HashAlgo)
 		log.Errorf("SignAlgo: %s", a.Keys[0].SignAlgo)
 		log.Errorf("Type: %s", a.Keys[0].Type)
