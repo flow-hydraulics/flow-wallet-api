@@ -256,6 +256,7 @@ func TestAccountHandlers(t *testing.T) {
 	router.Handle("/", handler.List()).Methods(http.MethodGet)
 	router.Handle("/", handler.Create()).Methods(http.MethodPost)
 	router.Handle("/{address}", handler.Details()).Methods(http.MethodGet)
+	router.Handle("/{address}/add-new-key", handler.AddNewKey()).Methods(http.MethodPost)
 
 	var tempAccAddress string
 
@@ -302,6 +303,13 @@ func TestAccountHandlers(t *testing.T) {
 			url:      "/<address>",
 			expected: `(?m)^{"address":".+"}$`,
 			status:   http.StatusOK,
+		},
+		{
+			name:     "add new key",
+			method:   http.MethodPost,
+			url:      "/<address>/add-new-key",
+			expected: `(?m)^{"address":".+"}$`,
+			status:   http.StatusCreated,
 		},
 	}
 
